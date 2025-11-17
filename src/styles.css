@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+@import 'reactflow/dist/style.css';
+
+:root {
+  --m2rf-node-bg: #ffffff;
+  --m2rf-node-border: #e5e7eb;
+  --m2rf-node-text: #111827;
+  --m2rf-edge-stroke: #9ca3af;
+}
+
+.m2rf-node {
+  @apply rounded-lg border-2 bg-white shadow-sm transition-shadow hover:shadow-md;
+}
+
+.m2rf-edge {
+  @apply transition-all;
+}
+
+.m2rf-label {
+  @apply text-sm font-medium;
+}
