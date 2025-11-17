@@ -34,7 +34,7 @@ export const transformToReactFlow = (
 
   const edges: M2RFEdge[] = parseResult.edges.map((mermaidEdge, index) => {
     const edgeComponentName = mermaidEdge.text && edgeComponents
-      ? resolveComponent(mermaidEdge.text, edgeComponents as any)
+      ? resolveComponent(mermaidEdge.text, edgeComponents as unknown as ComponentRegistry)
       : undefined;
 
     const edgeType = edgeComponentName ? 'componentEdge' : 'defaultEdge';

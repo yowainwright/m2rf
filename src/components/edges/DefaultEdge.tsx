@@ -23,10 +23,11 @@ export const DefaultEdge = memo<EdgeProps>(({
     targetPosition,
   });
 
-  const strokeColor = (data as any)?.strokeColor || DEFAULT_EDGE.strokeColor;
-  const strokeWidth = (data as any)?.strokeWidth || DEFAULT_EDGE.strokeWidth;
-  const labelClass = (data as any)?.labelClass || DEFAULT_EDGE.labelClass;
-  const wrapperClass = (data as any)?.wrapperClass || DEFAULT_EDGE.wrapperClass;
+  const edgeData = data as Record<string, unknown> | undefined;
+  const strokeColor = (edgeData?.strokeColor as string) || DEFAULT_EDGE.strokeColor;
+  const strokeWidth = (edgeData?.strokeWidth as number) || DEFAULT_EDGE.strokeWidth;
+  const labelClass = (edgeData?.labelClass as string) || DEFAULT_EDGE.labelClass;
+  const wrapperClass = (edgeData?.wrapperClass as string) || DEFAULT_EDGE.wrapperClass;
 
   return (
     <>

@@ -8,8 +8,10 @@ import ReactFlow, {
   useEdgesState,
   type NodeTypes,
   type EdgeTypes,
+  type Node,
+  type Edge,
 } from 'reactflow';
-import type { MermaidFlowProps } from '../types/index';
+import type { MermaidFlowProps, M2RFNode, M2RFEdge } from '../types/index';
 import { FlowStoreContext } from '../context/FlowContext';
 import { parseMermaid } from '../core/parser';
 import { transformToReactFlow } from '../core/transformer';
@@ -96,8 +98,8 @@ const MermaidFlowInner = <TStore,>({
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeClick={(_, node) => onNodeClick?.(node as any)}
-        onEdgeClick={(_, edge) => onEdgeClick?.(edge as any)}
+        onNodeClick={(_, node) => onNodeClick?.(node as M2RFNode)}
+        onEdgeClick={(_, edge) => onEdgeClick?.(edge as M2RFEdge)}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView

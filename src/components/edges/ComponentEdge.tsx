@@ -31,13 +31,14 @@ export const ComponentEdge = memo<ComponentEdgeProps>(({
     targetPosition,
   });
 
-  const componentName = data?.componentName;
+  const edgeData = data as Record<string, unknown> | undefined;
+  const componentName = edgeData?.componentName as string | undefined;
   const UserComponent = componentName && edgeComponents ? edgeComponents[componentName] : null;
 
-  const strokeColor = (data as any)?.strokeColor || DEFAULT_COMPONENT_EDGE.strokeColor;
-  const strokeWidth = (data as any)?.strokeWidth || DEFAULT_COMPONENT_EDGE.strokeWidth;
-  const labelClass = (data as any)?.labelClass || DEFAULT_COMPONENT_EDGE.labelClass;
-  const wrapperClass = (data as any)?.wrapperClass || (UserComponent ? DEFAULT_COMPONENT_EDGE.wrapperClass : DEFAULT_EDGE.wrapperClass);
+  const strokeColor = (edgeData?.strokeColor as string) || DEFAULT_COMPONENT_EDGE.strokeColor;
+  const strokeWidth = (edgeData?.strokeWidth as number) || DEFAULT_COMPONENT_EDGE.strokeWidth;
+  const labelClass = (edgeData?.labelClass as string) || DEFAULT_COMPONENT_EDGE.labelClass;
+  const wrapperClass = (edgeData?.wrapperClass as string) || (UserComponent ? DEFAULT_COMPONENT_EDGE.wrapperClass : DEFAULT_EDGE.wrapperClass);
 
   return (
     <>

@@ -1,9 +1,9 @@
 import { createContext, useContext } from 'react';
 import type { StoreApi, UseBoundStore } from 'zustand';
 
-export const FlowStoreContext = createContext<UseBoundStore<StoreApi<any>> | null>(null);
+export const FlowStoreContext = createContext<UseBoundStore<StoreApi<unknown>> | null>(null);
 
-export const useFlowStore = <T,>(selector?: (state: any) => T): T => {
+export const useFlowStore = <T,>(selector?: (state: unknown) => T): T => {
   const store = useContext(FlowStoreContext);
 
   if (!store) {
