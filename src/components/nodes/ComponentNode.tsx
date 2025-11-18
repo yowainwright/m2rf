@@ -10,16 +10,14 @@ interface ComponentNodeProps extends NodeComponentProps {
 }
 
 export const ComponentNode = memo<ComponentNodeProps>(({ id, data, components }) => {
-  const componentName = data.componentName;
-
-  if (!componentName || !components) {
+  if (!data.componentName || !components) {
     return null;
   }
 
-  const UserComponent = components[componentName];
+  const UserComponent = components[data.componentName];
 
   if (!UserComponent) {
-    console.warn(`Component "${componentName}" not found in registry`);
+    console.warn(`Component "${data.componentName}" not found in registry`);
     return null;
   }
 

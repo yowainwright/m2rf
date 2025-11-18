@@ -17,10 +17,5 @@ export const resolveComponent = (
   if (!registry) return undefined;
 
   const normalized = normalizeComponentName(nodeText);
-
-  if (normalized in registry) {
-    return normalized;
-  }
-
-  return undefined;
+  return normalized in registry ? normalized : undefined;
 };

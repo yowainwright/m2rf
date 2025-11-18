@@ -15,8 +15,8 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'm2rf',
-      formats: ['es', 'cjs'],
-      fileName: (format) => `index.${format === 'es' ? 'mjs' : 'cjs'}`,
+      formats: ['es'],
+      fileName: () => 'index.mjs',
     },
     rollupOptions: {
       external: ['react', 'react-dom', 'reactflow', 'zustand', 'mermaid', 'dagre'],
