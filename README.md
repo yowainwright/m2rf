@@ -1,21 +1,20 @@
-# m2rf - Mermaid to ReactFlow
+# m2rf
 
-> Render Mermaid diagrams as interactive ReactFlow graphs with embedded React components
+## Mermaid to ReactFlow
+
+Render Mermaid diagrams as interactive ReactFlow graphs with embedded React components
 
 ## Features
 
-- 🎨 **Write Mermaid, render ReactFlow** - Use familiar Mermaid syntax
-- ⚛️ **Embed React components** - Convention-based component resolution
-- 🔄 **Shared state with Zustand** - Components communicate via reactive state
-- 🎯 **Tailwind-first** - Style everything with Tailwind classes
-- 📊 **Perfect for MDX** - Drop into blog posts, docs, presentations
-- 🚀 **TypeScript native** - Fully typed API
+- **Write Mermaid, render ReactFlow** - Use familiar Mermaid syntax
+- **Embed React components** - Convention-based component resolution
+- **Shared state with Zustand** - Components communicate via reactive state
+- **Tailwind-first** - Style with Tailwind
+- **MDX focused** - Drop into MDX based docs
 
 ## Installation
 
 ```bash
-npm install m2rf react react-dom reactflow zustand
-# or
 bun add m2rf react react-dom reactflow zustand
 ```
 
@@ -113,13 +112,7 @@ const MyComponent = () => {
 };
 ```
 
-## Examples
-
-See the `examples/` directory for:
-- Counter with shared state
-- Data visualization components
-- Real-time data flow
-- Custom edge components
+More to come! 
 
 ## License
 
