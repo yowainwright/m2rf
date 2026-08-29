@@ -1,18 +1,38 @@
-import { createContext, useContext } from 'react';
-import type { StoreApi, UseBoundStore } from 'zustand';
+import { createContext, useContext, useSyncExternalStore } from 'react';
+import type { AnyActorRef } from 'xstate';
 
-export const FlowStoreContext = createContext<UseBoundStore<StoreApi<unknown>> | null>(null);
+export const FlowActorContext = createContext<AnyActorRef | null>(null);
 
-export const useFlowStore = <T,>(selector?: (state: unknown) => T): T => {
-  const store = useContext(FlowStoreContext);
+const subscribeToActor = (
+  actor: AnyActorRef,
+  onStoreChange: () => void
+) => {
+  const subscription = actor.subscribe(onStoreChange);
 
-  if (!store) {
-    throw new Error('useFlowStore must be used within a MermaidFlow component with a store prop');
+  return () => subscription.unsubscribe();
+};
+
+export const useFlowActor = <TActor extends AnyActorRef = AnyActorRef>() => {
+  const actor = useContext(FlowActorContext);
+
+  if (!actor) {
+    throw new Error('useFlowActor must be used within a MermaidFlow component with an actor prop');
   }
 
-  if (selector) {
-    return store(selector);
-  }
+  return actor as TActor;
+};
 
-  return store() as T;
+export const useFlowSnapshot = <
+  TActor extends AnyActorRef = AnyActorRef,
+  TSelected = ReturnType<TActor['getSnapshot']>,
+>(
+  selector: (snapshot: ReturnType<TActor['getSnapshot']>) => TSelected
+) => {
+  const actor = useFlowActor<TActor>();
+
+  return useSyncExternalStore(
+    (onStoreChange) => subscribeToActor(actor, onStoreChange),
+    () => selector(actor.getSnapshot()),
+    () => selector(actor.getSnapshot())
+  );
 };

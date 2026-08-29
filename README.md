@@ -8,34 +8,48 @@ Render Mermaid diagrams as interactive ReactFlow graphs with embedded React comp
 
 - **Write Mermaid, render ReactFlow** - Use familiar Mermaid syntax
 - **Embed React components** - Convention-based component resolution
-- **Shared state with Zustand** - Components communicate via reactive state
+- **Shared state with XState** - Components communicate through actors
 - **Tailwind-first** - Style with Tailwind
 - **MDX focused** - Drop into MDX based docs
+
+## Design
+
+See [DESIGN.md](DESIGN.md) for the current product and API design.
 
 ## Installation
 
 ```bash
-bun add m2rf react react-dom reactflow zustand
+bun add m2rf react react-dom reactflow xstate
 ```
 
 ## Quick Start
 
 ```tsx
-import { MermaidFlow } from 'm2rf';
-import { create } from 'zustand';
+import { MermaidFlow, useFlowActor, useFlowSnapshot } from 'm2rf';
+import { assign, createActor, setup } from 'xstate';
 import 'm2rf/styles.css';
 
-const useStore = create((set) => ({
-  count: 0,
-  increment: () => set((s) => ({ count: s.count + 1 })),
-}));
+const machine = setup({
+  actions: {
+    incrementCount: assign({
+      count: ({ context }) => context.count + 1,
+    }),
+  },
+}).createMachine({
+  context: { count: 0 },
+  on: {
+    'count.incremented': { actions: ['incrementCount'] },
+  },
+});
+
+const actor = createActor(machine).start();
 
 const Counter = ({ data }) => {
-  const count = useStore((s) => s.count);
-  const increment = useStore((s) => s.increment);
+  const flowActor = useFlowActor();
+  const count = useFlowSnapshot((snapshot) => snapshot.context.count);
 
   return (
-    <button onClick={increment}>
+    <button onClick={() => flowActor.send({ type: 'count.incremented' })}>
       Count: {count}
     </button>
   );
@@ -44,7 +58,7 @@ const Counter = ({ data }) => {
 export default function App() {
   return (
     <MermaidFlow
-      store={useStore}
+      actor={actor}
       components={{ Counter }}
       height="600px"
     >
@@ -93,21 +107,23 @@ flowchart LR
 | `children` | `string` | Mermaid diagram text |
 | `components` | `Record<string, Component>` | Component registry |
 | `edgeComponents` | `Record<string, Component>` | Edge component registry |
-| `store` | `UseBoundStore` | Zustand store |
+| `actor` | `AnyActorRef` | XState actor |
 | `className` | `string` | Container class |
 | `height` | `string \| number` | Container height |
 | `direction` | `'TB' \| 'LR' \| 'RL' \| 'BT'` | Layout direction |
 | `theme` | `'light' \| 'dark'` | Theme |
 
-### `useFlowStore`
+### `useFlowActor`
 
-Access Zustand store from inside components:
+Access the XState actor from inside components:
 
 ```tsx
-import { useFlowStore } from 'm2rf';
+import { useFlowActor, useFlowSnapshot } from 'm2rf';
 
 const MyComponent = () => {
-  const count = useFlowStore((s) => s.count);
+  const actor = useFlowActor();
+  const count = useFlowSnapshot((snapshot) => snapshot.context.count);
+
   return <div>{count}</div>;
 };
 ```

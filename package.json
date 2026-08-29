@@ -1,7 +1,7 @@
 {
   "name": "m2rf",
   "version": "0.0.0",
-  "description": "Mermaid to ReactFlow - Render Mermaid diagrams as interactive ReactFlow graphs with embedded React components",
+  "description": "Render Mermaid diagrams as ReactFlow graphs",
   "author": "Jeff Wainwright <me@jeffry.in> (https://jeffry.in)",
   "license": "MIT",
   "repository": {
@@ -9,7 +9,14 @@
     "url": "https://github.com/yowainwright/m2rf"
   },
   "type": "module",
-  "workspaces": ["site"],
+  "packageManager": "pnpm@11.18.0",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=26 <27",
+      "onFail": "error"
+    }
+  },
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -23,14 +30,17 @@
     "dist"
   ],
   "scripts": {
-    "dev": "bun --cwd site run dev",
-    "build": "vite build",
+    "dev": "pnpm --dir site dev",
+    "dev:site": "pnpm --dir site dev",
+    "build": "pnpm run build:js && pnpm run build:types",
+    "build:js": "vite build",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist --noEmit false",
     "build:watch": "vite build --watch",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
-    "test:coverage": "bun test --coverage",
-    "prepublishOnly": "bun run typecheck && bun test && bun run build"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "pnpm run typecheck && pnpm run test && pnpm run build"
   },
   "keywords": [
     "mermaid",
@@ -43,32 +53,47 @@
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0",
-    "zustand": "^4.0.0 || ^5.0.0"
+    "xstate": "^5.32.6"
   },
   "dependencies": {
+    "canvg": "^4.0.3",
     "dagre": "^0.8.5",
-    "mermaid": "^11.12.1",
-    "reactflow": "^11.11.4"
+    "effect": "^3.22.1",
+    "gifenc": "^1.0.3",
+    "mermaid": "^11.17.2",
+    "reactflow": "^11.11.4",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.0",
-    "@types/bun": "latest",
-    "@types/dagre": "^0.7.53",
-    "@types/react": "^19.2.5",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "autoprefixer": "^10.4.22",
-    "happy-dom": "^20.0.10",
-    "jsdom": "^27.2.0",
-    "postcss": "^8.5.6",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "rolldown": "^1.0.0-beta.50",
-    "tailwindcss": "^4.1.17",
-    "typescript": "^5.9.3",
-    "vite": "^7.2.2",
-    "vite-plugin-dts": "^4.5.4",
-    "zustand": "^5.0.8"
-  }
+    "@eslint/js": "10.0.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/dagre": "^0.7.54",
+    "@types/node": "^26.3.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.1.0",
+    "@vitest/coverage-v8": "^4.0.16",
+    "autoprefixer": "^10.5.4",
+    "codependence": "^1.0.12",
+    "eslint": "10.9.1",
+    "eslint-plugin-legibility": "0.3.5",
+    "happy-dom": "^20.11.6",
+    "jsdom": "^30.0.1",
+    "oxlint": "1.80.0",
+    "pastoralist": "^1.13.1",
+    "postcss": "^8.5.26",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "rolldown": "^1.2.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "typescript-eslint": "8.68.0",
+    "vite": "^8.2.2",
+    "vitest": "^4.0.16",
+    "xstate": "^5.32.6"
+  },
+  "workspaces": [
+    "site"
+  ]
 }

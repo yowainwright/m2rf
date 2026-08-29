@@ -1,21 +1,102 @@
 @import 'tailwindcss';
 @import 'reactflow/dist/style.css';
 
-:root {
+.m2rf-flow {
   --m2rf-node-bg: #ffffff;
   --m2rf-node-border: #e5e7eb;
   --m2rf-node-text: #111827;
+  --m2rf-node-font: inherit;
   --m2rf-edge-stroke: #9ca3af;
+  --m2rf-edge-width: 2;
+  --m2rf-edge-label-color: #111827;
+  --m2rf-edge-font: inherit;
+  --m2rf-edge-dasharray: 10 6;
 }
 
 .m2rf-node {
-  @apply rounded-lg border-2 bg-white shadow-sm transition-shadow hover:shadow-md;
+  @apply rounded-lg border-2 shadow-sm transition-shadow hover:shadow-md;
+  background-color: var(--m2rf-node-bg);
+  border-color: var(--m2rf-node-border);
+  color: var(--m2rf-node-text);
+  font-family: var(--m2rf-node-font);
+  transform-origin: center;
 }
 
-.m2rf-edge {
+.m2rf-flow .react-flow__edge-path {
   @apply transition-all;
 }
 
 .m2rf-label {
   @apply text-sm font-medium;
+}
+
+.m2rf-flow-animation-pulse .m2rf-node {
+  animation: m2rf-node-pulse 1.4s ease-in-out infinite;
+}
+
+.m2rf-flow-animation-start-to-finish .m2rf-node {
+  animation: m2rf-node-start-to-finish 1.1s ease-in-out infinite;
+}
+
+.m2rf-flow-animation-pulse .react-flow__edge-path {
+  animation: m2rf-edge-pulse 1.4s ease-in-out infinite;
+}
+
+.m2rf-flow-animation-start-to-finish .react-flow__edge-path {
+  animation: m2rf-edge-start-to-finish 1.1s linear infinite;
+  stroke-dasharray: var(--m2rf-edge-dasharray);
+}
+
+@keyframes m2rf-node-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes m2rf-node-start-to-finish {
+  0% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.18);
+  }
+
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@keyframes m2rf-edge-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes m2rf-edge-start-to-finish {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.m2rf-flow .m2rf-node[data-animation='none'] {
+  animation: none;
+}
+
+.m2rf-flow .m2rf-node[data-animation='pulse'] {
+  animation: m2rf-node-pulse 1.4s ease-in-out infinite;
+}
+
+.m2rf-flow .m2rf-node[data-animation='start-to-finish'] {
+  animation: m2rf-node-start-to-finish 1.1s ease-in-out infinite;
 }

@@ -1,5 +1,5 @@
-export { MermaidFlow } from './components/MermaidFlow';
-export { useFlowStore } from './context/FlowContext';
+export { MermaidFlow } from './components/flow';
+export { useFlowActor, useFlowSnapshot } from './context/FlowContext';
 
 export type {
   MermaidFlowProps,
@@ -9,5 +9,11 @@ export type {
   EdgeComponentRegistry,
   M2RFNode,
   M2RFEdge,
+  M2RFNodeView,
+  M2RFEdgeView,
+  M2RFView,
+  M2RFElements,
+  M2RFEdgePathType,
+  M2RFAnimationType,
   MermaidDirection,
 } from './types/index';

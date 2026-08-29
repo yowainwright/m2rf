@@ -1,33 +1,53 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
-import dts from 'vite-plugin-dts';
 
 export default defineConfig({
-  plugins: [
-    react(),
-    dts({
-      include: ['src'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
-    }),
-  ],
+  resolve: {
+    alias: {
+      '@': resolve(import.meta.dirname, 'src'),
+      '@studio': resolve(import.meta.dirname, 'src/studio'),
+    },
+  },
+  plugins: [react()],
+  test: {
+    environment: 'happy-dom',
+    setupFiles: ['./src/test-setup.ts'],
+  },
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: resolve(import.meta.dirname, 'src/index.ts'),
       name: 'm2rf',
       formats: ['es'],
       fileName: () => 'index.mjs',
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'reactflow', 'zustand', 'mermaid', 'dagre'],
+      external: [
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        'reactflow',
+        'mermaid',
+        'dagre',
+        'canvg',
+        'effect',
+        'gifenc',
+        'rxjs',
+        'xstate',
+      ],
       output: {
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',
           reactflow: 'ReactFlow',
-          zustand: 'zustand',
           mermaid: 'mermaid',
           dagre: 'dagre',
+          canvg: 'canvg',
+          effect: 'effect',
+          gifenc: 'gifenc',
+          rxjs: 'rxjs',
+          xstate: 'xstate',
         },
       },
     },
