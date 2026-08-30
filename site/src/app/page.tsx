@@ -14,16 +14,24 @@ import {
 } from 'react';
 import { EditorView } from '@codemirror/view';
 import CodeMirror from '@uiw/react-codemirror';
-import { Download, LogIn, LogOut } from 'lucide-react';
+import { Download, LogIn, LogOut, Plus, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
 import { authClient } from '@/auth/client';
+import {
+  graphRepository,
+  type GraphInput,
+  type GraphRenderSettings,
+  type GraphTranslation,
+  type GraphWorkspace,
+} from '@/graph';
 import { mermaid as mermaidLanguage } from 'codemirror-lang-mermaid';
 import {
   MermaidFlow,
   type M2RFAnimationType,
   type M2RFEdgeView,
   type M2RFEdgePathType,
+  type M2RFElements,
   type M2RFNodeView,
   type M2RFView,
 } from 'm2rf';
@@ -40,6 +48,7 @@ import {
   EDITOR_HEIGHT,
   FLOW_HEIGHT,
   FONT_OPTIONS,
+  GRAPH_TITLE_LIMIT,
   SPLIT_LIMITS,
   STYLE_CONTROL_CLASS_NAMES,
 } from './constants';
@@ -53,12 +62,24 @@ type AppContext = {
   edgeWidth: number;
   animation: M2RFAnimationType;
   leftColumnPercent: number;
+  activeWorkspaceId: string | null;
+  activeInputId: string | null;
+  activeTranslationId: string | null;
   activeNodeId: string | null;
   activeEdgeId: string | null;
+  elements: M2RFElements;
   view: M2RFView;
 };
 
 type AppEvent =
+  | { type: 'graph.new' }
+  | { type: 'graph.saved'; ids: SavedGraphIds }
+  | {
+      type: 'graph.loaded';
+      input: GraphInput;
+      translation: GraphTranslation;
+      workspace: GraphWorkspace;
+    }
   | { type: 'source.changed'; source: string }
   | { type: 'primary.changed'; value: string }
   | { type: 'inverse.changed'; value: string }
@@ -70,6 +91,7 @@ type AppEvent =
   | { type: 'style.flow.opened' }
   | { type: 'style.node.opened'; nodeId: string }
   | { type: 'style.edge.opened'; edgeId: string }
+  | { type: 'flow.elements.changed'; elements: M2RFElements }
   | { type: 'node.view.changed'; nodeId: string; view: M2RFNodeView }
   | { type: 'edge.view.changed'; edgeId: string; view: M2RFEdgeView };
 
@@ -91,6 +113,19 @@ type StyleValues = {
   animation: M2RFAnimationType;
 };
 
+type SavedGraphIds = {
+  workspaceId: string;
+  inputId: string;
+  translationId: string;
+};
+
+type PersistenceStatus =
+  | 'idle'
+  | 'saving'
+  | 'loading'
+  | 'saveError'
+  | 'loadError';
+
 type StyleSelectorHandlers = {
   handlePrimary(value: string): void;
   handleInverse(value: string): void;
@@ -103,6 +138,7 @@ type StyleSelectorHandlers = {
 type FlowPreviewHandlers = {
   handleNodeStyleOpen(nodeId: string): void;
   handleEdgeStyleOpen(edgeId: string): void;
+  handleElementsChange(elements: M2RFElements): void;
   handleNodeViewChange(nodeId: string, view: M2RFNodeView): void;
 };
 
@@ -177,6 +213,8 @@ type AuthSession = AuthSessionState['data'];
 type AuthSessionError = AuthSessionState['error'];
 type AuthRefetch = AuthSessionState['refetch'];
 type SetAuthPending = (value: boolean) => void;
+type SetGraphWorkspaces = (workspaces: GraphWorkspace[]) => void;
+type SetPersistenceStatus = (status: PersistenceStatus) => void;
 
 type AuthButtonProps = {
   isPending: boolean;
@@ -191,15 +229,94 @@ type FileDownloadOptions = {
 };
 
 type HeaderActionsProps = {
+  actor: AppActor;
+  snapshot: AppSnapshot;
+};
+
+type DownloadMermaidButtonProps = {
   source: string;
+};
+
+type PersistenceControlProps = HeaderActionsProps;
+
+type GraphSelectProps = {
+  activeWorkspaceId: string;
+  disabled: boolean;
+  workspaces: GraphWorkspace[];
+  onChange(value: string): void;
 };
 
 type StyleSelectorContentProps = StyleSelectorInputProps & {
   target: StyleTarget;
 };
 
+type LoadedGraph = {
+  workspace: GraphWorkspace;
+  input: GraphInput;
+  translation: GraphTranslation;
+};
+
 const editorExtensions = [mermaidLanguage(), EditorView.lineWrapping];
 const rowClassName = STYLE_CONTROL_CLASS_NAMES.row;
+const emptyElements: M2RFElements = { nodes: [], edges: [] };
+
+const createInitialContext = (): AppContext => {
+  return {
+    source: APP_DEFAULTS.source,
+    primaryColor: APP_DEFAULTS.primaryColor,
+    inverseColor: APP_DEFAULTS.inverseColor,
+    fontFamily: APP_DEFAULTS.fontFamily,
+    edgePathType: APP_DEFAULTS.edgePathType,
+    edgeWidth: APP_DEFAULTS.edgeWidth,
+    animation: APP_DEFAULTS.animation,
+    leftColumnPercent: APP_DEFAULTS.leftColumnPercent,
+    activeWorkspaceId: null,
+    activeInputId: null,
+    activeTranslationId: null,
+    activeNodeId: null,
+    activeEdgeId: null,
+    elements: emptyElements,
+    view: {},
+  };
+};
+
+const getGraphTitle = (source: string) => {
+  const firstLine = source.split('\n').find((line) => {
+    return line.trim().length > 0;
+  });
+
+  return (
+    firstLine?.trim().slice(0, GRAPH_TITLE_LIMIT) ||
+    APP_TEXT.untitledGraph
+  );
+};
+
+const getGraphSettings = (context: AppContext): GraphRenderSettings => {
+  return {
+    primaryColor: context.primaryColor,
+    inverseColor: context.inverseColor,
+    fontFamily: context.fontFamily,
+    edgePathType: context.edgePathType,
+    edgeWidth: context.edgeWidth,
+    animation: context.animation,
+  };
+};
+
+const getSerializableElements = (elements: M2RFElements): M2RFElements => {
+  return JSON.parse(JSON.stringify(elements)) as M2RFElements;
+};
+
+const getSavedGraphIds = (
+  workspace: GraphWorkspace,
+  input: GraphInput,
+  translation: GraphTranslation
+): SavedGraphIds => {
+  return {
+    workspaceId: workspace.id,
+    inputId: input.id,
+    translationId: translation.id,
+  };
+};
 
 const clampSplitPercent = (value: number) => {
   return Math.min(SPLIT_LIMITS.max, Math.max(SPLIT_LIMITS.min, value));
@@ -533,6 +650,43 @@ const appMachine = setup({
     events: AppEvent;
   },
   actions: {
+    resetGraph: assign(() => {
+      return createInitialContext();
+    }),
+    setGraphIds: assign(({ event }) => {
+      assertEvent(event, 'graph.saved');
+
+      return {
+        activeWorkspaceId: event.ids.workspaceId,
+        activeInputId: event.ids.inputId,
+        activeTranslationId: event.ids.translationId,
+      };
+    }),
+    setLoadedGraph: assign(({ event }) => {
+      assertEvent(event, 'graph.loaded');
+
+      return {
+        source: event.input.source,
+        primaryColor: event.translation.settings.primaryColor,
+        inverseColor: event.translation.settings.inverseColor,
+        fontFamily: event.translation.settings.fontFamily,
+        edgePathType: event.translation.settings.edgePathType,
+        edgeWidth: event.translation.settings.edgeWidth,
+        animation: event.translation.settings.animation,
+        activeWorkspaceId: event.workspace.id,
+        activeInputId: event.input.id,
+        activeTranslationId: event.translation.id,
+        activeNodeId: null,
+        activeEdgeId: null,
+        elements: event.translation.elements,
+        view: event.translation.view,
+      };
+    }),
+    setElements: assign(({ event }) => {
+      assertEvent(event, 'flow.elements.changed');
+
+      return { elements: event.elements };
+    }),
     setSource: assign(({ event }) => {
       assertEvent(event, 'source.changed');
 
@@ -599,25 +753,16 @@ const appMachine = setup({
   },
 }).createMachine({
   initial: 'flow',
-  context: {
-    source: APP_DEFAULTS.source,
-    primaryColor: APP_DEFAULTS.primaryColor,
-    inverseColor: APP_DEFAULTS.inverseColor,
-    fontFamily: APP_DEFAULTS.fontFamily,
-    edgePathType: APP_DEFAULTS.edgePathType,
-    edgeWidth: APP_DEFAULTS.edgeWidth,
-    animation: APP_DEFAULTS.animation,
-    leftColumnPercent: APP_DEFAULTS.leftColumnPercent,
-    activeNodeId: null,
-    activeEdgeId: null,
-    view: {},
-  },
+  context: createInitialContext(),
   states: {
     flow: {},
     node: {},
     edge: {},
   },
   on: {
+    'graph.new': { target: '.flow', actions: ['resetGraph'] },
+    'graph.saved': { actions: ['setGraphIds'] },
+    'graph.loaded': { target: '.flow', actions: ['setLoadedGraph'] },
     'source.changed': { actions: ['setSource'] },
     'primary.changed': { actions: ['setPrimary'] },
     'inverse.changed': { actions: ['setInverse'] },
@@ -629,6 +774,7 @@ const appMachine = setup({
     'style.flow.opened': { target: '.flow', actions: ['clearStyleTarget'] },
     'style.node.opened': { target: '.node', actions: ['setNodeTarget'] },
     'style.edge.opened': { target: '.edge', actions: ['setEdgeTarget'] },
+    'flow.elements.changed': { actions: ['setElements'] },
     'node.view.changed': { actions: ['setNodeView'] },
     'edge.view.changed': { actions: ['setEdgeView'] },
   },
@@ -665,6 +811,214 @@ const useAppSnapshot = (actor: AppActor) => {
   );
 };
 
+const refreshGraphWorkspaces = async (setWorkspaces: SetGraphWorkspaces) => {
+  const workspaces = await graphRepository.listWorkspaces();
+
+  setWorkspaces(workspaces);
+};
+
+const getActiveSavedGraphIds = (context: AppContext) => {
+  if (
+    !context.activeWorkspaceId ||
+    !context.activeInputId ||
+    !context.activeTranslationId
+  ) {
+    return null;
+  }
+
+  return {
+    workspaceId: context.activeWorkspaceId,
+    inputId: context.activeInputId,
+    translationId: context.activeTranslationId,
+  };
+};
+
+const createGraphInputRecord = (
+  workspaceId: string,
+  context: AppContext
+) => {
+  return graphRepository.createInput({
+    workspaceId,
+    title: APP_TEXT.defaultInputTitle,
+    source: context.source,
+  });
+};
+
+const createGraphTranslationRecord = (
+  workspaceId: string,
+  inputId: string,
+  context: AppContext
+) => {
+  return graphRepository.createTranslation({
+    workspaceId,
+    inputId,
+    title: APP_TEXT.defaultTranslationTitle,
+    elements: getSerializableElements(context.elements),
+    view: context.view,
+    settings: getGraphSettings(context),
+  });
+};
+
+const activateGraphWorkspace = (
+  workspaceId: string,
+  inputId: string,
+  translationId: string
+) => {
+  return graphRepository.updateWorkspace(workspaceId, {
+    activeInputId: inputId,
+    activeTranslationId: translationId,
+  });
+};
+
+const createGraphRecords = async (context: AppContext) => {
+  const name = getGraphTitle(context.source);
+  const workspace = await graphRepository.createWorkspace({ name });
+  const input = await createGraphInputRecord(workspace.id, context);
+  const translation = await createGraphTranslationRecord(
+    workspace.id,
+    input.id,
+    context
+  );
+
+  await activateGraphWorkspace(workspace.id, input.id, translation.id);
+
+  return getSavedGraphIds(workspace, input, translation);
+};
+
+const updateGraphWorkspaceRecord = (
+  context: AppContext,
+  ids: SavedGraphIds
+) => {
+  return graphRepository.updateWorkspace(ids.workspaceId, {
+    name: getGraphTitle(context.source),
+    activeInputId: ids.inputId,
+    activeTranslationId: ids.translationId,
+  });
+};
+
+const updateGraphInputRecord = (
+  context: AppContext,
+  ids: SavedGraphIds
+) => {
+  return graphRepository.updateInput(ids.inputId, {
+    title: APP_TEXT.defaultInputTitle,
+    source: context.source,
+  });
+};
+
+const updateGraphTranslationRecord = (
+  context: AppContext,
+  ids: SavedGraphIds
+) => {
+  return graphRepository.updateTranslation(ids.translationId, {
+    title: APP_TEXT.defaultTranslationTitle,
+    elements: getSerializableElements(context.elements),
+    view: context.view,
+    settings: getGraphSettings(context),
+  });
+};
+
+const updateGraphRecords = async (
+  context: AppContext,
+  ids: SavedGraphIds
+) => {
+  const workspace = await updateGraphWorkspaceRecord(context, ids);
+  const input = await updateGraphInputRecord(context, ids);
+  const translation = await updateGraphTranslationRecord(context, ids);
+
+  if (!workspace || !input || !translation) {
+    return createGraphRecords(context);
+  }
+
+  return ids;
+};
+
+const saveGraph = (context: AppContext) => {
+  const ids = getActiveSavedGraphIds(context);
+
+  if (!ids) {
+    return createGraphRecords(context);
+  }
+
+  return updateGraphRecords(context, ids);
+};
+
+const getWorkspaceGraph = async (workspaceId: string): Promise<LoadedGraph | null> => {
+  const workspace = await graphRepository.getWorkspace(workspaceId);
+
+  if (!workspace?.activeInputId || !workspace.activeTranslationId) {
+    return null;
+  }
+
+  const input = await graphRepository.getInput(workspace.activeInputId);
+  const translation = await graphRepository.getTranslation(
+    workspace.activeTranslationId
+  );
+
+  if (!input || !translation) {
+    return null;
+  }
+
+  return { workspace, input, translation };
+};
+
+const saveCurrentGraph = async (
+  actor: AppActor,
+  context: AppContext,
+  setWorkspaces: SetGraphWorkspaces,
+  setStatus: SetPersistenceStatus
+) => {
+  setStatus('saving');
+
+  try {
+    const ids = await saveGraph(context);
+
+    actor.send({ type: 'graph.saved', ids });
+    await refreshGraphWorkspaces(setWorkspaces);
+    setStatus('idle');
+  } catch {
+    setStatus('saveError');
+  }
+};
+
+const loadSavedGraph = async (
+  actor: AppActor,
+  workspaceId: string,
+  setStatus: SetPersistenceStatus
+) => {
+  setStatus('loading');
+
+  try {
+    const graph = await getWorkspaceGraph(workspaceId);
+
+    if (graph) {
+      actor.send({ type: 'graph.loaded', ...graph });
+    }
+
+    setStatus('idle');
+  } catch {
+    setStatus('loadError');
+  }
+};
+
+const deleteSavedGraph = async (
+  actor: AppActor,
+  workspaceId: string,
+  setWorkspaces: SetGraphWorkspaces,
+  setStatus: SetPersistenceStatus
+) => {
+  setStatus('loading');
+
+  try {
+    await graphRepository.deleteWorkspace(workspaceId);
+    actor.send({ type: 'graph.new' });
+    await refreshGraphWorkspaces(setWorkspaces);
+    setStatus('idle');
+  } catch {
+    setStatus('loadError');
+  }
+};
+
 const revokeDownloadURL = (url: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url));
 };
@@ -695,7 +1049,7 @@ const downloadMermaidSource = (source: string) => {
   });
 };
 
-const DownloadMermaidButton = ({ source }: HeaderActionsProps) => {
+const DownloadMermaidButton = ({ source }: DownloadMermaidButtonProps) => {
   const handleClick = () => {
     downloadMermaidSource(source);
   };
@@ -860,18 +1214,143 @@ const AuthHeaderControl = () => {
   return <AuthControl />;
 };
 
-const HeaderActions = ({ source }: HeaderActionsProps) => (
+const getSaveButtonText = (status: PersistenceStatus) => {
+  if (status === 'saving') {
+    return APP_TEXT.savingGraph;
+  }
+
+  if (status === 'loading') {
+    return APP_TEXT.loadingGraph;
+  }
+
+  if (status === 'saveError') {
+    return APP_TEXT.graphSaveError;
+  }
+
+  if (status === 'loadError') {
+    return APP_TEXT.graphLoadError;
+  }
+
+  return APP_TEXT.saveGraph;
+};
+
+const GraphSelect = ({
+  activeWorkspaceId,
+  disabled,
+  workspaces,
+  onChange,
+}: GraphSelectProps) => {
+  const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    onChange(event.target.value);
+  };
+
+  return (
+    <select
+      aria-label={APP_TEXT.savedGraphs}
+      className="h-8 w-44 rounded-md border border-input bg-background px-2 text-xs"
+      disabled={disabled}
+      value={activeWorkspaceId}
+      onChange={handleChange}
+    >
+      <option value="">{APP_TEXT.unsavedGraph}</option>
+      {workspaces.map((workspace) => (
+        <option key={workspace.id} value={workspace.id}>
+          {workspace.name}
+        </option>
+      ))}
+    </select>
+  );
+};
+
+const useSavedGraphOptions = (setStatus: SetPersistenceStatus) => {
+  const [workspaces, setWorkspaces] = useState<GraphWorkspace[]>([]);
+
+  useEffect(() => {
+    void refreshGraphWorkspaces(setWorkspaces).catch(() => {
+      setStatus('loadError');
+    });
+  }, [setStatus]);
+
+  return { workspaces, setWorkspaces };
+};
+
+const PersistenceControl = ({ actor, snapshot }: PersistenceControlProps) => {
+  const [status, setStatus] = useState<PersistenceStatus>('idle');
+  const { workspaces, setWorkspaces } = useSavedGraphOptions(setStatus);
+  const context = snapshot.context;
+  const activeWorkspaceId = context.activeWorkspaceId || '';
+  const isBusy = status === 'saving' || status === 'loading';
+  const canDelete = Boolean(activeWorkspaceId) && !isBusy;
+
+  const handleNew = () => {
+    actor.send({ type: 'graph.new' });
+    setStatus('idle');
+  };
+  const handleSave = () => {
+    void saveCurrentGraph(actor, context, setWorkspaces, setStatus);
+  };
+  const handleDelete = () => {
+    void deleteSavedGraph(actor, activeWorkspaceId, setWorkspaces, setStatus);
+  };
+  const handleSelect = (workspaceId: string) => {
+    if (!workspaceId) {
+      actor.send({ type: 'graph.new' });
+      setStatus('idle');
+      return;
+    }
+
+    void loadSavedGraph(actor, workspaceId, setStatus);
+  };
+
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Button size="sm" type="button" variant="outline" onClick={handleNew}>
+        <Plus aria-hidden="true" />
+        <span>{APP_TEXT.newGraph}</span>
+      </Button>
+      <GraphSelect
+        activeWorkspaceId={activeWorkspaceId}
+        disabled={isBusy}
+        workspaces={workspaces}
+        onChange={handleSelect}
+      />
+      <Button
+        disabled={isBusy}
+        size="sm"
+        type="button"
+        variant="default"
+        onClick={handleSave}
+      >
+        <Save aria-hidden="true" />
+        <span>{getSaveButtonText(status)}</span>
+      </Button>
+      <Button
+        disabled={!canDelete}
+        size="sm"
+        type="button"
+        variant="outline"
+        onClick={handleDelete}
+      >
+        <Trash2 aria-hidden="true" />
+        <span>{APP_TEXT.deleteGraph}</span>
+      </Button>
+    </div>
+  );
+};
+
+const HeaderActions = ({ actor, snapshot }: HeaderActionsProps) => (
   <div className="flex min-w-0 items-center gap-2">
-    <DownloadMermaidButton source={source} />
+    <PersistenceControl actor={actor} snapshot={snapshot} />
+    <DownloadMermaidButton source={snapshot.context.source} />
     <AuthHeaderControl />
   </div>
 );
 
-const AppHeader = ({ source }: HeaderActionsProps) => (
+const AppHeader = ({ actor, snapshot }: HeaderActionsProps) => (
   <header className="border-b">
     <div className="flex h-12 items-center justify-between gap-2 px-2">
       <p className="text-sm font-semibold">{APP_TEXT.title}</p>
-      <HeaderActions source={source} />
+      <HeaderActions actor={actor} snapshot={snapshot} />
     </div>
   </header>
 );
@@ -1236,11 +1715,19 @@ const createFlowPreviewHandlers = (actor: AppActor): FlowPreviewHandlers => {
   const handleEdgeStyleOpen = (edgeId: string) => {
     actor.send({ type: 'style.edge.opened', edgeId });
   };
+  const handleElementsChange = (elements: M2RFElements) => {
+    actor.send({ type: 'flow.elements.changed', elements });
+  };
   const handleNodeViewChange = (nodeId: string, view: M2RFNodeView) => {
     actor.send({ type: 'node.view.changed', nodeId, view });
   };
 
-  return { handleNodeStyleOpen, handleEdgeStyleOpen, handleNodeViewChange };
+  return {
+    handleNodeStyleOpen,
+    handleEdgeStyleOpen,
+    handleElementsChange,
+    handleNodeViewChange,
+  };
 };
 
 const getFlowPreviewProps = (
@@ -1257,6 +1744,7 @@ const getFlowPreviewProps = (
     animation: context.animation,
     view: context.view,
     onEdgeStyleOpen: handlers.handleEdgeStyleOpen,
+    onElementsChange: handlers.handleElementsChange,
     onNodeStyleOpen: handlers.handleNodeStyleOpen,
     onNodeViewChange: handlers.handleNodeViewChange,
   };
@@ -1269,7 +1757,9 @@ const FlowPreview = ({
   actor: AppActor;
   context: AppContext;
 }) => {
-  const handlers = createFlowPreviewHandlers(actor);
+  const handlers = useMemo(() => {
+    return createFlowPreviewHandlers(actor);
+  }, [actor]);
   const flowPreviewProps = getFlowPreviewProps(context, handlers);
 
   return (
@@ -1332,7 +1822,7 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
-      <AppHeader source={context.source} />
+      <AppHeader actor={actor} snapshot={snapshot} />
       <AppColumns
         actor={actor}
         shellRef={shellRef}

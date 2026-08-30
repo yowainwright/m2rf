@@ -38,6 +38,8 @@ export const DOWNLOAD_FILE_NAMES = {
   mermaid: 'diagram.mmd',
 } as const;
 
+export const GRAPH_TITLE_LIMIT = 48;
+
 export const APP_TEXT = {
   animation: 'Animation',
   authError: 'Auth error',
@@ -47,18 +49,30 @@ export const APP_TEXT = {
   authSignedIn: 'Signed In',
   edgeType: 'Edge Type',
   edgeWidth: 'Edge Width',
+  defaultInputTitle: 'Mermaid Source',
+  defaultTranslationTitle: 'React Flow',
+  deleteGraph: 'Delete',
   exportMermaid: 'Mermaid',
   footerPrefix: 'Diagrams powered by',
   footerLink: 'React Flow',
   font: 'Font',
   inverse: 'Inverse',
+  graphLoadError: 'Load Error',
+  graphSaveError: 'Save Error',
+  loadingGraph: 'Loading',
   localMode: 'Local',
   mermaid: 'Mermaid',
+  newGraph: 'New',
   openFlowStyles: 'Open Mermaid Flow styles',
   primary: 'Primary',
   resizeColumns: 'Resize columns',
+  saveGraph: 'Save',
+  savedGraphs: 'Saved graphs',
+  savingGraph: 'Saving',
   title: 'm2rf',
   flowTitle: 'Mermaid Flow',
+  unsavedGraph: 'Unsaved',
+  untitledGraph: 'Untitled Graph',
 } as const;
 
 export const FONT_OPTIONS = [

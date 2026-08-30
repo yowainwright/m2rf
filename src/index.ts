@@ -1,5 +1,13 @@
 export { MermaidFlow } from './components/flow';
 export { useFlowActor, useFlowSnapshot } from './context/FlowContext';
+export {
+  OBSERVABILITY_EVENT_NAMES,
+  OBSERVABILITY_MAX_STRING_LENGTH,
+  OBSERVABILITY_REDACTED_VALUE,
+  createObservability,
+  createObservabilityEvent,
+  redactObservabilityAttributes,
+} from './observability';
 
 export type {
   MermaidFlowProps,
@@ -17,3 +25,14 @@ export type {
   M2RFAnimationType,
   MermaidDirection,
 } from './types/index';
+export type {
+  CreateM2RFObservabilityEventInput,
+  M2RFObservability,
+  M2RFObservabilityAttributes,
+  M2RFObservabilityEvent,
+  M2RFObservabilityEventName,
+  M2RFObservabilityInputAttributes,
+  M2RFObservabilitySink,
+  M2RFObservabilityStatus,
+  M2RFObservabilityValue,
+} from './observability';

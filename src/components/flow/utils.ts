@@ -151,7 +151,7 @@ const applyNodeView = (node: Node, view?: M2RFNodeView): Node => {
   };
 };
 
-const applyNodeTheme = (node: Node, props: MermaidFlowProps): Node => {
+const applyNodeTheme = (node: Node, props: FlowThemeOptions): Node => {
   return {
     ...node,
     data: {
@@ -241,7 +241,7 @@ const applyEdgeView = (edge: Edge, view?: M2RFEdgeView): Edge => {
   };
 };
 
-const applyEdgeTheme = (edge: Edge, props: MermaidFlowProps): Edge => {
+const applyEdgeTheme = (edge: Edge, props: FlowThemeOptions): Edge => {
   return {
     ...edge,
     data: {
@@ -303,7 +303,7 @@ const syncFlowElements = async (
     setError(null);
 
     const elements = await createFlowElements({
-      source: props.children,
+      source: props.source,
       components: props.components,
       edgeComponents: props.edgeComponents,
       direction: props.direction,
