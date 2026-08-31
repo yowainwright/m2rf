@@ -5,11 +5,13 @@ import { useEffect } from 'react';
 import { mermaid as mermaidLanguage } from 'codemirror-lang-mermaid';
 import mermaid from 'mermaid';
 import ReactFlow, {
+  applyEdgeChanges,
   applyNodeChanges,
   Background,
   Controls,
   MarkerType,
   type Edge,
+  type EdgeChange,
   type Node,
   type NodeChange,
   type Viewport,
@@ -147,6 +149,228 @@ const getEdgeAnimated = (settings: TranslationSettings) => {
   return settings.edgeAnimation === 'flow';
 };
 
+const getSelectedNodeIds = (view: GraphTranslationView) => {
+  return view.selection?.nodeIds || [];
+};
+
+const getSelectedEdgeIds = (view: GraphTranslationView) => {
+  return view.selection?.edgeIds || [];
+};
+
+const getSelectedNodes = (nodes: Node[]) => {
+  return nodes.filter((node) => node.selected === true);
+};
+
+const getSelectedEdges = (edges: Edge[]) => {
+  return edges.filter((edge) => edge.selected === true);
+};
+
+const getElementIds = (elements: Array<Edge | Node>) => {
+  return elements.map((element) => element.id);
+};
+
+const getActiveNodeIds = (nodes: Node[], view: GraphTranslationView) => {
+  const selectedNodes = getSelectedNodes(nodes);
+
+  if (selectedNodes.length > 0) {
+    return getElementIds(selectedNodes);
+  }
+
+  return getSelectedNodeIds(view);
+};
+
+const getActiveEdgeIds = (edges: Edge[], view: GraphTranslationView) => {
+  const selectedEdges = getSelectedEdges(edges);
+
+  if (selectedEdges.length > 0) {
+    return getElementIds(selectedEdges);
+  }
+
+  return getSelectedEdgeIds(view);
+};
+
+const areIdsEqual = (left: string[], right: string[]) => {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
+};
+
+const createNodeStyleUpdate = (
+  node: Node,
+  settings: Partial<TranslationSettings>
+) => {
+  const backgroundColor =
+    settings.primaryColor || String(node.style?.backgroundColor || '');
+  const color = settings.inverseColor || String(node.style?.color || '');
+  const borderColor = settings.primaryColor || backgroundColor;
+
+  return {
+    ...node.style,
+    backgroundColor,
+    border: `2px solid ${borderColor}`,
+    color,
+  };
+};
+
+const createEdgeUpdate = (
+  edge: Edge,
+  settings: Partial<TranslationSettings>
+) => {
+  const edgeSettings = getSettings(settings);
+
+  return {
+    ...edge,
+    animated:
+      settings.edgeAnimation === undefined
+        ? edge.animated
+        : getEdgeAnimated(edgeSettings),
+    className:
+      settings.edgeAnimation === undefined
+        ? edge.className
+        : getEdgeAnimationClassName(edgeSettings),
+    style: {
+      ...edge.style,
+      ...(settings.edgeColor ? { stroke: settings.edgeColor } : {}),
+      ...(settings.edgeWidth ? { strokeWidth: settings.edgeWidth } : {}),
+    },
+    type:
+      settings.edgeType === undefined ? edge.type : getEdgeType(edgeSettings),
+  };
+};
+
+const updateSelectedNodes = (
+  elements: GraphElements,
+  nodeIds: string[],
+  settings: Partial<TranslationSettings>
+): GraphElements => {
+  const selectedIds = new Set(nodeIds);
+  const nodes = elements.nodes.map((node) => {
+    if (!selectedIds.has(node.id)) {
+      return node;
+    }
+
+    return {
+      ...node,
+      style: createNodeStyleUpdate(node, settings),
+    };
+  });
+
+  return { ...elements, nodes };
+};
+
+const updateSelectedEdges = (
+  elements: GraphElements,
+  edgeIds: string[],
+  settings: Partial<TranslationSettings>
+): GraphElements => {
+  const selectedIds = new Set(edgeIds);
+  const edges = elements.edges.map((edge) => {
+    if (!selectedIds.has(edge.id)) {
+      return edge;
+    }
+
+    return createEdgeUpdate(edge, settings);
+  });
+
+  return { ...elements, edges };
+};
+
+const getSelectedNode = (nodes: Node[], nodeIds: string[]) => {
+  return nodes.find((node) => nodeIds.includes(node.id));
+};
+
+const getSelectedEdge = (edges: Edge[], edgeIds: string[]) => {
+  return edges.find((edge) => edgeIds.includes(edge.id));
+};
+
+const getColorValue = (value: unknown, fallback: string) => {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  return value;
+};
+
+const getNumberValue = (value: unknown, fallback: number) => {
+  if (typeof value !== 'number') {
+    return fallback;
+  }
+
+  return value;
+};
+
+const getNodeFillValue = (
+  node: Node | undefined,
+  settings: TranslationSettings
+) => {
+  return getColorValue(node?.style?.backgroundColor, settings.primaryColor);
+};
+
+const getNodeTextValue = (
+  node: Node | undefined,
+  settings: TranslationSettings
+) => {
+  return getColorValue(node?.style?.color, settings.inverseColor);
+};
+
+const getEdgeColorValue = (
+  edge: Edge | undefined,
+  settings: TranslationSettings
+) => {
+  return getColorValue(edge?.style?.stroke, settings.edgeColor);
+};
+
+const getEdgeWidthValue = (
+  edge: Edge | undefined,
+  settings: TranslationSettings
+) => {
+  return getNumberValue(edge?.style?.strokeWidth, settings.edgeWidth);
+};
+
+const getEdgeTypeValue = (
+  edge: Edge | undefined,
+  settings: TranslationSettings
+) => {
+  if (edge?.type === undefined) {
+    return settings.edgeType;
+  }
+
+  return edge.type as EdgeType;
+};
+
+const getEdgeAnimationValue = (
+  edge: Edge | undefined,
+  settings: TranslationSettings
+) => {
+  if (edge?.animated) {
+    return 'flow';
+  }
+
+  if (edge?.className === 'animate-pulse') {
+    return 'pulse';
+  }
+
+  return settings.edgeAnimation;
+};
+
+const getSelectionLabel = (nodeCount: number, edgeCount: number) => {
+  if (nodeCount > 0 && edgeCount > 0) {
+    return `${nodeCount} node, ${edgeCount} edge`;
+  }
+
+  if (nodeCount > 0) {
+    return `${nodeCount} node`;
+  }
+
+  if (edgeCount > 0) {
+    return `${edgeCount} edge`;
+  }
+
+  return 'Global';
+};
+
 const applySettings = (
   elements: GraphElements,
   settings: TranslationSettings
@@ -166,6 +390,31 @@ const applySettings = (
   return { nodes, edges };
 };
 
+const hydrateElementSettings = (
+  elements: GraphElements,
+  settings: TranslationSettings
+): GraphElements => {
+  const nodes = elements.nodes.map((node) => ({
+    ...node,
+    style: {
+      ...createNodeStyle(settings),
+      ...node.style,
+    },
+  }));
+  const edges = elements.edges.map((edge) => ({
+    ...edge,
+    animated: edge.animated ?? getEdgeAnimated(settings),
+    className: edge.className ?? getEdgeAnimationClassName(settings),
+    style: {
+      ...createEdgeStyle(settings),
+      ...edge.style,
+    },
+    type: edge.type ?? getEdgeType(settings),
+  }));
+
+  return { nodes, edges };
+};
+
 const getSettings = (
   settings: Partial<TranslationSettings>
 ): TranslationSettings => {
@@ -177,7 +426,7 @@ const getTranslation = (translation: GraphTranslation): GraphTranslation => {
 
   return {
     ...translation,
-    elements: applySettings(translation.elements, settings),
+    elements: hydrateElementSettings(translation.elements, settings),
     settings,
   };
 };
@@ -268,9 +517,14 @@ const appMachine = setup({
 
       const settings = { ...context.translation.settings, ...event.settings };
       const nextElements = event.elements || context.translation.elements;
-      const elements = event.preserveNodePositions && event.elements
+      const rawElements = event.preserveNodePositions && event.elements
         ? applySavedNodePositions(event.elements, context.translation.elements)
         : nextElements;
+      const shouldApplySettings =
+        event.settings !== undefined || event.preserveNodePositions;
+      const elements = shouldApplySettings
+        ? applySettings(rawElements, settings)
+        : rawElements;
       const view = event.view
         ? { ...context.translation.view, ...event.view }
         : context.translation.view;
@@ -280,7 +534,7 @@ const appMachine = setup({
       return {
         translation: {
           ...context.translation,
-          elements: applySettings(elements, settings),
+          elements,
           error,
           settings,
           view,
@@ -548,8 +802,22 @@ export default function Home() {
   const hasWorkspaceNavigation = workspaces.length > 1;
   const isSaving = snapshot.hasTag('saving');
   const savedViewport = translation.view.viewport;
+  const selectedEdgeIds = getActiveEdgeIds(
+    translation.elements.edges,
+    translation.view
+  );
+  const selectedNodeIds = getActiveNodeIds(
+    translation.elements.nodes,
+    translation.view
+  );
+  const selectedEdge = getSelectedEdge(translation.elements.edges, selectedEdgeIds);
+  const selectedNode = getSelectedNode(translation.elements.nodes, selectedNodeIds);
   const saveLabel = getSaveLabel(snapshot);
   const shouldFitView = !savedViewport;
+  const toolkitScope = getSelectionLabel(
+    selectedNodeIds.length,
+    selectedEdgeIds.length
+  );
 
   useEffect(() => {
     let isCurrent = true;
@@ -593,29 +861,84 @@ export default function Home() {
     send({ type: 'workspace.update', name: event.target.value });
   };
   const handlePrimaryUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const settingsUpdate = { primaryColor: event.target.value };
+
+    if (selectedNodeIds.length > 0) {
+      send({
+        type: 'translation.update',
+        elements: updateSelectedNodes(
+          translation.elements,
+          selectedNodeIds,
+          settingsUpdate
+        ),
+      });
+      return;
+    }
+
     send({
       type: 'translation.update',
-      settings: { primaryColor: event.target.value },
+      settings: settingsUpdate,
     });
   };
   const handleInverseUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const settingsUpdate = { inverseColor: event.target.value };
+
+    if (selectedNodeIds.length > 0) {
+      send({
+        type: 'translation.update',
+        elements: updateSelectedNodes(
+          translation.elements,
+          selectedNodeIds,
+          settingsUpdate
+        ),
+      });
+      return;
+    }
+
     send({
       type: 'translation.update',
-      settings: { inverseColor: event.target.value },
+      settings: settingsUpdate,
     });
   };
   const handleEdgeColorUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const settingsUpdate = { edgeColor: event.target.value };
+
+    if (selectedEdgeIds.length > 0) {
+      send({
+        type: 'translation.update',
+        elements: updateSelectedEdges(
+          translation.elements,
+          selectedEdgeIds,
+          settingsUpdate
+        ),
+      });
+      return;
+    }
+
     send({
       type: 'translation.update',
-      settings: { edgeColor: event.target.value },
+      settings: settingsUpdate,
     });
   };
   const handleEdgeWidthUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
     const edgeWidth = Math.max(1, Number(event.target.value));
+    const settingsUpdate = { edgeWidth };
+
+    if (selectedEdgeIds.length > 0) {
+      send({
+        type: 'translation.update',
+        elements: updateSelectedEdges(
+          translation.elements,
+          selectedEdgeIds,
+          settingsUpdate
+        ),
+      });
+      return;
+    }
 
     send({
       type: 'translation.update',
-      settings: { edgeWidth },
+      settings: settingsUpdate,
     });
   };
   const handleEdgeTypeUpdate = (value: string) => {
@@ -625,9 +948,23 @@ export default function Home() {
       return;
     }
 
+    const settingsUpdate = { edgeType: option.value };
+
+    if (selectedEdgeIds.length > 0) {
+      send({
+        type: 'translation.update',
+        elements: updateSelectedEdges(
+          translation.elements,
+          selectedEdgeIds,
+          settingsUpdate
+        ),
+      });
+      return;
+    }
+
     send({
       type: 'translation.update',
-      settings: { edgeType: option.value },
+      settings: settingsUpdate,
     });
   };
   const handleEdgeAnimationUpdate = (value: string) => {
@@ -637,19 +974,58 @@ export default function Home() {
       return;
     }
 
+    const settingsUpdate = { edgeAnimation: option.value };
+
+    if (selectedEdgeIds.length > 0) {
+      send({
+        type: 'translation.update',
+        elements: updateSelectedEdges(
+          translation.elements,
+          selectedEdgeIds,
+          settingsUpdate
+        ),
+      });
+      return;
+    }
+
     send({
       type: 'translation.update',
-      settings: { edgeAnimation: option.value },
+      settings: settingsUpdate,
     });
   };
   const handleNodesUpdate = (changes: NodeChange[]) => {
     const nodes = applyNodeChanges(changes, translation.elements.nodes);
+    const nodeIds = getElementIds(getSelectedNodes(nodes));
 
     send({
       type: 'translation.update',
       elements: {
         ...translation.elements,
         nodes,
+      },
+      view: {
+        selection: {
+          edgeIds: selectedEdgeIds,
+          nodeIds,
+        },
+      },
+    });
+  };
+  const handleEdgesUpdate = (changes: EdgeChange[]) => {
+    const edges = applyEdgeChanges(changes, translation.elements.edges);
+    const edgeIds = getElementIds(getSelectedEdges(edges));
+
+    send({
+      type: 'translation.update',
+      elements: {
+        ...translation.elements,
+        edges,
+      },
+      view: {
+        selection: {
+          edgeIds,
+          nodeIds: selectedNodeIds,
+        },
       },
     });
   };
@@ -678,6 +1054,30 @@ export default function Home() {
     send({
       type: 'translation.update',
       view: { viewport },
+    });
+  };
+  const handleSelectionUpdate = (selection: {
+    edges: Edge[];
+    nodes: Node[];
+  }) => {
+    const edgeIds = selection.edges.map((edge) => edge.id);
+    const nodeIds = selection.nodes.map((node) => node.id);
+    const isSameSelection =
+      areIdsEqual(edgeIds, selectedEdgeIds) &&
+      areIdsEqual(nodeIds, selectedNodeIds);
+
+    if (isSameSelection) {
+      return;
+    }
+
+    send({
+      type: 'translation.update',
+      view: {
+        selection: {
+          edgeIds,
+          nodeIds,
+        },
+      },
     });
   };
 
@@ -772,7 +1172,7 @@ export default function Home() {
               <Popover defaultOpen>
                 <PopoverTrigger asChild>
                   <Button size="sm" type="button" variant="outline">
-                    Toolkit
+                    Toolkit: {toolkitScope}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
@@ -780,6 +1180,9 @@ export default function Home() {
                   className="w-80 bg-background text-foreground"
                 >
                   <div className="grid gap-4">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      {toolkitScope}
+                    </div>
                     <div className="grid gap-2">
                       <p className="text-sm font-medium">Nodes</p>
                       <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
@@ -787,7 +1190,7 @@ export default function Home() {
                         <Input
                           className="h-8 cursor-pointer p-1"
                           type="color"
-                          value={translation.settings.primaryColor}
+                          value={getNodeFillValue(selectedNode, settings)}
                           onChange={handlePrimaryUpdate}
                         />
                       </label>
@@ -796,7 +1199,7 @@ export default function Home() {
                         <Input
                           className="h-8 cursor-pointer p-1"
                           type="color"
-                          value={translation.settings.inverseColor}
+                          value={getNodeTextValue(selectedNode, settings)}
                           onChange={handleInverseUpdate}
                         />
                       </label>
@@ -806,7 +1209,7 @@ export default function Home() {
                       <label className="grid gap-1 text-xs text-muted-foreground">
                         <span>Type</span>
                         <Select
-                          value={translation.settings.edgeType}
+                          value={getEdgeTypeValue(selectedEdge, settings)}
                           onValueChange={handleEdgeTypeUpdate}
                         >
                           <SelectTrigger className="h-8">
@@ -831,7 +1234,7 @@ export default function Home() {
                           min="1"
                           step="1"
                           type="number"
-                          value={translation.settings.edgeWidth}
+                          value={getEdgeWidthValue(selectedEdge, settings)}
                           onChange={handleEdgeWidthUpdate}
                         />
                       </label>
@@ -840,14 +1243,14 @@ export default function Home() {
                         <Input
                           className="h-8 cursor-pointer p-1"
                           type="color"
-                          value={translation.settings.edgeColor}
+                          value={getEdgeColorValue(selectedEdge, settings)}
                           onChange={handleEdgeColorUpdate}
                         />
                       </label>
                       <label className="grid gap-1 text-xs text-muted-foreground">
                         <span>Animation</span>
                         <Select
-                          value={translation.settings.edgeAnimation}
+                          value={getEdgeAnimationValue(selectedEdge, settings)}
                           onValueChange={handleEdgeAnimationUpdate}
                         >
                           <SelectTrigger className="h-8">
@@ -878,13 +1281,14 @@ export default function Home() {
               </div>
             ) : (
               <ReactFlow
-                key={translation.id}
                 defaultViewport={savedViewport}
                 edges={translation.elements.edges}
                 fitView={shouldFitView}
                 nodes={translation.elements.nodes}
+                onEdgesChange={handleEdgesUpdate}
                 onMoveEnd={handleViewportUpdate}
                 onNodesChange={handleNodesUpdate}
+                onSelectionChange={handleSelectionUpdate}
               >
                 <Background />
                 <Controls />

@@ -18,6 +18,10 @@ export type GraphTranslationSettings = {
 };
 
 export type GraphTranslationView = {
+  selection?: {
+    edgeIds: string[];
+    nodeIds: string[];
+  };
   viewport?: Viewport;
 };
 
