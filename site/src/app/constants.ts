@@ -1,113 +1,57 @@
-import type { M2RFAnimationType, M2RFEdgePathType } from 'm2rf';
-
-type StyleOption<TValue extends string> = {
-  label: string;
-  value: TValue;
-};
-
-export const APP_DEFAULTS = {
-  source: `flowchart LR
+export const DEFAULT_SOURCE = `flowchart LR
   Idea[Write Mermaid] -->|parse| Graph[Build graph]
-  Graph -->|style| Preview[Tune React Flow]
-  Preview -->|export| Output[Ship outputs]
-`,
+  Graph -->|render| Preview[React Flow preview]
+`;
+
+export const DEFAULT_SETTINGS = {
   primaryColor: '#2563eb',
   inverseColor: '#ffffff',
   fontFamily: 'Arial, Helvetica, sans-serif',
-  edgePathType: 'smoothstep' as M2RFEdgePathType,
-  edgeWidth: 2,
-  animation: 'none' as M2RFAnimationType,
-  leftColumnPercent: 50,
 } as const;
 
-export const AUTH_ENABLED = process.env.NEXT_PUBLIC_M2RF_AUTH_ENABLED === 'true';
+export const EMPTY_ELEMENTS = {
+  nodes: [],
+  edges: [],
+};
 
-export const EDGE_WIDTH_LIMITS = {
-  min: 1,
-  max: 12,
-} as const;
+export const INITIAL_UPDATED_AT = '1970-01-01T00:00:00.000Z';
 
-export const SPLIT_LIMITS = {
-  min: 20,
-  max: 80,
-} as const;
+export const APP_INITIAL_CONTEXT = {
+  workspace: {
+    id: 'workspace-local',
+    name: 'Untitled Graph',
+    activeInputId: 'input-local',
+    activeTranslationId: 'translation-local',
+    updatedAt: INITIAL_UPDATED_AT,
+  },
+  input: {
+    id: 'input-local',
+    workspaceId: 'workspace-local',
+    format: 'mermaid' as const,
+    source: DEFAULT_SOURCE,
+    updatedAt: INITIAL_UPDATED_AT,
+  },
+  translation: {
+    id: 'translation-local',
+    inputId: 'input-local',
+    elements: EMPTY_ELEMENTS,
+    settings: DEFAULT_SETTINGS,
+    view: {},
+    error: null,
+    updatedAt: INITIAL_UPDATED_AT,
+  },
+};
 
-export const EDITOR_HEIGHT = '100%';
-export const FLOW_HEIGHT = '100%';
-export const DOWNLOAD_FILE_NAMES = {
-  mermaid: 'diagram.mmd',
-} as const;
-
-export const GRAPH_TITLE_LIMIT = 48;
-
-export const APP_TEXT = {
-  animation: 'Animation',
-  authError: 'Auth error',
-  authLoading: 'Auth',
-  authSignIn: 'GitHub',
-  authSignOut: 'Sign Out',
-  authSignedIn: 'Signed In',
-  edgeType: 'Edge Type',
-  edgeWidth: 'Edge Width',
-  defaultInputTitle: 'Mermaid Source',
-  defaultTranslationTitle: 'React Flow',
-  deleteGraph: 'Delete',
-  exportMermaid: 'Mermaid',
-  footerPrefix: 'Diagrams powered by',
-  footerLink: 'React Flow',
-  font: 'Font',
-  inverse: 'Inverse',
-  graphLoadError: 'Load Error',
-  graphSaveError: 'Save Error',
-  loadingGraph: 'Loading',
-  localMode: 'Local',
-  mermaid: 'Mermaid',
-  newGraph: 'New',
-  openFlowStyles: 'Open Mermaid Flow styles',
-  primary: 'Primary',
-  resizeColumns: 'Resize columns',
-  saveGraph: 'Save',
-  savedGraphs: 'Saved graphs',
-  savingGraph: 'Saving',
-  title: 'm2rf',
-  flowTitle: 'Mermaid Flow',
-  unsavedGraph: 'Unsaved',
-  untitledGraph: 'Untitled Graph',
-} as const;
-
-export const FONT_OPTIONS = [
-  { label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
-  { label: 'Georgia', value: 'Georgia, serif' },
-  { label: 'Inter', value: 'Inter, Arial, sans-serif' },
-  { label: 'Mono', value: 'SFMono-Regular, Consolas, monospace' },
-] as const satisfies readonly StyleOption<string>[];
-
-export const EDGE_TYPE_OPTIONS = [
-  { label: 'Smoothstep', value: 'smoothstep' },
-  { label: 'Straight', value: 'straight' },
-  { label: 'Step', value: 'step' },
-  { label: 'Bezier', value: 'bezier' },
-] as const satisfies readonly StyleOption<M2RFEdgePathType>[];
-
-export const ANIMATION_OPTIONS = [
-  { label: 'None', value: 'none' },
-  { label: 'Pulse', value: 'pulse' },
-  { label: 'Start to Finish', value: 'start-to-finish' },
-] as const satisfies readonly StyleOption<M2RFAnimationType>[];
-
-export const STYLE_CONTROL_CLASS_NAMES = {
-  shell: 'm-2 grid min-h-0 w-[calc(100vw-1rem)] flex-1 gap-0',
-  splitHandle: [
-    'group flex cursor-col-resize items-stretch justify-center rounded-md',
-    'outline-none focus-visible:ring-2 focus-visible:ring-ring',
-  ].join(' '),
-  input: [
-    'h-7 w-full rounded-md border border-input bg-background px-2 py-1 text-[11px]',
-    'outline-none focus-visible:ring-2 focus-visible:ring-ring',
-  ].join(' '),
-  colorInput: [
-    'h-4 w-4 cursor-pointer appearance-none rounded-none border border-input bg-background p-0',
-    'outline-none focus-visible:ring-2 focus-visible:ring-ring',
-  ].join(' '),
-  row: 'grid grid-cols-2 gap-2',
+export const APP_MACHINE_CONFIG = {
+  id: 'm2rf-studio',
+  initial: 'ready',
+  context: APP_INITIAL_CONTEXT,
+  states: {
+    ready: {},
+  },
+  on: {
+    'workspace.update': { actions: ['updateWorkspace'] },
+    'input.update': { actions: ['updateInput'] },
+    'translation.update': { actions: ['updateTranslation'] },
+  },
 } as const;

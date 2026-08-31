@@ -1,13 +1,9 @@
-import type { Metadata } from "next";
-import "./globals.css";
-
-const title = "m2rf - Mermaid to ReactFlow";
-const description =
-  "Render Mermaid diagrams as interactive ReactFlow graphs with embedded React components";
+import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title,
-  description,
+  title: 'm2rf Studio',
+  description: 'CRUD Mermaid input into React Flow graph output.',
 };
 
 export default function RootLayout({
@@ -16,10 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="antialiased" suppressHydrationWarning>
-        {children}
-      </body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   );
 }

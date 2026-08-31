@@ -98,6 +98,40 @@ flowchart LR
 </MermaidFlow>
 ```
 
+## Private Site Deployment
+
+Deploy the studio with Vercel, not GitHub Pages.
+
+Use these Vercel project settings:
+
+| Setting | Value |
+| --- | --- |
+| Framework Preset | Next.js |
+| Root Directory | `site` |
+| Install Command | `pnpm install --frozen-lockfile` |
+| Build Command | `pnpm build` |
+| Include source files outside Root Directory | Enabled |
+| Production Deployment Protection | Enabled |
+
+Set production environment values in Vercel:
+
+```sh
+NEXT_PUBLIC_M2RF_AUTH_ENABLED=true
+BETTER_AUTH_URL=https://<private-vercel-domain>
+BETTER_AUTH_SECRET=<32+ chars>
+GITHUB_CLIENT_ID=<github app client id>
+GITHUB_CLIENT_SECRET=<github app client secret>
+```
+
+Add the GitHub OAuth callback URL:
+
+```text
+https://<private-vercel-domain>/api/auth/callback/github
+```
+
+The repo config in `site/vercel.json` sets the build commands and noindex
+headers. Private access is enforced in Vercel's Deployment Protection settings.
+
 ## API
 
 ### `<MermaidFlow>`
