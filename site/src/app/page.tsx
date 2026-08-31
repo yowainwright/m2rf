@@ -9,7 +9,10 @@ import ReactFlow, {
   applyNodeChanges,
   Background,
   Controls,
+  EdgeLabelRenderer,
   MarkerType,
+  NodeToolbar,
+  Position,
   type Edge,
   type EdgeChange,
   type Node,
@@ -85,6 +88,22 @@ type FlowNodeRecord = {
   id: string;
   label: string;
 };
+type NodeToolProps = {
+  fillValue: string;
+  onFillUpdate: React.ChangeEventHandler<HTMLInputElement>;
+  onTextUpdate: React.ChangeEventHandler<HTMLInputElement>;
+  textValue: string;
+};
+type EdgeToolProps = {
+  animationValue: EdgeAnimation;
+  colorValue: string;
+  onAnimationUpdate: (value: string) => void;
+  onColorUpdate: React.ChangeEventHandler<HTMLInputElement>;
+  onTypeUpdate: (value: string) => void;
+  onWidthUpdate: React.ChangeEventHandler<HTMLInputElement>;
+  typeValue: EdgeType;
+  widthValue: number;
+};
 
 const editorExtensions = [mermaidLanguage()];
 const edgeSelector = '.edgePath, .flowchart-link';
@@ -101,6 +120,9 @@ const edgeTypeOptions: Array<{ label: string; value: EdgeType }> = [
   { label: 'Step', value: 'step' },
   { label: 'Smooth step', value: 'smoothstep' },
 ];
+const edgeAnchorStyle = {
+  pointerEvents: 'all',
+} as const;
 
 let renderCount = 0;
 
@@ -332,18 +354,20 @@ const getEdgeWidthValue = (
 const getEdgeTypeValue = (
   edge: Edge | undefined,
   settings: TranslationSettings
-) => {
+): EdgeType => {
   if (edge?.type === undefined) {
     return settings.edgeType;
   }
 
-  return edge.type as EdgeType;
+  const option = edgeTypeOptions.find((item) => item.value === edge.type);
+
+  return option?.value || settings.edgeType;
 };
 
 const getEdgeAnimationValue = (
   edge: Edge | undefined,
   settings: TranslationSettings
-) => {
+): EdgeAnimation => {
   if (edge?.animated) {
     return 'flow';
   }
@@ -353,6 +377,38 @@ const getEdgeAnimationValue = (
   }
 
   return settings.edgeAnimation;
+};
+
+const getNodeWidth = (node: Node) => {
+  return node.width || 150;
+};
+
+const getNodeHeight = (node: Node) => {
+  return node.height || 40;
+};
+
+const getNodeCenter = (node: Node) => {
+  return {
+    x: node.position.x + getNodeWidth(node) / 2,
+    y: node.position.y + getNodeHeight(node) / 2,
+  };
+};
+
+const getEdgeAnchor = (edge: Edge, nodes: Node[]) => {
+  const source = nodes.find((node) => node.id === edge.source);
+  const target = nodes.find((node) => node.id === edge.target);
+
+  if (!source || !target) {
+    return null;
+  }
+
+  const sourceCenter = getNodeCenter(source);
+  const targetCenter = getNodeCenter(target);
+
+  return {
+    x: (sourceCenter.x + targetCenter.x) / 2,
+    y: (sourceCenter.y + targetCenter.y) / 2,
+  };
 };
 
 const getSelectionLabel = (nodeCount: number, edgeCount: number) => {
@@ -369,6 +425,93 @@ const getSelectionLabel = (nodeCount: number, edgeCount: number) => {
   }
 
   return 'Global';
+};
+
+const renderNodeTools = (props: NodeToolProps) => {
+  return (
+    <div className="grid gap-2">
+      <p className="text-sm font-medium">Nodes</p>
+      <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
+        <span>Fill</span>
+        <Input
+          className="h-8 cursor-pointer p-1"
+          type="color"
+          value={props.fillValue}
+          onChange={props.onFillUpdate}
+        />
+      </label>
+      <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
+        <span>Text</span>
+        <Input
+          className="h-8 cursor-pointer p-1"
+          type="color"
+          value={props.textValue}
+          onChange={props.onTextUpdate}
+        />
+      </label>
+    </div>
+  );
+};
+
+const renderEdgeTools = (props: EdgeToolProps) => {
+  return (
+    <div className="grid gap-2">
+      <p className="text-sm font-medium">Edges</p>
+      <label className="grid gap-1 text-xs text-muted-foreground">
+        <span>Type</span>
+        <Select value={props.typeValue} onValueChange={props.onTypeUpdate}>
+          <SelectTrigger className="h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {edgeTypeOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </label>
+      <label className="grid grid-cols-[1fr_4rem] items-center gap-3 text-xs text-muted-foreground">
+        <span>Width</span>
+        <Input
+          className="h-8"
+          min="1"
+          step="1"
+          type="number"
+          value={props.widthValue}
+          onChange={props.onWidthUpdate}
+        />
+      </label>
+      <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
+        <span>Color</span>
+        <Input
+          className="h-8 cursor-pointer p-1"
+          type="color"
+          value={props.colorValue}
+          onChange={props.onColorUpdate}
+        />
+      </label>
+      <label className="grid gap-1 text-xs text-muted-foreground">
+        <span>Animation</span>
+        <Select
+          value={props.animationValue}
+          onValueChange={props.onAnimationUpdate}
+        >
+          <SelectTrigger className="h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {edgeAnimationOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </label>
+    </div>
+  );
 };
 
 const applySettings = (
@@ -812,6 +955,11 @@ export default function Home() {
   );
   const selectedEdge = getSelectedEdge(translation.elements.edges, selectedEdgeIds);
   const selectedNode = getSelectedNode(translation.elements.nodes, selectedNodeIds);
+  const selectedEdgeAnchor = selectedEdge
+    ? getEdgeAnchor(selectedEdge, translation.elements.nodes)
+    : null;
+  const hasSelectedEdge = selectedEdge !== undefined;
+  const hasSelectedNode = selectedNode !== undefined;
   const saveLabel = getSaveLabel(snapshot);
   const shouldFitView = !savedViewport;
   const toolkitScope = getSelectionLabel(
@@ -1080,6 +1228,22 @@ export default function Home() {
       },
     });
   };
+  const nodeToolProps = {
+    fillValue: getNodeFillValue(selectedNode, settings),
+    onFillUpdate: handlePrimaryUpdate,
+    onTextUpdate: handleInverseUpdate,
+    textValue: getNodeTextValue(selectedNode, settings),
+  };
+  const edgeToolProps = {
+    animationValue: getEdgeAnimationValue(selectedEdge, settings),
+    colorValue: getEdgeColorValue(selectedEdge, settings),
+    onAnimationUpdate: handleEdgeAnimationUpdate,
+    onColorUpdate: handleEdgeColorUpdate,
+    onTypeUpdate: handleEdgeTypeUpdate,
+    onWidthUpdate: handleEdgeWidthUpdate,
+    typeValue: getEdgeTypeValue(selectedEdge, settings),
+    widthValue: getEdgeWidthValue(selectedEdge, settings),
+  };
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
@@ -1183,92 +1347,8 @@ export default function Home() {
                     <div className="text-xs font-medium text-muted-foreground">
                       {toolkitScope}
                     </div>
-                    <div className="grid gap-2">
-                      <p className="text-sm font-medium">Nodes</p>
-                      <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
-                        <span>Fill</span>
-                        <Input
-                          className="h-8 cursor-pointer p-1"
-                          type="color"
-                          value={getNodeFillValue(selectedNode, settings)}
-                          onChange={handlePrimaryUpdate}
-                        />
-                      </label>
-                      <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
-                        <span>Text</span>
-                        <Input
-                          className="h-8 cursor-pointer p-1"
-                          type="color"
-                          value={getNodeTextValue(selectedNode, settings)}
-                          onChange={handleInverseUpdate}
-                        />
-                      </label>
-                    </div>
-                    <div className="grid gap-2">
-                      <p className="text-sm font-medium">Edges</p>
-                      <label className="grid gap-1 text-xs text-muted-foreground">
-                        <span>Type</span>
-                        <Select
-                          value={getEdgeTypeValue(selectedEdge, settings)}
-                          onValueChange={handleEdgeTypeUpdate}
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {edgeTypeOptions.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </label>
-                      <label className="grid grid-cols-[1fr_4rem] items-center gap-3 text-xs text-muted-foreground">
-                        <span>Width</span>
-                        <Input
-                          className="h-8"
-                          min="1"
-                          step="1"
-                          type="number"
-                          value={getEdgeWidthValue(selectedEdge, settings)}
-                          onChange={handleEdgeWidthUpdate}
-                        />
-                      </label>
-                      <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
-                        <span>Color</span>
-                        <Input
-                          className="h-8 cursor-pointer p-1"
-                          type="color"
-                          value={getEdgeColorValue(selectedEdge, settings)}
-                          onChange={handleEdgeColorUpdate}
-                        />
-                      </label>
-                      <label className="grid gap-1 text-xs text-muted-foreground">
-                        <span>Animation</span>
-                        <Select
-                          value={getEdgeAnimationValue(selectedEdge, settings)}
-                          onValueChange={handleEdgeAnimationUpdate}
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {edgeAnimationOptions.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </label>
-                    </div>
+                    {hasSelectedEdge ? null : renderNodeTools(nodeToolProps)}
+                    {hasSelectedNode ? null : renderEdgeTools(edgeToolProps)}
                   </div>
                 </PopoverContent>
               </Popover>
@@ -1290,6 +1370,34 @@ export default function Home() {
                 onNodesChange={handleNodesUpdate}
                 onSelectionChange={handleSelectionUpdate}
               >
+                {hasSelectedNode && selectedNode ? (
+                  <NodeToolbar
+                    className="nodrag nopan"
+                    isVisible
+                    nodeId={selectedNode.id}
+                    offset={12}
+                    position={Position.Top}
+                  >
+                    <div className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm">
+                      Node selected
+                    </div>
+                  </NodeToolbar>
+                ) : null}
+                {hasSelectedEdge && selectedEdgeAnchor ? (
+                  <EdgeLabelRenderer>
+                    <div
+                      className="nodrag nopan absolute"
+                      style={{
+                        ...edgeAnchorStyle,
+                        transform: `translate(-50%, -50%) translate(${selectedEdgeAnchor.x}px, ${selectedEdgeAnchor.y}px)`,
+                      }}
+                    >
+                      <div className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm">
+                        Edge selected
+                      </div>
+                    </div>
+                  </EdgeLabelRenderer>
+                ) : null}
                 <Background />
                 <Controls />
               </ReactFlow>
