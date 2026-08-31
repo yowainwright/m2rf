@@ -5,68 +5,62 @@ import { useEffect } from 'react';
 import { mermaid as mermaidLanguage } from 'codemirror-lang-mermaid';
 import mermaid from 'mermaid';
 import ReactFlow, {
+  applyNodeChanges,
   Background,
   Controls,
   MarkerType,
   type Edge,
   type Node,
+  type NodeChange,
+  type Viewport,
 } from 'reactflow';
 import { useMachine } from '@xstate/react';
 import { assign, assertEvent, setup } from 'xstate';
 import { Button } from '@/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
 import { Input } from '@/ui/input';
-import { APP_INITIAL_CONTEXT, APP_MACHINE_CONFIG } from './constants';
+import {
+  graphRepository,
+  type GraphElements,
+  type GraphInput,
+  type GraphRecords,
+  type GraphTranslation,
+  type GraphTranslationSettings,
+  type GraphTranslationView,
+  type GraphWorkspace,
+} from '@/graph';
+import {
+  APP_INITIAL_CONTEXT,
+  APP_MACHINE_CONFIG,
+  LOCAL_WORKSPACE_ID,
+} from './constants';
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), {
   ssr: false,
 });
 
-type TranslationSettings = {
-  fontFamily: string;
-  inverseColor: string;
-  primaryColor: string;
-};
-type GraphElements = {
-  nodes: Node[];
-  edges: Edge[];
-};
-type GraphWorkspace = {
-  activeInputId: string | null;
-  activeTranslationId: string | null;
-  id: string;
-  name: string;
-  updatedAt: string;
-};
-type GraphInput = {
-  format: 'mermaid';
-  id: string;
-  source: string;
-  updatedAt: string;
-  workspaceId: string;
-};
-type GraphTranslation = {
-  elements: GraphElements;
-  error: string | null;
-  id: string;
-  inputId: string;
-  settings: TranslationSettings;
-  updatedAt: string;
-  view: Record<string, never>;
-};
+type TranslationSettings = GraphTranslationSettings;
 type AppContext = {
-  workspace: GraphWorkspace;
   input: GraphInput;
   translation: GraphTranslation;
+  workspace: GraphWorkspace;
+  workspaces: GraphWorkspace[];
 };
 type AppEvent =
+  | { type: 'workspace.create'; records: GraphRecords; workspaces: GraphWorkspace[] }
+  | { type: 'workspace.save' }
+  | { type: 'workspace.save.error' }
   | { type: 'workspace.update'; name: string }
+  | { type: 'workspace.update'; records: GraphRecords; workspaces: GraphWorkspace[] }
+  | { type: 'workspace.delete'; workspaces: GraphWorkspace[] }
   | { type: 'input.update'; source: string }
   | {
       type: 'translation.update';
       elements?: GraphElements;
       error?: string | null;
+      preserveNodePositions?: boolean;
       settings?: Partial<TranslationSettings>;
+      view?: GraphTranslationView;
     };
 type FlowNodeRecord = {
   domId: string;
@@ -122,6 +116,25 @@ const applySettings = (
   return { nodes, edges };
 };
 
+const createNodePositionMap = (nodes: Node[]) => {
+  const entries = nodes.map((node) => [node.id, node.position] as const);
+
+  return new Map(entries);
+};
+
+const applySavedNodePositions = (
+  elements: GraphElements,
+  savedElements: GraphElements
+): GraphElements => {
+  const positionMap = createNodePositionMap(savedElements.nodes);
+  const nodes = elements.nodes.map((node) => ({
+    ...node,
+    position: positionMap.get(node.id) || node.position,
+  }));
+
+  return { ...elements, nodes };
+};
+
 const appMachine = setup({
   types: {} as {
     context: AppContext;
@@ -131,12 +144,39 @@ const appMachine = setup({
     updateWorkspace: assign(({ context, event }) => {
       assertEvent(event, 'workspace.update');
 
+      if (!('records' in event)) {
+        return {
+          workspace: {
+            ...context.workspace,
+            name: event.name,
+            updatedAt: getUpdatedAt(),
+          },
+        };
+      }
+
       return {
-        workspace: {
-          ...context.workspace,
-          name: event.name,
-          updatedAt: getUpdatedAt(),
-        },
+        input: event.records.input,
+        translation: event.records.translation,
+        workspace: event.records.workspace,
+        workspaces: event.workspaces,
+      };
+    }),
+    createWorkspace: assign(({ event }) => {
+      assertEvent(event, 'workspace.create');
+
+      return {
+        input: event.records.input,
+        translation: event.records.translation,
+        workspace: event.records.workspace,
+        workspaces: event.workspaces,
+      };
+    }),
+    deleteWorkspace: assign(({ event }) => {
+      assertEvent(event, 'workspace.delete');
+
+      return {
+        ...APP_INITIAL_CONTEXT,
+        workspaces: event.workspaces,
       };
     }),
     updateInput: assign(({ context, event }) => {
@@ -154,14 +194,23 @@ const appMachine = setup({
       assertEvent(event, 'translation.update');
 
       const settings = { ...context.translation.settings, ...event.settings };
-      const elements = event.elements || context.translation.elements;
+      const nextElements = event.elements || context.translation.elements;
+      const elements = event.preserveNodePositions && event.elements
+        ? applySavedNodePositions(event.elements, context.translation.elements)
+        : nextElements;
+      const view = event.view
+        ? { ...context.translation.view, ...event.view }
+        : context.translation.view;
+      const error =
+        event.error === undefined ? context.translation.error : event.error;
 
       return {
         translation: {
           ...context.translation,
           elements: applySettings(elements, settings),
-          error: event.error ?? null,
+          error,
           settings,
+          view,
           updatedAt: getUpdatedAt(),
         },
       };
@@ -292,21 +341,10 @@ const translateMermaid = async (
 
   const nodes = readNodeRecords(svg);
 
-  const elements = {
+  return {
     nodes: nodes.map((node, index) => createFlowNode(node, index, settings)),
     edges: createFlowEdges(svg, nodes, settings),
   };
-
-  console.log('[m2rf-gate1]', {
-    edges: elements.edges.map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-    })),
-    nodes: elements.nodes.map((node) => node.id),
-  });
-
-  return elements;
 };
 
 const toErrorMessage = (error: unknown) => {
@@ -317,11 +355,125 @@ const toErrorMessage = (error: unknown) => {
   return 'Mermaid could not be translated.';
 };
 
+const getSaveLabel = (snapshot: { hasTag: (tag: string) => boolean }) => {
+  if (snapshot.hasTag('saving')) {
+    return 'Saving';
+  }
+
+  if (snapshot.hasTag('saved')) {
+    return 'Saved';
+  }
+
+  if (snapshot.hasTag('saveError')) {
+    return 'Failed';
+  }
+
+  return 'Save';
+};
+
+type AppSend = (event: AppEvent) => void;
+
+const createRepositoryInput = (context: AppContext) => {
+  return {
+    input: {
+      format: context.input.format,
+      source: context.input.source,
+    },
+    translation: {
+      elements: context.translation.elements,
+      error: context.translation.error,
+      settings: context.translation.settings,
+      view: context.translation.view,
+    },
+    workspace: {
+      name: context.workspace.name,
+    },
+  };
+};
+
+const createRepositoryUpdate = (context: AppContext) => {
+  return {
+    input: {
+      source: context.input.source,
+    },
+    translation: {
+      elements: context.translation.elements,
+      error: context.translation.error,
+      settings: context.translation.settings,
+      view: context.translation.view,
+    },
+    workspace: {
+      id: context.workspace.id,
+      name: context.workspace.name,
+    },
+  };
+};
+
+const saveGraph = async (context: AppContext, send: AppSend) => {
+  send({ type: 'workspace.save' });
+
+  try {
+    const isLocalWorkspace = context.workspace.id === LOCAL_WORKSPACE_ID;
+    const records = isLocalWorkspace
+      ? await graphRepository.create(createRepositoryInput(context))
+      : await graphRepository.update(createRepositoryUpdate(context));
+    const workspaces = await graphRepository.list();
+
+    if (isLocalWorkspace) {
+      send({ type: 'workspace.create', records, workspaces });
+      return;
+    }
+
+    send({ type: 'workspace.update', records, workspaces });
+  } catch {
+    send({ type: 'workspace.save.error' });
+  }
+};
+
+const loadGraph = async (workspaceId: string, send: AppSend) => {
+  const records = await graphRepository.read(workspaceId);
+
+  if (!records) {
+    return;
+  }
+
+  const workspaces = await graphRepository.list();
+
+  send({ type: 'workspace.update', records, workspaces });
+};
+
+const deleteGraph = async (context: AppContext, send: AppSend) => {
+  if (context.workspace.id !== LOCAL_WORKSPACE_ID) {
+    await graphRepository.delete(context.workspace.id);
+  }
+
+  const workspaces = await graphRepository.list();
+
+  send({ type: 'workspace.delete', workspaces });
+};
+
+const loadLatestGraph = async (send: AppSend) => {
+  const workspaces = await graphRepository.list();
+  const [workspace] = workspaces;
+
+  if (!workspace) {
+    return;
+  }
+
+  await loadGraph(workspace.id, send);
+};
+
 export default function Home() {
   const [snapshot, send] = useMachine(appMachine);
   const context = snapshot.context;
-  const { input, translation, workspace } = context;
+  const { input, translation, workspace, workspaces } = context;
   const settings = translation.settings;
+  const canDelete = workspace.id !== LOCAL_WORKSPACE_ID;
+  const hasWorkspaceNavigation = workspaces.length > 1;
+  const isSaving = snapshot.hasTag('saving');
+  const savedViewport = translation.view.viewport;
+  const saveLabel = getSaveLabel(snapshot);
+  const shouldFitView = !savedViewport;
 
   useEffect(() => {
     let isCurrent = true;
@@ -329,7 +481,12 @@ export default function Home() {
     translateMermaid(input.source, settings)
       .then((elements) => {
         if (isCurrent) {
-          send({ type: 'translation.update', elements, error: null });
+          send({
+            type: 'translation.update',
+            elements,
+            error: null,
+            preserveNodePositions: true,
+          });
         }
       })
       .catch((error: unknown) => {
@@ -349,8 +506,15 @@ export default function Home() {
     settings.primaryColor,
   ]);
 
+  useEffect(() => {
+    void loadLatestGraph(send);
+  }, [send]);
+
   const handleSourceUpdate = (source: string) => {
     send({ type: 'input.update', source });
+  };
+  const handleNameUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
+    send({ type: 'workspace.update', name: event.target.value });
   };
   const handlePrimaryUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
     send({
@@ -358,15 +522,93 @@ export default function Home() {
       settings: { primaryColor: event.target.value },
     });
   };
+  const handleNodesUpdate = (changes: NodeChange[]) => {
+    const nodes = applyNodeChanges(changes, translation.elements.nodes);
+
+    send({
+      type: 'translation.update',
+      elements: {
+        ...translation.elements,
+        nodes,
+      },
+    });
+  };
+  const handleLayoutReset = () => {
+    translateMermaid(input.source, settings)
+      .then((elements) => {
+        send({ type: 'translation.update', elements, error: null });
+      })
+      .catch((error: unknown) => {
+        send({ type: 'translation.update', error: toErrorMessage(error) });
+      });
+  };
+  const handleSave = () => {
+    void saveGraph(context, send);
+  };
+  const handleDelete = () => {
+    void deleteGraph(context, send);
+  };
+  const handleViewportUpdate = (
+    _event: MouseEvent | TouchEvent,
+    viewport: Viewport
+  ) => {
+    send({
+      type: 'translation.update',
+      view: { viewport },
+    });
+  };
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="flex h-12 items-center justify-between border-b px-4">
         <h1 className="text-sm font-semibold">m2rf Studio</h1>
-        <Button size="sm" type="button" variant="outline">
-          {workspace.name}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Input
+            aria-label="Graph name"
+            className="h-8 w-44"
+            placeholder="Untitled Graph"
+            value={workspace.name}
+            onChange={handleNameUpdate}
+          />
+          <Button
+            className="min-w-16"
+            disabled={isSaving}
+            size="sm"
+            type="button"
+            onClick={handleSave}
+          >
+            {saveLabel}
+          </Button>
+          <Button
+            disabled={!canDelete}
+            size="sm"
+            type="button"
+            variant="outline"
+            onClick={handleDelete}
+          >
+            Delete
+          </Button>
+        </div>
       </header>
+
+      {hasWorkspaceNavigation ? (
+        <div className="flex items-center gap-2 border-b px-4 py-2">
+          <span className="text-xs text-muted-foreground">Saved</span>
+          {workspaces.map((savedWorkspace) => (
+            <Button
+              key={savedWorkspace.id}
+              size="sm"
+              type="button"
+              variant={savedWorkspace.id === workspace.id ? 'default' : 'outline'}
+              onClick={() => {
+                void loadGraph(savedWorkspace.id, send);
+              }}
+            >
+              {savedWorkspace.name || 'Untitled Graph'}
+            </Button>
+          ))}
+        </div>
+      ) : null}
 
       <section className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
         <Card className="flex min-h-[520px] flex-col overflow-hidden">
@@ -387,15 +629,25 @@ export default function Home() {
         <Card className="flex min-h-[520px] flex-col overflow-hidden">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm">React Flow output</CardTitle>
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Color</span>
-              <Input
-                className="h-8 w-12 cursor-pointer p-1"
-                type="color"
-                value={translation.settings.primaryColor}
-                onChange={handlePrimaryUpdate}
-              />
-            </label>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                type="button"
+                variant="outline"
+                onClick={handleLayoutReset}
+              >
+                Reset layout
+              </Button>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Color</span>
+                <Input
+                  className="h-8 w-12 cursor-pointer p-1"
+                  type="color"
+                  value={translation.settings.primaryColor}
+                  onChange={handlePrimaryUpdate}
+                />
+              </label>
+            </div>
           </CardHeader>
           <CardContent className="min-h-0 flex-1 p-0">
             {translation.error ? (
@@ -404,9 +656,13 @@ export default function Home() {
               </div>
             ) : (
               <ReactFlow
-                fitView
+                key={translation.id}
+                defaultViewport={savedViewport}
                 edges={translation.elements.edges}
+                fitView={shouldFitView}
                 nodes={translation.elements.nodes}
+                onMoveEnd={handleViewportUpdate}
+                onNodesChange={handleNodesUpdate}
               >
                 <Background />
                 <Controls />
