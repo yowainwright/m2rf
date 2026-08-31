@@ -4,6 +4,10 @@ export const DEFAULT_SOURCE = `flowchart LR
 `;
 
 export const DEFAULT_SETTINGS = {
+  edgeAnimation: 'none',
+  edgeColor: '#171717',
+  edgeType: 'default',
+  edgeWidth: 2,
   primaryColor: '#2563eb',
   inverseColor: '#ffffff',
   fontFamily: 'Arial, Helvetica, sans-serif',

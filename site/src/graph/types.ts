@@ -8,6 +8,10 @@ export type GraphElements = {
 };
 
 export type GraphTranslationSettings = {
+  edgeAnimation: 'flow' | 'none' | 'pulse';
+  edgeColor: string;
+  edgeType: 'default' | 'smoothstep' | 'step' | 'straight';
+  edgeWidth: number;
   fontFamily: string;
   inverseColor: string;
   primaryColor: string;

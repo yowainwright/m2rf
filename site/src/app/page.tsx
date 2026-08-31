@@ -20,6 +20,18 @@ import { Button } from '@/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
 import { Input } from '@/ui/input';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/ui/select';
+import {
   graphRepository,
   type GraphElements,
   type GraphInput,
@@ -32,6 +44,7 @@ import {
 import {
   APP_INITIAL_CONTEXT,
   APP_MACHINE_CONFIG,
+  DEFAULT_SETTINGS,
   LOCAL_WORKSPACE_ID,
 } from './constants';
 
@@ -40,6 +53,8 @@ const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), {
 });
 
 type TranslationSettings = GraphTranslationSettings;
+type EdgeAnimation = TranslationSettings['edgeAnimation'];
+type EdgeType = TranslationSettings['edgeType'];
 type AppContext = {
   input: GraphInput;
   translation: GraphTranslation;
@@ -47,6 +62,7 @@ type AppContext = {
   workspaces: GraphWorkspace[];
 };
 type AppEvent =
+  | { type: 'workspace.create' }
   | { type: 'workspace.create'; records: GraphRecords; workspaces: GraphWorkspace[] }
   | { type: 'workspace.save' }
   | { type: 'workspace.save.error' }
@@ -72,6 +88,17 @@ const editorExtensions = [mermaidLanguage()];
 const edgeSelector = '.edgePath, .flowchart-link';
 const nodeIdPattern = /(?:^|-)flowchart-(.+)-\d+$/;
 const edgeIdPattern = /^L-(.+)-(.+)-\d+$/;
+const edgeAnimationOptions: Array<{ label: string; value: EdgeAnimation }> = [
+  { label: 'None', value: 'none' },
+  { label: 'Pulse', value: 'pulse' },
+  { label: 'Flow', value: 'flow' },
+];
+const edgeTypeOptions: Array<{ label: string; value: EdgeType }> = [
+  { label: 'Default', value: 'default' },
+  { label: 'Straight', value: 'straight' },
+  { label: 'Step', value: 'step' },
+  { label: 'Smooth step', value: 'smoothstep' },
+];
 
 let renderCount = 0;
 
@@ -93,11 +120,31 @@ const createNodeStyle = (settings: TranslationSettings) => {
   };
 };
 
-const createEdgeStyle = (_settings: TranslationSettings) => {
+const createEdgeStyle = (settings: TranslationSettings) => {
   return {
-    stroke: 'var(--foreground)',
-    strokeWidth: 2,
+    stroke: settings.edgeColor,
+    strokeWidth: settings.edgeWidth,
   };
+};
+
+const getEdgeType = (settings: TranslationSettings) => {
+  if (settings.edgeType === 'default') {
+    return undefined;
+  }
+
+  return settings.edgeType;
+};
+
+const getEdgeAnimationClassName = (settings: TranslationSettings) => {
+  if (settings.edgeAnimation !== 'pulse') {
+    return undefined;
+  }
+
+  return 'animate-pulse';
+};
+
+const getEdgeAnimated = (settings: TranslationSettings) => {
+  return settings.edgeAnimation === 'flow';
 };
 
 const applySettings = (
@@ -110,10 +157,29 @@ const applySettings = (
   }));
   const edges = elements.edges.map((edge) => ({
     ...edge,
+    animated: getEdgeAnimated(settings),
+    className: getEdgeAnimationClassName(settings),
     style: createEdgeStyle(settings),
+    type: getEdgeType(settings),
   }));
 
   return { nodes, edges };
+};
+
+const getSettings = (
+  settings: Partial<TranslationSettings>
+): TranslationSettings => {
+  return { ...DEFAULT_SETTINGS, ...settings };
+};
+
+const getTranslation = (translation: GraphTranslation): GraphTranslation => {
+  const settings = getSettings(translation.settings);
+
+  return {
+    ...translation,
+    elements: applySettings(translation.elements, settings),
+    settings,
+  };
 };
 
 const createNodePositionMap = (nodes: Node[]) => {
@@ -156,17 +222,24 @@ const appMachine = setup({
 
       return {
         input: event.records.input,
-        translation: event.records.translation,
+        translation: getTranslation(event.records.translation),
         workspace: event.records.workspace,
         workspaces: event.workspaces,
       };
     }),
-    createWorkspace: assign(({ event }) => {
+    createWorkspace: assign(({ context, event }) => {
       assertEvent(event, 'workspace.create');
+
+      if (!('records' in event)) {
+        return {
+          ...APP_INITIAL_CONTEXT,
+          workspaces: context.workspaces,
+        };
+      }
 
       return {
         input: event.records.input,
-        translation: event.records.translation,
+        translation: getTranslation(event.records.translation),
         workspace: event.records.workspace,
         workspaces: event.workspaces,
       };
@@ -310,9 +383,12 @@ const createFlowEdge = (
     id: `edge-${index}`,
     source: getEndpoint(source, endpointMap, nodes[index]?.id || ''),
     target: getEndpoint(target, endpointMap, nodes[index + 1]?.id || ''),
+    animated: getEdgeAnimated(settings),
+    className: getEdgeAnimationClassName(settings),
     label: getText(edge, 'title'),
     markerEnd: { type: MarkerType.ArrowClosed },
     style: createEdgeStyle(settings),
+    type: getEdgeType(settings),
   };
 };
 
@@ -522,6 +598,50 @@ export default function Home() {
       settings: { primaryColor: event.target.value },
     });
   };
+  const handleInverseUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
+    send({
+      type: 'translation.update',
+      settings: { inverseColor: event.target.value },
+    });
+  };
+  const handleEdgeColorUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
+    send({
+      type: 'translation.update',
+      settings: { edgeColor: event.target.value },
+    });
+  };
+  const handleEdgeWidthUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const edgeWidth = Math.max(1, Number(event.target.value));
+
+    send({
+      type: 'translation.update',
+      settings: { edgeWidth },
+    });
+  };
+  const handleEdgeTypeUpdate = (value: string) => {
+    const option = edgeTypeOptions.find((item) => item.value === value);
+
+    if (!option) {
+      return;
+    }
+
+    send({
+      type: 'translation.update',
+      settings: { edgeType: option.value },
+    });
+  };
+  const handleEdgeAnimationUpdate = (value: string) => {
+    const option = edgeAnimationOptions.find((item) => item.value === value);
+
+    if (!option) {
+      return;
+    }
+
+    send({
+      type: 'translation.update',
+      settings: { edgeAnimation: option.value },
+    });
+  };
   const handleNodesUpdate = (changes: NodeChange[]) => {
     const nodes = applyNodeChanges(changes, translation.elements.nodes);
 
@@ -544,6 +664,9 @@ export default function Home() {
   };
   const handleSave = () => {
     void saveGraph(context, send);
+  };
+  const handleCreate = () => {
+    send({ type: 'workspace.create' });
   };
   const handleDelete = () => {
     void deleteGraph(context, send);
@@ -578,6 +701,14 @@ export default function Home() {
             onClick={handleSave}
           >
             {saveLabel}
+          </Button>
+          <Button
+            size="sm"
+            type="button"
+            variant="outline"
+            onClick={handleCreate}
+          >
+            New
           </Button>
           <Button
             disabled={!canDelete}
@@ -638,15 +769,106 @@ export default function Home() {
               >
                 Reset layout
               </Button>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Color</span>
-                <Input
-                  className="h-8 w-12 cursor-pointer p-1"
-                  type="color"
-                  value={translation.settings.primaryColor}
-                  onChange={handlePrimaryUpdate}
-                />
-              </label>
+              <Popover defaultOpen>
+                <PopoverTrigger asChild>
+                  <Button size="sm" type="button" variant="outline">
+                    Toolkit
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  className="w-80 bg-background text-foreground"
+                >
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <p className="text-sm font-medium">Nodes</p>
+                      <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
+                        <span>Fill</span>
+                        <Input
+                          className="h-8 cursor-pointer p-1"
+                          type="color"
+                          value={translation.settings.primaryColor}
+                          onChange={handlePrimaryUpdate}
+                        />
+                      </label>
+                      <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
+                        <span>Text</span>
+                        <Input
+                          className="h-8 cursor-pointer p-1"
+                          type="color"
+                          value={translation.settings.inverseColor}
+                          onChange={handleInverseUpdate}
+                        />
+                      </label>
+                    </div>
+                    <div className="grid gap-2">
+                      <p className="text-sm font-medium">Edges</p>
+                      <label className="grid gap-1 text-xs text-muted-foreground">
+                        <span>Type</span>
+                        <Select
+                          value={translation.settings.edgeType}
+                          onValueChange={handleEdgeTypeUpdate}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {edgeTypeOptions.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </label>
+                      <label className="grid grid-cols-[1fr_4rem] items-center gap-3 text-xs text-muted-foreground">
+                        <span>Width</span>
+                        <Input
+                          className="h-8"
+                          min="1"
+                          step="1"
+                          type="number"
+                          value={translation.settings.edgeWidth}
+                          onChange={handleEdgeWidthUpdate}
+                        />
+                      </label>
+                      <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
+                        <span>Color</span>
+                        <Input
+                          className="h-8 cursor-pointer p-1"
+                          type="color"
+                          value={translation.settings.edgeColor}
+                          onChange={handleEdgeColorUpdate}
+                        />
+                      </label>
+                      <label className="grid gap-1 text-xs text-muted-foreground">
+                        <span>Animation</span>
+                        <Select
+                          value={translation.settings.edgeAnimation}
+                          onValueChange={handleEdgeAnimationUpdate}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {edgeAnimationOptions.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </label>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </CardHeader>
           <CardContent className="min-h-0 flex-1 p-0">
