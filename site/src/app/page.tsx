@@ -15,8 +15,10 @@ import ReactFlow, {
   Position,
   type Edge,
   type EdgeChange,
+  type EdgeTypes,
   type Node,
   type NodeChange,
+  type NodeTypes,
   type Viewport,
 } from 'reactflow';
 import { useMachine } from '@xstate/react';
@@ -52,6 +54,12 @@ import {
   DEFAULT_SETTINGS,
   LOCAL_WORKSPACE_ID,
 } from './constants';
+import {
+  exportPng,
+  exportSvg,
+  getPngExportElement,
+  getSvgExportElement,
+} from '@/export';
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), {
   ssr: false,
@@ -120,6 +128,8 @@ const edgeTypeOptions: Array<{ label: string; value: EdgeType }> = [
   { label: 'Step', value: 'step' },
   { label: 'Smooth step', value: 'smoothstep' },
 ];
+const flowEdgeTypes = {} satisfies EdgeTypes;
+const flowNodeTypes = {} satisfies NodeTypes;
 const edgeAnchorStyle = {
   pointerEvents: 'all',
 } as const;
@@ -936,6 +946,26 @@ const loadLatestGraph = async (send: AppSend) => {
   await loadGraph(workspace.id, send);
 };
 
+const exportCurrentSvg = async (name: string) => {
+  const element = getSvgExportElement();
+
+  if (!element) {
+    return;
+  }
+
+  await exportSvg({ element, name });
+};
+
+const exportCurrentPng = async (name: string) => {
+  const element = getPngExportElement();
+
+  if (!element) {
+    return;
+  }
+
+  await exportPng({ element, name });
+};
+
 export default function Home() {
   const [snapshot, send] = useMachine(appMachine);
   const context = snapshot.context;
@@ -1189,6 +1219,12 @@ export default function Home() {
   const handleSave = () => {
     void saveGraph(context, send);
   };
+  const handleSvgExport = () => {
+    void exportCurrentSvg(workspace.name);
+  };
+  const handlePngExport = () => {
+    void exportCurrentPng(workspace.name);
+  };
   const handleCreate = () => {
     send({ type: 'workspace.create' });
   };
@@ -1265,6 +1301,24 @@ export default function Home() {
             onClick={handleSave}
           >
             {saveLabel}
+          </Button>
+          <Button
+            disabled={translation.elements.nodes.length === 0}
+            size="sm"
+            type="button"
+            variant="outline"
+            onClick={handleSvgExport}
+          >
+            Export SVG
+          </Button>
+          <Button
+            disabled={translation.elements.nodes.length === 0}
+            size="sm"
+            type="button"
+            variant="outline"
+            onClick={handlePngExport}
+          >
+            Export PNG
           </Button>
           <Button
             size="sm"
@@ -1362,8 +1416,10 @@ export default function Home() {
             ) : (
               <ReactFlow
                 defaultViewport={savedViewport}
+                edgeTypes={flowEdgeTypes}
                 edges={translation.elements.edges}
                 fitView={shouldFitView}
+                nodeTypes={flowNodeTypes}
                 nodes={translation.elements.nodes}
                 onEdgesChange={handleEdgesUpdate}
                 onMoveEnd={handleViewportUpdate}
@@ -1378,7 +1434,10 @@ export default function Home() {
                     offset={12}
                     position={Position.Top}
                   >
-                    <div className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm">
+                    <div
+                      className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm"
+                      data-m2rf-export-ignore="true"
+                    >
                       Node selected
                     </div>
                   </NodeToolbar>
@@ -1392,7 +1451,10 @@ export default function Home() {
                         transform: `translate(-50%, -50%) translate(${selectedEdgeAnchor.x}px, ${selectedEdgeAnchor.y}px)`,
                       }}
                     >
-                      <div className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm">
+                      <div
+                        className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm"
+                        data-m2rf-export-ignore="true"
+                      >
                         Edge selected
                       </div>
                     </div>

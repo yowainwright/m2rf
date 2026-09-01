@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 const source = `flowchart LR
   Alpha[Write Mermaid] --> Beta[Build graph]
@@ -80,4 +81,35 @@ test('saves selected node visual edits after Mermaid update', async ({ page }) =
   });
 
   await expect(reloadedNode).toHaveCSS('background-color', 'rgb(239, 68, 68)');
+
+  const downloadPromise = page.waitForEvent('download');
+
+  await page.getByRole('button', { name: 'Export SVG' }).click();
+
+  const download = await downloadPromise;
+  const outputPath = '.next/cache/playwright/export.svg';
+
+  await download.saveAs(outputPath);
+
+  const svg = await readFile(outputPath, 'utf8');
+
+  expect(download.suggestedFilename()).toBe('untitled-graph.svg');
+  expect(svg).toContain('<svg');
+  expect(svg).toContain('Write Mermaid');
+  expect(svg).toContain('rgb(239, 68, 68)');
+
+  const pngDownloadPromise = page.waitForEvent('download');
+
+  await page.getByRole('button', { name: 'Export PNG' }).click();
+
+  const pngDownload = await pngDownloadPromise;
+  const pngOutputPath = '.next/cache/playwright/export.png';
+
+  await pngDownload.saveAs(pngOutputPath);
+
+  const png = await readFile(pngOutputPath);
+  const pngSignature = Array.from(png.subarray(0, 4));
+
+  expect(pngDownload.suggestedFilename()).toBe('untitled-graph.png');
+  expect(pngSignature).toEqual([0x89, 0x50, 0x4e, 0x47]);
 });
