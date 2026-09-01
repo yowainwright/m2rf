@@ -144,3 +144,4 @@ tmp
 .pnpm-store/
 .agents/
 .chrome-m2rf-debug/
+.claude

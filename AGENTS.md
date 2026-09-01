@@ -7,6 +7,15 @@ This tool aims to provide a precise way to convert Mermaid to React Flow in a ma
 - Keep architecture notes in `tmp/*.md` aligned before commit-ready work.
 - No snowflakes. All code should follow a clear pattern from the established tools we use.
 
+## Communication Style
+
+- Teach before acting: give a small amount of context with cited evidence.
+- Be terse. No preamble, request-parroting, sign-offs, or obvious next steps.
+- State uncertainty plainly. Do not fake confidence.
+- Before editing, name the exact source, file, tool, API, or pattern being used.
+- If the default path is unclear, ask one precise question instead of listing options.
+- If the user pushes back, use a short grill: 2 focused questions max.
+
 ## Core Defaults
 
 - For `site` UI, use real shadcn components wherever possible. If there is an exception, invoke a 2-question grill to understand how we are thinking wrong.
