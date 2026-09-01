@@ -1,0 +1,66 @@
+import pino, { type LogFn } from 'pino';
+import {
+  BROWSER_LOG_LEVEL,
+  OBSERVABILITY_LOGGER_NAME,
+  SERVER_LOG_LEVEL,
+} from './constants';
+import { redactTelemetry } from './redact';
+import type {
+  BrowserLoggerInput,
+  BrowserLogWriter,
+  ObservabilityLogger,
+  ServerLoggerInput,
+} from './types';
+
+const defaultBrowserWriter: BrowserLogWriter = (value) => {
+  globalThis.console.info(value);
+};
+
+const redactLogArguments = (args: Parameters<LogFn>) => {
+  return args.map((arg) => redactTelemetry(arg)) as Parameters<LogFn>;
+};
+
+const logMethod = function redactedLogMethod(
+  this: ObservabilityLogger,
+  args: Parameters<LogFn>,
+  method: LogFn
+) {
+  method.apply(this, redactLogArguments(args));
+};
+
+export const writeBrowserLog = (
+  value: unknown,
+  writer = defaultBrowserWriter
+) => {
+  writer(redactTelemetry(value));
+};
+
+export const createBrowserLogger = (input: BrowserLoggerInput = {}) => {
+  const write = (value: unknown) => {
+    writeBrowserLog(value, input.write);
+  };
+
+  return pino({
+    browser: {
+      asObject: true,
+      write,
+    },
+    hooks: { logMethod },
+    level: input.level || BROWSER_LOG_LEVEL,
+    name: OBSERVABILITY_LOGGER_NAME,
+  });
+};
+
+export const createServerLogger = (input: ServerLoggerInput = {}) => {
+  const options = {
+    hooks: { logMethod },
+    level: input.level || SERVER_LOG_LEVEL,
+    name: OBSERVABILITY_LOGGER_NAME,
+  };
+
+  if (input.destination) {
+    return pino(options, input.destination);
+  }
+
+  return pino(options);
+};

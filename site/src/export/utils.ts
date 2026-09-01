@@ -1,11 +1,21 @@
-import { toPng, toSvg } from 'html-to-image';
+import { applyPalette, GIFEncoder, quantize } from 'gifenc';
+import { toCanvas, toPng, toSvg } from 'html-to-image';
 import {
   GRAPH_EXPORT_SELECTOR,
+  GIF_FILE_EXTENSION,
+  GIF_FRAME_COUNT,
+  GIF_FRAME_DELAY_MS,
+  GIF_MAX_COLORS,
+  GIF_REPEAT_FOREVER,
+  GIF_REPEAT_ONCE,
+  GIF_TYPE,
   PNG_FILE_EXTENSION,
   SVG_FILE_EXTENSION,
   SVG_FILE_FALLBACK_NAME,
 } from './constants';
 import type {
+  GifExportInput,
+  GifExportResult,
   PngExportInput,
   PngExportResult,
   SvgExportInput,
@@ -47,18 +57,104 @@ const downloadDataUrl = (dataUrl: string, fileName: string) => {
   link.click();
 };
 
-const toSvgDataUrl = async (element: HTMLElement) => {
-  return toSvg(element, {
-    cacheBust: true,
-    filter: shouldExportNode,
+const downloadBlob = (blob: Blob, fileName: string) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.download = fileName;
+  link.href = url;
+  link.rel = 'noopener';
+  link.click();
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
   });
 };
 
+const exportOptions = {
+  cacheBust: true,
+  filter: shouldExportNode,
+};
+
+const toSvgDataUrl = async (element: HTMLElement) => {
+  return toSvg(element, exportOptions);
+};
+
 const toPngDataUrl = async (element: HTMLElement) => {
-  return toPng(element, {
-    cacheBust: true,
-    filter: shouldExportNode,
+  return toPng(element, exportOptions);
+};
+
+const waitForFrame = () => {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, GIF_FRAME_DELAY_MS);
   });
+};
+
+const getCanvasImageData = (canvas: HTMLCanvasElement) => {
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+
+  if (!context) {
+    throw new Error('Unable to read graph export canvas.');
+  }
+
+  return context.getImageData(0, 0, canvas.width, canvas.height);
+};
+
+const captureGifFrame = async (element: HTMLElement) => {
+  const canvas = await toCanvas(element, exportOptions);
+
+  return getCanvasImageData(canvas);
+};
+
+const captureGifFrames = async (element: HTMLElement) => {
+  const frames: ImageData[] = [];
+  const frameIndexes = Array.from({ length: GIF_FRAME_COUNT });
+
+  await frameIndexes.reduce(async (previousFrame) => {
+    await previousFrame;
+    await waitForFrame();
+    frames.push(await captureGifFrame(element));
+  }, Promise.resolve());
+
+  return frames;
+};
+
+const getGifRepeat = (repeat: GifExportInput['repeat']) => {
+  if (repeat === 'once') {
+    return GIF_REPEAT_ONCE;
+  }
+
+  return GIF_REPEAT_FOREVER;
+};
+
+const createGifFrame = (imageData: ImageData) => {
+  const palette = quantize(imageData.data, GIF_MAX_COLORS);
+  const index = applyPalette(imageData.data, palette);
+
+  return { index, palette };
+};
+
+const createGifBlob = (frames: ImageData[], repeat: GifExportInput['repeat']) => {
+  const gif = GIFEncoder();
+  const loop = getGifRepeat(repeat);
+
+  frames.forEach((frame) => {
+    const gifFrame = createGifFrame(frame);
+
+    gif.writeFrame(gifFrame.index, frame.width, frame.height, {
+      delay: GIF_FRAME_DELAY_MS,
+      palette: gifFrame.palette,
+      repeat: loop,
+    });
+  });
+
+  gif.finish();
+
+  const bytes = gif.bytes();
+  const buffer = new ArrayBuffer(bytes.byteLength);
+
+  new Uint8Array(buffer).set(bytes);
+
+  return new Blob([buffer], { type: GIF_TYPE });
 };
 
 export const getSvgExportElement = () => {
@@ -66,6 +162,19 @@ export const getSvgExportElement = () => {
 };
 
 export const getPngExportElement = getSvgExportElement;
+export const getGifExportElement = getSvgExportElement;
+
+export const exportGif = async (
+  input: GifExportInput
+): Promise<GifExportResult> => {
+  const fileName = createFileName(input.name, GIF_FILE_EXTENSION);
+  const frames = await captureGifFrames(input.element);
+  const blob = createGifBlob(frames, input.repeat);
+
+  downloadBlob(blob, fileName);
+
+  return { fileName };
+};
 
 export const exportPng = async (
   input: PngExportInput

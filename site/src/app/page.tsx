@@ -55,11 +55,15 @@ import {
   LOCAL_WORKSPACE_ID,
 } from './constants';
 import {
+  exportGif,
   exportPng,
   exportSvg,
+  getGifExportElement,
   getPngExportElement,
   getSvgExportElement,
+  type GifExportRepeat,
 } from '@/export';
+import { createBrowserLogger } from '@/observability';
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), {
   ssr: false,
@@ -133,6 +137,7 @@ const flowNodeTypes = {} satisfies NodeTypes;
 const edgeAnchorStyle = {
   pointerEvents: 'all',
 } as const;
+const browserLogger = createBrowserLogger();
 
 let renderCount = 0;
 
@@ -470,7 +475,7 @@ const renderEdgeTools = (props: EdgeToolProps) => {
       <label className="grid gap-1 text-xs text-muted-foreground">
         <span>Type</span>
         <Select value={props.typeValue} onValueChange={props.onTypeUpdate}>
-          <SelectTrigger className="h-8">
+          <SelectTrigger aria-label="Type" className="h-8">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -508,7 +513,7 @@ const renderEdgeTools = (props: EdgeToolProps) => {
           value={props.animationValue}
           onValueChange={props.onAnimationUpdate}
         >
-          <SelectTrigger className="h-8">
+          <SelectTrigger aria-label="Animation" className="h-8">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -966,6 +971,20 @@ const exportCurrentPng = async (name: string) => {
   await exportPng({ element, name });
 };
 
+const exportCurrentGif = async (name: string, repeat: GifExportRepeat) => {
+  const element = getGifExportElement();
+
+  if (!element) {
+    return;
+  }
+
+  await exportGif({ element, name, repeat });
+};
+
+const logAppEvent = (name: string, payload: Record<string, unknown> = {}) => {
+  browserLogger.debug({ event: name, ...payload }, 'm2rf app event');
+};
+
 export default function Home() {
   const [snapshot, send] = useMachine(appMachine);
   const context = snapshot.context;
@@ -990,6 +1009,7 @@ export default function Home() {
     : null;
   const hasSelectedEdge = selectedEdge !== undefined;
   const hasSelectedNode = selectedNode !== undefined;
+  const hasGraph = translation.elements.nodes.length > 0;
   const saveLabel = getSaveLabel(snapshot);
   const shouldFitView = !savedViewport;
   const toolkitScope = getSelectionLabel(
@@ -1033,9 +1053,13 @@ export default function Home() {
   }, [send]);
 
   const handleSourceUpdate = (source: string) => {
+    logAppEvent('input.update', { source });
     send({ type: 'input.update', source });
   };
   const handleNameUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
+    logAppEvent('workspace.update', {
+      hasName: event.target.value.trim().length > 0,
+    });
     send({ type: 'workspace.update', name: event.target.value });
   };
   const handlePrimaryUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1217,18 +1241,34 @@ export default function Home() {
       });
   };
   const handleSave = () => {
+    logAppEvent('workspace.save', {
+      edgeCount: translation.elements.edges.length,
+      nodeCount: translation.elements.nodes.length,
+    });
     void saveGraph(context, send);
   };
   const handleSvgExport = () => {
+    logAppEvent('translation.read', { format: 'svg' });
     void exportCurrentSvg(workspace.name);
   };
   const handlePngExport = () => {
+    logAppEvent('translation.read', { format: 'png' });
     void exportCurrentPng(workspace.name);
   };
+  const handleGifExport = () => {
+    logAppEvent('translation.read', { format: 'gif', repeat: 'forever' });
+    void exportCurrentGif(workspace.name, 'forever');
+  };
+  const handleGifOnceExport = () => {
+    logAppEvent('translation.read', { format: 'gif', repeat: 'once' });
+    void exportCurrentGif(workspace.name, 'once');
+  };
   const handleCreate = () => {
+    logAppEvent('workspace.create');
     send({ type: 'workspace.create' });
   };
   const handleDelete = () => {
+    logAppEvent('workspace.delete');
     void deleteGraph(context, send);
   };
   const handleViewportUpdate = (
@@ -1283,9 +1323,9 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="flex h-12 items-center justify-between border-b px-4">
+      <header className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
         <h1 className="text-sm font-semibold">m2rf Studio</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Input
             aria-label="Graph name"
             className="h-8 w-44"
@@ -1303,7 +1343,7 @@ export default function Home() {
             {saveLabel}
           </Button>
           <Button
-            disabled={translation.elements.nodes.length === 0}
+            disabled={!hasGraph}
             size="sm"
             type="button"
             variant="outline"
@@ -1312,13 +1352,31 @@ export default function Home() {
             Export SVG
           </Button>
           <Button
-            disabled={translation.elements.nodes.length === 0}
+            disabled={!hasGraph}
             size="sm"
             type="button"
             variant="outline"
             onClick={handlePngExport}
           >
             Export PNG
+          </Button>
+          <Button
+            disabled={!hasGraph}
+            size="sm"
+            type="button"
+            variant="outline"
+            onClick={handleGifExport}
+          >
+            Export GIF
+          </Button>
+          <Button
+            disabled={!hasGraph}
+            size="sm"
+            type="button"
+            variant="outline"
+            onClick={handleGifOnceExport}
+          >
+            Export GIF Once
           </Button>
           <Button
             size="sm"

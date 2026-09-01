@@ -53,11 +53,39 @@ const setColorInput = async (
 };
 
 test('saves selected node visual edits after Mermaid update', async ({ page }) => {
+  const consoleMessages: unknown[] = [];
+
+  page.on('console', (message) => {
+    const [firstArgument] = message.args();
+    const isInfo = message.type() === 'info';
+
+    if (!isInfo || !firstArgument) {
+      return;
+    }
+
+    void firstArgument
+      .jsonValue()
+      .then((value) => {
+        if (value !== null && typeof value === 'object') {
+          consoleMessages.push(value);
+        }
+      })
+      .catch(() => {});
+  });
+
   await page.goto('/');
   await clearIndexedDb(page);
   await page.reload();
 
   await updateEditor(page);
+
+  await expect.poll(() => consoleMessages).toContainEqual(
+    expect.objectContaining({
+      event: 'input.update',
+      msg: 'm2rf app event',
+      source: '[REDACTED]',
+    })
+  );
 
   const node = page.locator('.react-flow__node').filter({
     hasText: 'Write Mermaid',
@@ -112,4 +140,34 @@ test('saves selected node visual edits after Mermaid update', async ({ page }) =
 
   expect(pngDownload.suggestedFilename()).toBe('untitled-graph.png');
   expect(pngSignature).toEqual([0x89, 0x50, 0x4e, 0x47]);
+
+  const gifDownloadPromise = page.waitForEvent('download');
+
+  await page.getByRole('button', { name: 'Export GIF', exact: true }).click();
+
+  const gifDownload = await gifDownloadPromise;
+  const gifOutputPath = '.next/cache/playwright/export.gif';
+
+  await gifDownload.saveAs(gifOutputPath);
+
+  const gif = await readFile(gifOutputPath);
+
+  expect(gifDownload.suggestedFilename()).toBe('untitled-graph.gif');
+  expect(gif.subarray(0, 6).toString('ascii')).toBe('GIF89a');
+  expect(gif.toString('latin1')).toContain('NETSCAPE2.0');
+
+  const onceDownloadPromise = page.waitForEvent('download');
+
+  await page.getByRole('button', { name: 'Export GIF Once' }).click();
+
+  const onceDownload = await onceDownloadPromise;
+  const onceOutputPath = '.next/cache/playwright/export-once.gif';
+
+  await onceDownload.saveAs(onceOutputPath);
+
+  const onceGif = await readFile(onceOutputPath);
+
+  expect(onceDownload.suggestedFilename()).toBe('untitled-graph.gif');
+  expect(onceGif.subarray(0, 6).toString('ascii')).toBe('GIF89a');
+  expect(onceGif.toString('latin1')).not.toContain('NETSCAPE2.0');
 });
