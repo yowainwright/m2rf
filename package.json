@@ -9,7 +9,7 @@
     "url": "https://github.com/yowainwright/m2rf"
   },
   "type": "module",
-  "packageManager": "pnpm@11.18.0",
+  "packageManager": "pnpm@12.2.1",
   "devEngines": {
     "runtime": {
       "name": "node",
@@ -32,14 +32,21 @@
   "scripts": {
     "dev": "pnpm --dir site dev",
     "dev:site": "pnpm --dir site dev",
-    "build": "pnpm run build:js && pnpm run build:types",
+    "build": "pnpm --dir site build",
     "build:js": "vite build",
     "build:types": "tsc --emitDeclarationOnly --outDir dist --noEmit false",
     "build:watch": "vite build --watch",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "deps:check": "codependence --files package.json site/package.json",
+    "deps:overrides": "pastoralist",
+    "deps:security": "pastoralist --checkSecurity --hasWorkspaceSecurityChecks",
+    "typecheck": "pnpm --dir site typecheck",
+    "test": "pnpm run test:unit && pnpm run test:integration",
+    "test:e2e": "pnpm --dir site test:e2e",
+    "test:integration": "pnpm --dir site test:integration",
+    "test:unit": "pnpm --dir site test:unit",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "update:deps": "codependence --files package.json site/package.json --update",
     "prepublishOnly": "pnpm run typecheck && pnpm run test && pnpm run build"
   },
   "keywords": [
