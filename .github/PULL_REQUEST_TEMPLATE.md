@@ -11,6 +11,7 @@ Brief description of changes.
 
 ## Testing
 
-- [ ] Tests pass (`bun test`)
-- [ ] Type check passes (`bun run typecheck`)
-- [ ] Build succeeds (`bun run build`)
+- [ ] Lint passes (`pnpm run lint/session`)
+- [ ] Tests pass (`pnpm run test`)
+- [ ] Type check passes (`pnpm run typecheck`)
+- [ ] Build succeeds (`pnpm run build`)

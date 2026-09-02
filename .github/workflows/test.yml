@@ -39,11 +39,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install shell lint tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
       - name: Type check
         run: pnpm run typecheck
 
       - name: Lint
-        run: pnpm exec oxlint site/src site/tests
+        run: pnpm run lint:ci
 
       - name: Check build
         run: pnpm run build

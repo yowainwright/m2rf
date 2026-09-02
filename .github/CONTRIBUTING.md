@@ -1,27 +1,26 @@
 # Contributing to m2rf
 
-Thanks for your interest in contributing to m2rf! This guide will help you get started.
+Thanks for your interest in contributing to m2rf.
 
 ## Development Setup
 
 1. Fork and clone the repository
-2. Install Bun (recommended via mise or direct install from bun.sh)
-3. Install dependencies: `bun install`
+2. Install Node 26 and pnpm 12
+3. Install dependencies: `pnpm install --frozen-lockfile`
+4. Install local hooks: `pnpm run lint/setup`
 
 ## Development Workflow
 
 1. Create a feature branch: `git checkout -b feature/your-feature`
 2. Make your changes
-3. Run tests: `bun test`
-4. Type check: `bun run typecheck`
-5. Build project: `bun run build`
+3. Run checks: `pnpm run validate`
 
 ## Testing
 
-- Unit tests: `bun test`
-- Watch mode: `bun test --watch`
-- Coverage: `bun test --coverage`
-- All checks: `bun run typecheck && bun test && bun run build`
+- Unit tests: `pnpm run test:unit`
+- Integration tests: `pnpm run test:integration`
+- End-to-end tests: `pnpm run test:e2e`
+- All checks: `pnpm run validate`
 
 ## Code Style
 
@@ -31,6 +30,7 @@ Thanks for your interest in contributing to m2rf! This guide will help you get s
 - Functional programming patterns preferred
 - Extract complex conditionals into well-named variables
 - Keep functions single-purpose and under 20 lines
+- Run `pnpm run lint/session` before commit-ready work
 
 ## Pull Request Process
 
@@ -50,7 +50,3 @@ When reporting issues, please include:
 - Browser (if applicable)
 - Minimal reproduction case
 - Error messages and stack traces
-
-## Questions?
-
-Feel free to open an issue for questions or join discussions in existing issues.
