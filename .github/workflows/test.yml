@@ -13,14 +13,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Pastoralist security check
-        uses: yowainwright/pastoralist@v1
+      - name: Setup pnpm
+        uses: pnpm/setup@v2
         with:
-          mode: check
-          check-security: "true"
-          auto-fix: "false"
-          dep-paths: workspace
-          fail-on-security: "true"
+          version: 12.2.1
+          cache: true
+          install: false
+          runtime: node@26
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Pastoralist security check
+        run: pnpm run deps:security
 
   lint-and-typecheck:
     runs-on: ubuntu-latest
