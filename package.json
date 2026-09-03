@@ -60,6 +60,7 @@
     "update:deps": "codependence --files package.json site/package.json --update",
     "validate": "pnpm run lint/session && pnpm run typecheck && pnpm run test && pnpm run build",
     "setup": "sh scripts/setup.sh",
+    "prepare": "sh scripts/setup.sh prepare",
     "prepublishOnly": "pnpm run validate"
   },
   "keywords": [

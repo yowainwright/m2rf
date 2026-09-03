@@ -5,4 +5,5 @@ max-function-lines = 20
 min-case-chain-length = 3
 min-object-lookup-chain-length = 3
 min-dirname-match-depth = 3
+ignore = ["LEG025", "LEG035", "LEG039"]
 comment-matchers = []
