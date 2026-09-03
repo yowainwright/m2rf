@@ -43,38 +43,35 @@ const createWorkspace = (
   activeInputId: string,
   activeTranslationId: string
 ): GraphWorkspace => {
-  return {
-    ...input,
+  return Object.assign({}, input, {
     activeInputId,
     activeTranslationId,
     id: createId(),
     updatedAt: getUpdatedAt(),
-  };
+  });
 };
 
 const createInput = (
   input: CreateGraphRecordsInput['input'],
   workspaceId: string
 ): GraphInput => {
-  return {
-    ...input,
+  return Object.assign({}, input, {
     format: GRAPH_INPUT_FORMAT,
     id: createId(),
     updatedAt: getUpdatedAt(),
     workspaceId,
-  };
+  });
 };
 
 const createTranslation = (
   translation: CreateGraphRecordsInput['translation'],
   inputId: string
 ): GraphTranslation => {
-  return {
-    ...translation,
+  return Object.assign({}, translation, {
     id: createId(),
     inputId,
     updatedAt: getUpdatedAt(),
-  };
+  });
 };
 
 const putRecords = async (records: GraphRecords) => {
@@ -97,14 +94,10 @@ const createRecords = (input: CreateGraphRecordsInput): GraphRecords => {
   const inputId = createId();
   const translationId = createId();
   const workspace = createWorkspace(input.workspace, inputId, translationId);
-  const graphInput = {
-    ...createInput(input.input, workspace.id),
-    id: inputId,
-  };
-  const translation = {
-    ...createTranslation(input.translation, inputId),
-    id: translationId,
-  };
+  const createdInput = createInput(input.input, workspace.id);
+  const createdTranslation = createTranslation(input.translation, inputId);
+  const graphInput = Object.assign({}, createdInput, { id: inputId });
+  const translation = Object.assign({}, createdTranslation, { id: translationId });
 
   return { input: graphInput, translation, workspace };
 };
@@ -112,14 +105,25 @@ const createRecords = (input: CreateGraphRecordsInput): GraphRecords => {
 const readRecords = async (
   workspace: GraphWorkspace
 ): Promise<GraphRecords | null> => {
-  if (!workspace.activeInputId || !workspace.activeTranslationId) {
+  const activeInputId = workspace.activeInputId;
+  const activeTranslationId = workspace.activeTranslationId;
+
+  if (!activeInputId) {
     return null;
   }
 
-  const input = await database.inputs.get(workspace.activeInputId);
-  const translation = await database.translations.get(workspace.activeTranslationId);
+  if (!activeTranslationId) {
+    return null;
+  }
 
-  if (!input || !translation) {
+  const input = await database.inputs.get(activeInputId);
+  const translation = await database.translations.get(activeTranslationId);
+
+  if (!input) {
+    return null;
+  }
+
+  if (!translation) {
     return null;
   }
 
@@ -138,31 +142,48 @@ const updateRecords = async (
   const inputId = existing.activeInputId;
   const translationId = existing.activeTranslationId;
 
-  if (!inputId || !translationId) {
+  if (!inputId) {
+    throw new Error('Workspace is missing active records.');
+  }
+
+  if (!translationId) {
     throw new Error('Workspace is missing active records.');
   }
 
   const updatedAt = getUpdatedAt();
-  const workspace = { ...existing, name: records.workspace.name, updatedAt };
-  const input: GraphInput = {
-    ...records.input,
+  const workspace = Object.assign({}, existing, {
+    name: records.workspace.name,
+    updatedAt,
+  });
+  const input = Object.assign({}, records.input, {
     format: GRAPH_INPUT_FORMAT,
     id: inputId,
     updatedAt,
     workspaceId: workspace.id,
-  };
-  const translation: GraphTranslation = {
-    ...records.translation,
+  }) satisfies GraphInput;
+  const translation = Object.assign({}, records.translation, {
     id: translationId,
     inputId,
     updatedAt,
-  };
+  }) satisfies GraphTranslation;
 
   return putRecords({ input, translation, workspace });
 };
 
+const deleteWorkspaceRecord = async (workspaceId: string) => {
+  await database.workspaces.delete(workspaceId);
+};
+
+const deleteInputRecord = async (inputId: string) => {
+  await database.inputs.delete(inputId);
+};
+
+const deleteTranslationRecord = async (translationId: string) => {
+  await database.translations.delete(translationId);
+};
+
 export const graphRepository: GraphRepository = {
-  async create(input) {
+  create(input) {
     return putRecords(createRecords(input));
   },
   async delete(workspaceId) {
@@ -178,14 +199,14 @@ export const graphRepository: GraphRepository = {
       database.inputs,
       database.translations,
       async () => {
-        await database.workspaces.delete(workspace.id);
+        await deleteWorkspaceRecord(workspace.id);
 
         if (workspace.activeInputId) {
-          await database.inputs.delete(workspace.activeInputId);
+          await deleteInputRecord(workspace.activeInputId);
         }
 
         if (workspace.activeTranslationId) {
-          await database.translations.delete(workspace.activeTranslationId);
+          await deleteTranslationRecord(workspace.activeTranslationId);
         }
       }
     );

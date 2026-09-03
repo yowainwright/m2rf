@@ -13,13 +13,16 @@ const normalizedSensitiveFieldNames = new Set(
 
 const redactObjectPaths = createRedactor({
   censor: REDACTED_VALUE,
-  paths: [...SENSITIVE_OBJECT_PATHS],
+  paths: SENSITIVE_OBJECT_PATHS.concat(),
   serialize: false,
   strict: false,
 });
 
 const isRecord = (value: unknown): value is RedactableRecord => {
-  return value !== null && typeof value === 'object';
+  const hasValue = value !== null;
+  const isObject = typeof value === 'object';
+
+  return hasValue && isObject;
 };
 
 const isSensitiveField = (key: string) => {
@@ -40,7 +43,15 @@ const redactRecord = (value: RedactableRecord, seen: WeakSet<object>) => {
   return Object.fromEntries(
     Object.entries(value)
       .filter(([key, item]) => {
-        return key !== 'restore' || typeof item !== 'function';
+        const keyIsRestore = key === 'restore';
+
+        if (!keyIsRestore) {
+          return true;
+        }
+
+        const itemIsFunction = typeof item === 'function';
+
+        return !itemIsFunction;
       })
       .map(([key, item]) => {
         if (isSensitiveField(key)) {

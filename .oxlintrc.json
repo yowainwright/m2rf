@@ -39,7 +39,25 @@
         "max": 1
       }
     ],
-    "legibility/no-hidden-side-effects": "warn",
+    "legibility/no-hidden-side-effects": [
+      "warn",
+      {
+        "mutatingMethods": [
+          "add",
+          "clear",
+          "copyWithin",
+          "fill",
+          "pop",
+          "push",
+          "reverse",
+          "set",
+          "shift",
+          "sort",
+          "splice",
+          "unshift"
+        ]
+      }
+    ],
     "legibility/no-quadratic-patterns": "warn",
     "legibility/no-standalone-array-mutations": "warn",
     "legibility/prefer-concat-object-assign": "warn"

@@ -75,11 +75,11 @@ const exportOptions = {
   filter: shouldExportNode,
 };
 
-const toSvgDataUrl = async (element: HTMLElement) => {
+const toSvgDataUrl = (element: HTMLElement) => {
   return toSvg(element, exportOptions);
 };
 
-const toPngDataUrl = async (element: HTMLElement) => {
+const toPngDataUrl = (element: HTMLElement) => {
   return toPng(element, exportOptions);
 };
 
@@ -105,17 +105,18 @@ const captureGifFrame = async (element: HTMLElement) => {
   return getCanvasImageData(canvas);
 };
 
-const captureGifFrames = async (element: HTMLElement) => {
-  const frames: ImageData[] = [];
+const captureGifFrames = (element: HTMLElement) => {
   const frameIndexes = Array.from({ length: GIF_FRAME_COUNT });
 
-  await frameIndexes.reduce(async (previousFrame) => {
-    await previousFrame;
-    await waitForFrame();
-    frames.push(await captureGifFrame(element));
-  }, Promise.resolve());
+  return frameIndexes.reduce<Promise<ImageData[]>>(async (previousFrames) => {
+    const frames = await previousFrames;
 
-  return frames;
+    await waitForFrame();
+
+    const frame = await captureGifFrame(element);
+
+    return frames.concat(frame);
+  }, Promise.resolve([] as ImageData[]));
 };
 
 const getGifRepeat = (repeat: GifExportInput['repeat']) => {

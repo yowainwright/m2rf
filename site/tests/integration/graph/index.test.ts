@@ -2,8 +2,8 @@ import 'fake-indexeddb/auto';
 
 import type { Edge, Node } from 'reactflow';
 import { afterEach, describe, expect, it } from 'vitest';
-import { graphRepository } from '../../src/graph';
-import type { CreateGraphRecordsInput } from '../../src/graph';
+import { graphRepository } from '@/graph';
+import type { CreateGraphRecordsInput } from '@/graph';
 
 const settings = {
   edgeAnimation: 'none',
@@ -60,12 +60,12 @@ const input = {
 
 const deleteWorkspaces = async () => {
   const workspaces = await graphRepository.list();
+  const workspaceIds = workspaces.map((workspace) => workspace.id);
+  const deletions = workspaceIds.map((workspaceId) => {
+    return graphRepository.delete(workspaceId);
+  });
 
-  await Promise.allSettled(
-    workspaces.map((workspace) => {
-      return graphRepository.delete(workspace.id);
-    })
-  );
+  await Promise.allSettled(deletions);
 };
 
 describe('graphRepository', () => {
@@ -75,23 +75,25 @@ describe('graphRepository', () => {
 
   it('persists translation visual edits and view data', async () => {
     const records = await graphRepository.create(input);
-    const updatedNode = {
-      ...node,
+    const updatedNodeStyle = Object.assign({}, node.style, {
+      backgroundColor: '#ef4444',
+    });
+    const updatedNode = Object.assign({}, node, {
       position: { x: 120, y: 160 },
-      style: {
-        ...node.style,
-        backgroundColor: '#ef4444',
-      },
-    } satisfies Node;
-    const updatedEdge = {
-      ...edge,
+      style: updatedNodeStyle,
+    }) satisfies Node;
+    const updatedEdgeStyle = Object.assign({}, edge.style, {
+      stroke: '#22c55e',
+      strokeWidth: 4,
+    });
+    const updatedEdge = Object.assign({}, edge, {
       animated: true,
-      style: {
-        ...edge.style,
-        stroke: '#22c55e',
-        strokeWidth: 4,
-      },
-    } satisfies Edge;
+      style: updatedEdgeStyle,
+    }) satisfies Edge;
+    const updatedSettings = Object.assign({}, settings, {
+      edgeColor: '#22c55e',
+      edgeWidth: 4,
+    });
     const updated = await graphRepository.update({
       input: {
         source,
@@ -102,11 +104,7 @@ describe('graphRepository', () => {
           nodes: [updatedNode],
         },
         error: null,
-        settings: {
-          ...settings,
-          edgeColor: '#22c55e',
-          edgeWidth: 4,
-        },
+        settings: updatedSettings,
         view: {
           selection: {
             edgeIds: ['edge-0'],

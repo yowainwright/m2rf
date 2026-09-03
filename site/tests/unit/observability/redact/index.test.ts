@@ -54,10 +54,10 @@ describe('observability redaction', () => {
   });
 
   test('redacts server logs before pino writes', () => {
-    const lines: string[] = [];
+    let writtenLine = '';
     const destination = {
       write(line: string) {
-        lines.push(line);
+        writtenLine = line;
       },
     };
     const logger = createServerLogger({ destination });
@@ -70,9 +70,8 @@ describe('observability redaction', () => {
       'saved graph'
     );
 
-    expect(lines).toHaveLength(1);
-    expect(lines[0]).toContain('[REDACTED]');
-    expect(lines[0]).not.toContain('Customer system');
-    expect(lines[0]).not.toContain('internal.example.local');
+    expect(writtenLine).toContain('[REDACTED]');
+    expect(writtenLine).not.toContain('Customer system');
+    expect(writtenLine).not.toContain('internal.example.local');
   });
 });

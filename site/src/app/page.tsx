@@ -238,17 +238,17 @@ const createNodeStyleUpdate = (
   node: Node,
   settings: Partial<TranslationSettings>
 ) => {
+  const nodeStyle = node.style || {};
   const backgroundColor =
     settings.primaryColor || String(node.style?.backgroundColor || '');
   const color = settings.inverseColor || String(node.style?.color || '');
   const borderColor = settings.primaryColor || backgroundColor;
 
-  return {
-    ...node.style,
+  return Object.assign({}, nodeStyle, {
     backgroundColor,
     border: `2px solid ${borderColor}`,
     color,
-  };
+  });
 };
 
 const createEdgeUpdate = (
@@ -256,25 +256,29 @@ const createEdgeUpdate = (
   settings: Partial<TranslationSettings>
 ) => {
   const edgeSettings = getSettings(settings);
+  const keepsAnimation = settings.edgeAnimation === undefined;
+  const keepsType = settings.edgeType === undefined;
+  const animated = keepsAnimation ? edge.animated : getEdgeAnimated(edgeSettings);
+  const className = keepsAnimation
+    ? edge.className
+    : getEdgeAnimationClassName(edgeSettings);
+  const type = keepsType ? edge.type : getEdgeType(edgeSettings);
+  const style = Object.assign({}, edge.style);
 
-  return {
-    ...edge,
-    animated:
-      settings.edgeAnimation === undefined
-        ? edge.animated
-        : getEdgeAnimated(edgeSettings),
-    className:
-      settings.edgeAnimation === undefined
-        ? edge.className
-        : getEdgeAnimationClassName(edgeSettings),
-    style: {
-      ...edge.style,
-      ...(settings.edgeColor ? { stroke: settings.edgeColor } : {}),
-      ...(settings.edgeWidth ? { strokeWidth: settings.edgeWidth } : {}),
-    },
-    type:
-      settings.edgeType === undefined ? edge.type : getEdgeType(edgeSettings),
-  };
+  if (settings.edgeColor) {
+    style.stroke = settings.edgeColor;
+  }
+
+  if (settings.edgeWidth) {
+    style.strokeWidth = settings.edgeWidth;
+  }
+
+  return Object.assign({}, edge, {
+    animated,
+    className,
+    style,
+    type,
+  });
 };
 
 const updateSelectedNodes = (
@@ -288,13 +292,12 @@ const updateSelectedNodes = (
       return node;
     }
 
-    return {
-      ...node,
+    return Object.assign({}, node, {
       style: createNodeStyleUpdate(node, settings),
-    };
+    });
   });
 
-  return { ...elements, nodes };
+  return Object.assign({}, elements, { nodes });
 };
 
 const updateSelectedEdges = (
@@ -311,7 +314,7 @@ const updateSelectedEdges = (
     return createEdgeUpdate(edge, settings);
   });
 
-  return { ...elements, edges };
+  return Object.assign({}, elements, { edges });
 };
 
 const getSelectedNode = (nodes: Node[], nodeIds: string[]) => {
@@ -403,39 +406,48 @@ const getNodeHeight = (node: Node) => {
 };
 
 const getNodeCenter = (node: Node) => {
-  return {
-    x: node.position.x + getNodeWidth(node) / 2,
-    y: node.position.y + getNodeHeight(node) / 2,
-  };
+  const xOffset = getNodeWidth(node) / 2;
+  const yOffset = getNodeHeight(node) / 2;
+  const x = node.position.x + xOffset;
+  const y = node.position.y + yOffset;
+
+  return { x, y };
 };
 
 const getEdgeAnchor = (edge: Edge, nodes: Node[]) => {
   const source = nodes.find((node) => node.id === edge.source);
   const target = nodes.find((node) => node.id === edge.target);
 
-  if (!source || !target) {
+  if (!source) {
+    return null;
+  }
+
+  if (!target) {
     return null;
   }
 
   const sourceCenter = getNodeCenter(source);
   const targetCenter = getNodeCenter(target);
+  const x = (sourceCenter.x + targetCenter.x) / 2;
+  const y = (sourceCenter.y + targetCenter.y) / 2;
 
-  return {
-    x: (sourceCenter.x + targetCenter.x) / 2,
-    y: (sourceCenter.y + targetCenter.y) / 2,
-  };
+  return { x, y };
 };
 
 const getSelectionLabel = (nodeCount: number, edgeCount: number) => {
-  if (nodeCount > 0 && edgeCount > 0) {
+  const hasNodes = nodeCount > 0;
+  const hasEdges = edgeCount > 0;
+  const hasNodesAndEdges = hasNodes && hasEdges;
+
+  if (hasNodesAndEdges) {
     return `${nodeCount} node, ${edgeCount} edge`;
   }
 
-  if (nodeCount > 0) {
+  if (hasNodes) {
     return `${nodeCount} node`;
   }
 
-  if (edgeCount > 0) {
+  if (hasEdges) {
     return `${edgeCount} edge`;
   }
 
@@ -533,12 +545,12 @@ const applySettings = (
   elements: GraphElements,
   settings: TranslationSettings
 ): GraphElements => {
-  const nodes = elements.nodes.map((node) => ({
-    ...node,
-    style: createNodeStyle(settings),
-  }));
-  const edges = elements.edges.map((edge) => ({
-    ...edge,
+  const nodes = elements.nodes.map((node) => {
+    return Object.assign({}, node, {
+      style: createNodeStyle(settings),
+    });
+  });
+  const edges = elements.edges.map((edge) => Object.assign({}, edge, {
     animated: getEdgeAnimated(settings),
     className: getEdgeAnimationClassName(settings),
     style: createEdgeStyle(settings),
@@ -552,23 +564,21 @@ const hydrateElementSettings = (
   elements: GraphElements,
   settings: TranslationSettings
 ): GraphElements => {
-  const nodes = elements.nodes.map((node) => ({
-    ...node,
-    style: {
-      ...createNodeStyle(settings),
-      ...node.style,
-    },
-  }));
-  const edges = elements.edges.map((edge) => ({
-    ...edge,
+  const nodes = elements.nodes.map((node) => {
+    const style = Object.assign({}, createNodeStyle(settings), node.style);
+
+    return Object.assign({}, node, { style });
+  });
+  const edges = elements.edges.map((edge) => {
+    const style = Object.assign({}, createEdgeStyle(settings), edge.style);
+
+    return Object.assign({}, edge, {
     animated: edge.animated ?? getEdgeAnimated(settings),
     className: edge.className ?? getEdgeAnimationClassName(settings),
-    style: {
-      ...createEdgeStyle(settings),
-      ...edge.style,
-    },
+      style,
     type: edge.type ?? getEdgeType(settings),
-  }));
+    });
+  });
 
   return { nodes, edges };
 };
@@ -576,17 +586,16 @@ const hydrateElementSettings = (
 const getSettings = (
   settings: Partial<TranslationSettings>
 ): TranslationSettings => {
-  return { ...DEFAULT_SETTINGS, ...settings };
+  return Object.assign({}, DEFAULT_SETTINGS, settings);
 };
 
 const getTranslation = (translation: GraphTranslation): GraphTranslation => {
   const settings = getSettings(translation.settings);
 
-  return {
-    ...translation,
+  return Object.assign({}, translation, {
     elements: hydrateElementSettings(translation.elements, settings),
     settings,
-  };
+  });
 };
 
 const createNodePositionMap = (nodes: Node[]) => {
@@ -600,12 +609,13 @@ const applySavedNodePositions = (
   savedElements: GraphElements
 ): GraphElements => {
   const positionMap = createNodePositionMap(savedElements.nodes);
-  const nodes = elements.nodes.map((node) => ({
-    ...node,
-    position: positionMap.get(node.id) || node.position,
-  }));
+  const nodes = elements.nodes.map((node) => {
+    const position = positionMap.get(node.id) || node.position;
 
-  return { ...elements, nodes };
+    return Object.assign({}, node, { position });
+  });
+
+  return Object.assign({}, elements, { nodes });
 };
 
 const appMachine = setup({
@@ -618,12 +628,13 @@ const appMachine = setup({
       assertEvent(event, 'workspace.update');
 
       if (!('records' in event)) {
+        const workspace = Object.assign({}, context.workspace, {
+          name: event.name,
+          updatedAt: getUpdatedAt(),
+        });
+
         return {
-          workspace: {
-            ...context.workspace,
-            name: event.name,
-            updatedAt: getUpdatedAt(),
-          },
+          workspace,
         };
       }
 
@@ -638,10 +649,9 @@ const appMachine = setup({
       assertEvent(event, 'workspace.create');
 
       if (!('records' in event)) {
-        return {
-          ...APP_INITIAL_CONTEXT,
+        return Object.assign({}, APP_INITIAL_CONTEXT, {
           workspaces: context.workspaces,
-        };
+        });
       }
 
       return {
@@ -654,26 +664,30 @@ const appMachine = setup({
     deleteWorkspace: assign(({ event }) => {
       assertEvent(event, 'workspace.delete');
 
-      return {
-        ...APP_INITIAL_CONTEXT,
+      return Object.assign({}, APP_INITIAL_CONTEXT, {
         workspaces: event.workspaces,
-      };
+      });
     }),
     updateInput: assign(({ context, event }) => {
       assertEvent(event, 'input.update');
 
+      const input = Object.assign({}, context.input, {
+        source: event.source,
+        updatedAt: getUpdatedAt(),
+      });
+
       return {
-        input: {
-          ...context.input,
-          source: event.source,
-          updatedAt: getUpdatedAt(),
-        },
+        input,
       };
     }),
     updateTranslation: assign(({ context, event }) => {
       assertEvent(event, 'translation.update');
 
-      const settings = { ...context.translation.settings, ...event.settings };
+      const settings = Object.assign(
+        {},
+        context.translation.settings,
+        event.settings
+      );
       const nextElements = event.elements || context.translation.elements;
       const rawElements = event.preserveNodePositions && event.elements
         ? applySavedNodePositions(event.elements, context.translation.elements)
@@ -684,20 +698,20 @@ const appMachine = setup({
         ? applySettings(rawElements, settings)
         : rawElements;
       const view = event.view
-        ? { ...context.translation.view, ...event.view }
+        ? Object.assign({}, context.translation.view, event.view)
         : context.translation.view;
       const error =
         event.error === undefined ? context.translation.error : event.error;
+      const translation = Object.assign({}, context.translation, {
+        elements,
+        error,
+        settings,
+        updatedAt: getUpdatedAt(),
+        view,
+      });
 
       return {
-        translation: {
-          ...context.translation,
-          elements,
-          error,
-          settings,
-          view,
-          updatedAt: getUpdatedAt(),
-        },
+        translation,
       };
     }),
   },
@@ -764,7 +778,16 @@ const getEndpoint = (
     return fallback;
   }
 
-  return endpointMap.get(rawValue) || endpointMap.get(getNodeId(rawValue)) || fallback;
+  const directEndpoint = endpointMap.get(rawValue);
+
+  if (directEndpoint) {
+    return directEndpoint;
+  }
+
+  const nodeId = getNodeId(rawValue);
+  const nodeEndpoint = endpointMap.get(nodeId);
+
+  return nodeEndpoint || fallback;
 };
 
 const createFlowNode = (
@@ -772,10 +795,14 @@ const createFlowNode = (
   index: number,
   settings: TranslationSettings
 ): Node => {
+  const x = index * 280;
+  const isEven = index % 2 === 0;
+  const y = isEven ? 0 : 120;
+
   return {
     id: node.id,
     data: { label: node.label },
-    position: { x: index * 280, y: index % 2 === 0 ? 0 : 120 },
+    position: { x, y },
     style: createNodeStyle(settings),
   };
 };
@@ -790,11 +817,15 @@ const createFlowEdge = (
   const edgeIdEndpoints = getEdgeIdEndpoints(edge);
   const source = getClassValue(edge, 'LS-') || edgeIdEndpoints.source;
   const target = getClassValue(edge, 'LE-') || edgeIdEndpoints.target;
+  const sourceFallback = nodes[index]?.id || '';
+  const targetFallback = nodes[index + 1]?.id || '';
+  const sourceId = getEndpoint(source, endpointMap, sourceFallback);
+  const targetId = getEndpoint(target, endpointMap, targetFallback);
 
   return {
     id: `edge-${index}`,
-    source: getEndpoint(source, endpointMap, nodes[index]?.id || ''),
-    target: getEndpoint(target, endpointMap, nodes[index + 1]?.id || ''),
+    source: sourceId,
+    target: targetId,
     animated: getEdgeAnimated(settings),
     className: getEdgeAnimationClassName(settings),
     label: getText(edge, 'title'),
@@ -931,7 +962,9 @@ const loadGraph = async (workspaceId: string, send: AppSend) => {
 };
 
 const deleteGraph = async (context: AppContext, send: AppSend) => {
-  if (context.workspace.id !== LOCAL_WORKSPACE_ID) {
+  const shouldDeleteWorkspace = context.workspace.id !== LOCAL_WORKSPACE_ID;
+
+  if (shouldDeleteWorkspace) {
     await graphRepository.delete(context.workspace.id);
   }
 
@@ -982,7 +1015,9 @@ const exportCurrentGif = async (name: string, repeat: GifExportRepeat) => {
 };
 
 const logAppEvent = (name: string, payload: Record<string, unknown> = {}) => {
-  browserLogger.debug({ event: name, ...payload }, 'm2rf app event');
+  const eventPayload = Object.assign({}, payload, { event: name });
+
+  browserLogger.debug(eventPayload, 'm2rf app event');
 };
 
 export default function Home() {
@@ -1198,13 +1233,11 @@ export default function Home() {
   const handleNodesUpdate = (changes: NodeChange[]) => {
     const nodes = applyNodeChanges(changes, translation.elements.nodes);
     const nodeIds = getElementIds(getSelectedNodes(nodes));
+    const elements = Object.assign({}, translation.elements, { nodes });
 
     send({
       type: 'translation.update',
-      elements: {
-        ...translation.elements,
-        nodes,
-      },
+      elements,
       view: {
         selection: {
           edgeIds: selectedEdgeIds,
@@ -1216,13 +1249,11 @@ export default function Home() {
   const handleEdgesUpdate = (changes: EdgeChange[]) => {
     const edges = applyEdgeChanges(changes, translation.elements.edges);
     const edgeIds = getElementIds(getSelectedEdges(edges));
+    const elements = Object.assign({}, translation.elements, { edges });
 
     send({
       type: 'translation.update',
-      elements: {
-        ...translation.elements,
-        edges,
-      },
+      elements,
       view: {
         selection: {
           edgeIds,
@@ -1320,6 +1351,63 @@ export default function Home() {
     typeValue: getEdgeTypeValue(selectedEdge, settings),
     widthValue: getEdgeWidthValue(selectedEdge, settings),
   };
+  const selectedNodeIndicator = selectedNode ? (
+    <NodeToolbar
+      className="nodrag nopan"
+      isVisible
+      nodeId={selectedNode.id}
+      offset={12}
+      position={Position.Top}
+    >
+      <div
+        className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm"
+        data-m2rf-export-ignore="true"
+      >
+        Node selected
+      </div>
+    </NodeToolbar>
+  ) : null;
+  const selectedEdgeTransform = selectedEdgeAnchor
+    ? `translate(-50%, -50%) translate(${selectedEdgeAnchor.x}px, ${selectedEdgeAnchor.y}px)`
+    : '';
+  const selectedEdgeStyle = Object.assign({}, edgeAnchorStyle, {
+    transform: selectedEdgeTransform,
+  });
+  const selectedEdgeIndicator = selectedEdgeAnchor ? (
+    <EdgeLabelRenderer>
+      <div className="nodrag nopan absolute" style={selectedEdgeStyle}>
+        <div
+          className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm"
+          data-m2rf-export-ignore="true"
+        >
+          Edge selected
+        </div>
+      </div>
+    </EdgeLabelRenderer>
+  ) : null;
+  const errorContent = (
+    <div className="p-4 text-sm text-destructive">{translation.error}</div>
+  );
+  const flowContent = (
+    <ReactFlow
+      defaultViewport={savedViewport}
+      edgeTypes={flowEdgeTypes}
+      edges={translation.elements.edges}
+      fitView={shouldFitView}
+      nodeTypes={flowNodeTypes}
+      nodes={translation.elements.nodes}
+      onEdgesChange={handleEdgesUpdate}
+      onMoveEnd={handleViewportUpdate}
+      onNodesChange={handleNodesUpdate}
+      onSelectionChange={handleSelectionUpdate}
+    >
+      {selectedNodeIndicator}
+      {selectedEdgeIndicator}
+      <Background />
+      <Controls />
+    </ReactFlow>
+  );
+  const graphContent = translation.error ? errorContent : flowContent;
 
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
@@ -1467,61 +1555,7 @@ export default function Home() {
             </div>
           </CardHeader>
           <CardContent className="min-h-0 flex-1 p-0">
-            {translation.error ? (
-              <div className="p-4 text-sm text-destructive">
-                {translation.error}
-              </div>
-            ) : (
-              <ReactFlow
-                defaultViewport={savedViewport}
-                edgeTypes={flowEdgeTypes}
-                edges={translation.elements.edges}
-                fitView={shouldFitView}
-                nodeTypes={flowNodeTypes}
-                nodes={translation.elements.nodes}
-                onEdgesChange={handleEdgesUpdate}
-                onMoveEnd={handleViewportUpdate}
-                onNodesChange={handleNodesUpdate}
-                onSelectionChange={handleSelectionUpdate}
-              >
-                {hasSelectedNode && selectedNode ? (
-                  <NodeToolbar
-                    className="nodrag nopan"
-                    isVisible
-                    nodeId={selectedNode.id}
-                    offset={12}
-                    position={Position.Top}
-                  >
-                    <div
-                      className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm"
-                      data-m2rf-export-ignore="true"
-                    >
-                      Node selected
-                    </div>
-                  </NodeToolbar>
-                ) : null}
-                {hasSelectedEdge && selectedEdgeAnchor ? (
-                  <EdgeLabelRenderer>
-                    <div
-                      className="nodrag nopan absolute"
-                      style={{
-                        ...edgeAnchorStyle,
-                        transform: `translate(-50%, -50%) translate(${selectedEdgeAnchor.x}px, ${selectedEdgeAnchor.y}px)`,
-                      }}
-                    >
-                      <div
-                        className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm"
-                        data-m2rf-export-ignore="true"
-                      >
-                        Edge selected
-                      </div>
-                    </div>
-                  </EdgeLabelRenderer>
-                ) : null}
-                <Background />
-                <Controls />
-              </ReactFlow>
-            )}
+            {graphContent}
           </CardContent>
         </Card>
       </section>

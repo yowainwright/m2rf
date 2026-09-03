@@ -53,21 +53,25 @@ const setColorInput = async (
 };
 
 test('saves selected node visual edits after Mermaid update', async ({ page }) => {
-  const consoleMessages: unknown[] = [];
+  let consoleMessages: unknown[] = [];
 
   page.on('console', (message) => {
     const [firstArgument] = message.args();
     const isInfo = message.type() === 'info';
+    const hasArgument = Boolean(firstArgument);
+    const shouldSkipMessage = !isInfo || !hasArgument;
 
-    if (!isInfo || !firstArgument) {
+    if (shouldSkipMessage) {
       return;
     }
 
     void firstArgument
       .jsonValue()
       .then((value) => {
-        if (value !== null && typeof value === 'object') {
-          consoleMessages.push(value);
+        const isObjectValue = value !== null && typeof value === 'object';
+
+        if (isObjectValue) {
+          consoleMessages = consoleMessages.concat(value);
         }
       })
       .catch(() => {});
