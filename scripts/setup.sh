@@ -46,7 +46,7 @@ run_pnpm_with_node() {
 
 current_pnpm_version() {
 	has_command pnpm || return 1
-	pnpm --version
+	pnpm --version 2>/dev/null
 }
 
 use_current_pnpm() {
