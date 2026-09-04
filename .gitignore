@@ -68,7 +68,6 @@ web_modules/
 # dotenv environment variable files
 .env
 .env.*
-!.env.example
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -139,3 +138,10 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 tmp
 .claude/settings.json
+
+# Local agent and package-manager state
+.node-version
+.pnpm-store/
+.agents/
+.chrome-m2rf-debug/
+.claude

@@ -1,0 +1,11 @@
+export const GRAPH_EXPORT_SELECTOR = '.react-flow__viewport';
+export const GIF_FILE_EXTENSION = 'gif';
+export const GIF_FRAME_COUNT = 4;
+export const GIF_FRAME_DELAY_MS = 120;
+export const GIF_MAX_COLORS = 256;
+export const GIF_REPEAT_FOREVER = 0;
+export const GIF_REPEAT_ONCE = -1;
+export const GIF_TYPE = 'image/gif';
+export const PNG_FILE_EXTENSION = 'png';
+export const SVG_FILE_EXTENSION = 'svg';
+export const SVG_FILE_FALLBACK_NAME = 'm2rf-graph';
