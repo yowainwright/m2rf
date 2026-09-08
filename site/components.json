@@ -14,5 +14,9 @@
     "utils": "@/ui/utils",
     "ui": "@/ui"
   },
-  "iconLibrary": "lucide"
+  "iconLibrary": "lucide",
+  "registries": {
+    "@react-flow": "https://ui.reactflow.dev/{name}",
+    "@approvals-ui": "https://approvals-ui.vercel.app/r/{name}.json"
+  }
 }

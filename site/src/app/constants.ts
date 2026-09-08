@@ -20,12 +20,15 @@ export const EMPTY_ELEMENTS = {
 
 export const INITIAL_UPDATED_AT = '1970-01-01T00:00:00.000Z';
 export const LOCAL_WORKSPACE_ID = 'workspace-local';
+export const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';
 
 export const APP_INITIAL_CONTEXT = {
+  isDesktop: false,
+  sidebarOpen: true,
   workspaces: [],
   workspace: {
     id: LOCAL_WORKSPACE_ID,
-    name: 'Untitled Graph',
+    name: '',
     activeInputId: 'input-local',
     activeTranslationId: 'translation-local',
     updatedAt: INITIAL_UPDATED_AT,
@@ -88,6 +91,8 @@ export const APP_MACHINE_CONFIG = {
     },
   },
   on: {
+    'layout.update': { actions: ['updateLayout'] },
+    'sidebar.update': { actions: ['updateSidebar'] },
     'workspace.save': { target: '.saving' },
     'workspace.create': { actions: ['createWorkspace'] },
     'workspace.update': { target: '.ready', actions: ['updateWorkspace'] },
