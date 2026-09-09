@@ -64,6 +64,26 @@ const selectDownload = async (page: Page, name: string) => {
   await page.getByRole('menuitem', { name, exact: true }).click();
 };
 
+const selectMarker = async (page: Page, name: string) => {
+  await page.getByRole('combobox', { name: 'Marker', exact: true }).click();
+  await page.getByRole('option', { name, exact: true }).click();
+};
+
+const readMarker = (edge: Locator) => {
+  return edge.locator('.react-flow__edge-path').evaluate((path) => {
+    const reference = path.getAttribute('marker-end') || '';
+    const id = reference.match(/#([^'")]+)/)?.[1];
+    const marker = id ? document.getElementById(id) : null;
+    const shape = marker?.querySelector('polyline');
+    if (!shape) {
+      return null;
+    }
+
+    const { fill, stroke } = getComputedStyle(shape);
+    return { fill, stroke };
+  });
+};
+
 test('lists, renames, switches, and deletes saved graphs in the sidebar', async ({ page }, testInfo) => {
   let reactFlowWarnings: string[] = [];
 
@@ -91,6 +111,8 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
   await expect(navigation.getByRole('button')).toHaveCount(1);
   await expect(navigation.getByRole('button')).toHaveText(/^[a-f0-9-]{36}$/);
+  const savedId = await navigation.getByRole('button').innerText();
+  await expect(graphName).toHaveAttribute('placeholder', savedId.trim());
 
   await page.getByRole('textbox', { name: 'Graph name' }).fill('Release plan');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -126,6 +148,100 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(navigation.getByRole('button')).toHaveCount(1);
   await expect(navigation.getByRole('button', { name: 'API dependencies' })).toBeVisible();
+});
+
+test('changes edge markers and matching colors globally and per edge, then restores them', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const edges = page.locator('.react-flow__edge');
+  const firstEdge = edges.nth(0);
+  const secondEdge = edges.nth(1);
+  const width = page.getByRole('spinbutton', { name: 'Width' });
+  await expect(edges).toHaveCount(2);
+  await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'rgb(23, 23, 23)', stroke: 'rgb(23, 23, 23)' });
+
+  await selectMarker(page, 'Open arrow');
+  await setColorInput(page.getByLabel('Color', { exact: true }), '#ef4444');
+  await page.getByRole('spinbutton', { name: 'Width' }).fill('99');
+  await expect(width).toHaveValue('8');
+  await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke-width', '8px');
+  await expect(secondEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke-width', '8px');
+  await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
+  await expect.poll(() => readMarker(secondEdge)).toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
+
+  await page.keyboard.press('Escape');
+  await firstEdge.click();
+  await page.getByRole('button', { name: 'Toolkit: 1 edge', exact: true }).click();
+  await selectMarker(page, 'Filled arrow');
+  await setColorInput(page.getByLabel('Color', { exact: true }), '#2563eb');
+  await page.getByRole('spinbutton', { name: 'Width' }).fill('0');
+  await expect(width).toHaveValue('1');
+  await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke', 'rgb(37, 99, 235)');
+  await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'rgb(37, 99, 235)', stroke: 'rgb(37, 99, 235)' });
+  await expect.poll(() => readMarker(secondEdge)).toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
+  await page.screenshot({ path: testInfo.outputPath('edge-markers.png') });
+
+  await selectMarker(page, 'None');
+  await setColorInput(page.getByLabel('Color', { exact: true }), '#22c55e');
+  await expect.poll(() => readMarker(firstEdge)).toBeNull();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('combobox', { name: 'Marker', exact: true })).toHaveText('None');
+  await expect.poll(() => readMarker(firstEdge)).toBeNull();
+  await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke', 'rgb(34, 197, 94)');
+  await expect.poll(() => readMarker(secondEdge)).toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
+  await selectMarker(page, 'Filled arrow');
+  await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'rgb(34, 197, 94)', stroke: 'rgb(34, 197, 94)' });
+});
+
+test('loads legacy marker colors, oversized edges, and untitled names', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.react-flow__edge')).toHaveCount(2);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open('m2rf-studio');
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      const transaction = database.transaction(['translations', 'workspaces'], 'readwrite');
+      const translations = transaction.objectStore('translations');
+      const workspaces = transaction.objectStore('workspaces');
+      const readTranslations = translations.getAll();
+      const readWorkspaces = workspaces.getAll();
+      readTranslations.onsuccess = () => {
+        const [translation] = readTranslations.result;
+        const settingsEntries = Object.entries(translation.settings);
+        const legacyEntries = settingsEntries.filter(([key]) => key !== 'edgeMarker');
+        const settings = Object.fromEntries(legacyEntries);
+        const [first, second] = translation.elements.edges;
+        const style = Object.assign({}, first.style, { stroke: '#a855f7', strokeWidth: 99 });
+        const edge = Object.assign({}, first, { markerEnd: { type: 'arrowclosed' }, style });
+        const elements = Object.assign({}, translation.elements, { edges: [edge, second] });
+        const legacy = Object.assign({}, translation, { elements, settings });
+        translations.put(legacy);
+      };
+      readWorkspaces.onsuccess = () => {
+        const [workspace] = readWorkspaces.result;
+        const legacy = Object.assign({}, workspace, { name: 'Untitled Graph' });
+        workspaces.put(legacy);
+      };
+      transaction.oncomplete = () => { database.close(); resolve(); };
+      transaction.onabort = () => { database.close(); reject(transaction.error); };
+    };
+  }));
+
+  await page.reload();
+  const firstEdge = page.locator('.react-flow__edge').first();
+  await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'rgb(168, 85, 247)', stroke: 'rgb(168, 85, 247)' });
+  await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke-width', '8px');
+  const graphName = page.getByRole('textbox', { name: 'Graph name' });
+  await expect(graphName).toHaveValue('');
+  await expect(graphName).toHaveAttribute('placeholder', /^[a-f0-9-]{36}$/);
+  await expect(page.getByRole('combobox', { name: 'Marker', exact: true })).toHaveText('Filled arrow');
 });
 
 test('opens the saved graph drawer and closes it after selection on mobile', async ({ page }, testInfo) => {

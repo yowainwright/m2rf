@@ -10,6 +10,7 @@ export type GraphElements = {
 export type GraphTranslationSettings = {
   edgeAnimation: 'flow' | 'none' | 'pulse';
   edgeColor: string;
+  edgeMarker: 'arrow' | 'arrowclosed' | 'none';
   edgeType: 'default' | 'smoothstep' | 'step' | 'straight';
   edgeWidth: number;
   fontFamily: string;

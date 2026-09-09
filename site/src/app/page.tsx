@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
+import { Number as EffectNumber } from 'effect';
 import { ChevronDown, Download, FileImage, FileCode, Film, Workflow } from 'lucide-react';
 import { mermaid as mermaidLanguage } from 'codemirror-lang-mermaid';
 import mermaid from 'mermaid';
@@ -17,6 +18,7 @@ import ReactFlow, {
   ReactFlowProvider,
   type Edge,
   type EdgeChange,
+  type EdgeMarker,
   type Node,
   type NodeChange,
   type Viewport,
@@ -76,6 +78,7 @@ import {
   APP_MACHINE_CONFIG,
   DEFAULT_SETTINGS,
   DESKTOP_MEDIA_QUERY,
+  EDGE_WIDTH_LIMITS,
   LOCAL_WORKSPACE_ID,
 } from './constants';
 import {
@@ -95,6 +98,7 @@ const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), {
 
 type TranslationSettings = GraphTranslationSettings;
 type EdgeAnimation = TranslationSettings['edgeAnimation'];
+type EdgeMarkerValue = TranslationSettings['edgeMarker'];
 type EdgeType = TranslationSettings['edgeType'];
 type AppContext = {
   isDesktop: boolean;
@@ -137,8 +141,10 @@ type NodeToolProps = {
 type EdgeToolProps = {
   animationValue: EdgeAnimation;
   colorValue: string;
+  markerValue: EdgeMarkerValue;
   onAnimationUpdate: (value: string) => void;
   onColorUpdate: React.ChangeEventHandler<HTMLInputElement>;
+  onMarkerUpdate: (value: string) => void;
   onTypeUpdate: (value: string) => void;
   onWidthUpdate: React.ChangeEventHandler<HTMLInputElement>;
   typeValue: EdgeType;
@@ -165,6 +171,12 @@ const edgeTypeOptions: Array<{ label: string; value: EdgeType }> = [
   { label: 'Step', value: 'step' },
   { label: 'Smooth step', value: 'smoothstep' },
 ];
+const edgeMarkerOptions: Array<{ label: string; value: EdgeMarkerValue }> = [
+  { label: 'None', value: 'none' },
+  { label: 'Open arrow', value: 'arrow' },
+  { label: 'Filled arrow', value: 'arrowclosed' },
+];
+const clampEdgeWidth = EffectNumber.clamp(EDGE_WIDTH_LIMITS);
 const edgeAnchorStyle = {
   pointerEvents: 'all',
 } as const;
@@ -218,10 +230,28 @@ const createNodeStyle = (settings: TranslationSettings) => {
 };
 
 const createEdgeStyle = (settings: TranslationSettings) => {
+  const strokeWidth = clampEdgeWidth(settings.edgeWidth);
   return {
     stroke: settings.edgeColor,
-    strokeWidth: settings.edgeWidth,
+    strokeWidth,
   };
+};
+
+const createEdgeMarker = (value: EdgeMarkerValue, color: string): EdgeMarker | undefined => {
+  if (value === 'none') {
+    return undefined;
+  }
+
+  const type = value === 'arrow' ? MarkerType.Arrow : MarkerType.ArrowClosed;
+  return { type, color };
+};
+
+const colorEdgeMarker = (marker: Edge['markerEnd'], color: string) => {
+  if (typeof marker !== 'object') {
+    return marker;
+  }
+
+  return Object.assign({}, marker, { color });
 };
 
 const getEdgeType = (settings: TranslationSettings) => {
@@ -316,6 +346,7 @@ const createEdgeUpdate = (
   const edgeSettings = getSettings(settings);
   const keepsAnimation = settings.edgeAnimation === undefined;
   const keepsType = settings.edgeType === undefined;
+  const keepsMarker = settings.edgeMarker === undefined;
   const animated = keepsAnimation ? edge.animated : getEdgeAnimated(edgeSettings);
   const className = keepsAnimation
     ? edge.className
@@ -328,12 +359,20 @@ const createEdgeUpdate = (
   }
 
   if (settings.edgeWidth) {
-    style.strokeWidth = settings.edgeWidth;
+    style.strokeWidth = clampEdgeWidth(settings.edgeWidth);
   }
+
+  const color = getColorValue(style.stroke, edgeSettings.edgeColor);
+  const markerEnd = keepsMarker
+    ? colorEdgeMarker(edge.markerEnd, color)
+    : createEdgeMarker(edgeSettings.edgeMarker, color);
+  const markerStart = colorEdgeMarker(edge.markerStart, color);
 
   return Object.assign({}, edge, {
     animated,
     className,
+    markerEnd,
+    markerStart,
     style,
     type,
   });
@@ -424,7 +463,25 @@ const getEdgeWidthValue = (
   edge: Edge | undefined,
   settings: TranslationSettings
 ) => {
-  return getNumberValue(edge?.style?.strokeWidth, settings.edgeWidth);
+  const width = getNumberValue(edge?.style?.strokeWidth, settings.edgeWidth);
+  return clampEdgeWidth(width);
+};
+
+const getEdgeMarkerValue = (
+  edge: Edge | undefined,
+  settings: TranslationSettings
+): EdgeMarkerValue => {
+  if (!edge) {
+    return settings.edgeMarker;
+  }
+
+  const marker = edge.markerEnd;
+  if (typeof marker !== 'object') {
+    return 'none';
+  }
+
+  const option = edgeMarkerOptions.find((item) => item.value === marker.type);
+  return option?.value || 'none';
 };
 
 const getEdgeTypeValue = (
@@ -561,12 +618,28 @@ const renderEdgeTools = (props: EdgeToolProps) => {
         <span>Width</span>
         <Input
           className="h-8"
-          min="1"
+          max={EDGE_WIDTH_LIMITS.maximum}
+          min={EDGE_WIDTH_LIMITS.minimum}
           step="1"
           type="number"
           value={props.widthValue}
           onChange={props.onWidthUpdate}
         />
+      </label>
+      <label className="grid gap-1 text-xs text-muted-foreground">
+        <span>Marker</span>
+        <Select value={props.markerValue} onValueChange={props.onMarkerUpdate}>
+          <SelectTrigger aria-label="Marker" className="h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {edgeMarkerOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </label>
       <label className="grid grid-cols-[1fr_3rem] items-center gap-3 text-xs text-muted-foreground">
         <span>Color</span>
@@ -611,6 +684,8 @@ const applySettings = (
   const edges = elements.edges.map((edge) => Object.assign({}, edge, {
     animated: getEdgeAnimated(settings),
     className: getEdgeAnimationClassName(settings),
+    markerEnd: createEdgeMarker(settings.edgeMarker, settings.edgeColor),
+    markerStart: colorEdgeMarker(edge.markerStart, settings.edgeColor),
     style: createEdgeStyle(settings),
     type: getEdgeType(settings),
   }));
@@ -628,13 +703,19 @@ const hydrateElementSettings = (
     return Object.assign({}, node, { style });
   });
   const edges = elements.edges.map((edge) => {
-    const style = Object.assign({}, createEdgeStyle(settings), edge.style);
+    const strokeWidth = getEdgeWidthValue(edge, settings);
+    const style = Object.assign({}, createEdgeStyle(settings), edge.style, { strokeWidth });
+    const color = getColorValue(style.stroke, settings.edgeColor);
+    const markerEnd = colorEdgeMarker(edge.markerEnd, color);
+    const markerStart = colorEdgeMarker(edge.markerStart, color);
 
     return Object.assign({}, edge, {
-    animated: edge.animated ?? getEdgeAnimated(settings),
-    className: edge.className ?? getEdgeAnimationClassName(settings),
+      animated: edge.animated ?? getEdgeAnimated(settings),
+      className: edge.className ?? getEdgeAnimationClassName(settings),
+      markerEnd,
+      markerStart,
       style,
-    type: edge.type ?? getEdgeType(settings),
+      type: edge.type ?? getEdgeType(settings),
     });
   });
 
@@ -644,7 +725,8 @@ const hydrateElementSettings = (
 const getSettings = (
   settings: Partial<TranslationSettings>
 ): TranslationSettings => {
-  return Object.assign({}, DEFAULT_SETTINGS, settings);
+  const edgeWidth = clampEdgeWidth(settings.edgeWidth ?? DEFAULT_SETTINGS.edgeWidth);
+  return Object.assign({}, DEFAULT_SETTINGS, settings, { edgeWidth });
 };
 
 const getTranslation = (translation: GraphTranslation): GraphTranslation => {
@@ -899,7 +981,7 @@ const createFlowEdge = (
     animated: getEdgeAnimated(settings),
     className: getEdgeAnimationClassName(settings),
     label: getText(edge, 'title'),
-    markerEnd: { type: MarkerType.ArrowClosed },
+    markerEnd: createEdgeMarker(settings.edgeMarker, settings.edgeColor),
     style: createEdgeStyle(settings),
     type: getEdgeType(settings),
   };
@@ -1148,6 +1230,7 @@ export default function Home() {
   const [snapshot, send] = useMachine(appMachine);
   const context = snapshot.context;
   const { input, isDesktop, translation, workspace, workspaces } = context;
+  const workspaceName = workspace.name === 'Untitled Graph' ? '' : workspace.name;
   const panelOrientation = isDesktop ? 'horizontal' : 'vertical';
   const panelMinimumSize = isDesktop ? '320px' : '520px';
   const settings = translation.settings;
@@ -1273,9 +1356,7 @@ export default function Home() {
       settings: settingsUpdate,
     });
   };
-  const handleEdgeColorUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const settingsUpdate = { edgeColor: event.target.value };
-
+  const handleEdgeSettingsUpdate = (settingsUpdate: Partial<TranslationSettings>) => {
     if (selectedEdgeIds.length > 0) {
       send({
         type: 'translation.update',
@@ -1293,26 +1374,17 @@ export default function Home() {
       settings: settingsUpdate,
     });
   };
+  const handleEdgeColorUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleEdgeSettingsUpdate({ edgeColor: event.target.value });
+  };
   const handleEdgeWidthUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const edgeWidth = Math.max(1, Number(event.target.value));
-    const settingsUpdate = { edgeWidth };
-
-    if (selectedEdgeIds.length > 0) {
-      send({
-        type: 'translation.update',
-        elements: updateSelectedEdges(
-          translation.elements,
-          selectedEdgeIds,
-          settingsUpdate
-        ),
-      });
+    const value = Number(event.target.value);
+    if (!Number.isFinite(value)) {
       return;
     }
 
-    send({
-      type: 'translation.update',
-      settings: settingsUpdate,
-    });
+    const edgeWidth = clampEdgeWidth(value);
+    handleEdgeSettingsUpdate({ edgeWidth });
   };
   const handleEdgeTypeUpdate = (value: string) => {
     const option = edgeTypeOptions.find((item) => item.value === value);
@@ -1321,24 +1393,16 @@ export default function Home() {
       return;
     }
 
-    const settingsUpdate = { edgeType: option.value };
+    handleEdgeSettingsUpdate({ edgeType: option.value });
+  };
+  const handleEdgeMarkerUpdate = (value: string) => {
+    const option = edgeMarkerOptions.find((item) => item.value === value);
 
-    if (selectedEdgeIds.length > 0) {
-      send({
-        type: 'translation.update',
-        elements: updateSelectedEdges(
-          translation.elements,
-          selectedEdgeIds,
-          settingsUpdate
-        ),
-      });
+    if (!option) {
       return;
     }
 
-    send({
-      type: 'translation.update',
-      settings: settingsUpdate,
-    });
+    handleEdgeSettingsUpdate({ edgeMarker: option.value });
   };
   const handleEdgeAnimationUpdate = (value: string) => {
     const option = edgeAnimationOptions.find((item) => item.value === value);
@@ -1347,24 +1411,7 @@ export default function Home() {
       return;
     }
 
-    const settingsUpdate = { edgeAnimation: option.value };
-
-    if (selectedEdgeIds.length > 0) {
-      send({
-        type: 'translation.update',
-        elements: updateSelectedEdges(
-          translation.elements,
-          selectedEdgeIds,
-          settingsUpdate
-        ),
-      });
-      return;
-    }
-
-    send({
-      type: 'translation.update',
-      settings: settingsUpdate,
-    });
+    handleEdgeSettingsUpdate({ edgeAnimation: option.value });
   };
   const handleNodesUpdate = (changes: NodeChange[]) => {
     const nodes = applyNodeChanges(changes, translation.elements.nodes);
@@ -1486,8 +1533,10 @@ export default function Home() {
   const edgeToolProps = {
     animationValue: getEdgeAnimationValue(selectedEdge, settings),
     colorValue: getEdgeColorValue(selectedEdge, settings),
+    markerValue: getEdgeMarkerValue(selectedEdge, settings),
     onAnimationUpdate: handleEdgeAnimationUpdate,
     onColorUpdate: handleEdgeColorUpdate,
+    onMarkerUpdate: handleEdgeMarkerUpdate,
     onTypeUpdate: handleEdgeTypeUpdate,
     onWidthUpdate: handleEdgeWidthUpdate,
     typeValue: getEdgeTypeValue(selectedEdge, settings),
@@ -1567,8 +1616,8 @@ export default function Home() {
             <Input
               aria-label="Graph name"
               className="h-8 w-44"
-              placeholder="Untitled Graph"
-              value={workspace.name}
+              placeholder={workspace.id}
+              value={workspaceName}
               onChange={handleNameUpdate}
             />
             <Button
