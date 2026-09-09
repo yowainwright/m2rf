@@ -1,7 +1,8 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ChevronDown, Download, FileImage, FileCode, Film, Workflow } from 'lucide-react';
 import { mermaid as mermaidLanguage } from 'codemirror-lang-mermaid';
 import mermaid from 'mermaid';
 import ReactFlow, {
@@ -13,19 +14,41 @@ import ReactFlow, {
   MarkerType,
   NodeToolbar,
   Position,
+  ReactFlowProvider,
   type Edge,
   type EdgeChange,
-  type EdgeTypes,
   type Node,
   type NodeChange,
-  type NodeTypes,
   type Viewport,
+  useStoreApi,
 } from 'reactflow';
 import { useMachine } from '@xstate/react';
 import { assign, assertEvent, setup } from 'xstate';
 import { Button } from '@/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
 import { Input } from '@/ui/input';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/ui/resizable';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/ui/dropdown-menu';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from '@/ui/sidebar';
 import {
   Popover,
   PopoverContent,
@@ -52,6 +75,7 @@ import {
   APP_INITIAL_CONTEXT,
   APP_MACHINE_CONFIG,
   DEFAULT_SETTINGS,
+  DESKTOP_MEDIA_QUERY,
   LOCAL_WORKSPACE_ID,
 } from './constants';
 import {
@@ -73,12 +97,16 @@ type TranslationSettings = GraphTranslationSettings;
 type EdgeAnimation = TranslationSettings['edgeAnimation'];
 type EdgeType = TranslationSettings['edgeType'];
 type AppContext = {
+  isDesktop: boolean;
+  sidebarOpen: boolean;
   input: GraphInput;
   translation: GraphTranslation;
   workspace: GraphWorkspace;
   workspaces: GraphWorkspace[];
 };
 type AppEvent =
+  | { type: 'layout.update'; isDesktop: boolean }
+  | { type: 'sidebar.update'; open: boolean }
   | { type: 'workspace.create' }
   | { type: 'workspace.create'; records: GraphRecords; workspaces: GraphWorkspace[] }
   | { type: 'workspace.save' }
@@ -116,6 +144,11 @@ type EdgeToolProps = {
   typeValue: EdgeType;
   widthValue: number;
 };
+type ReactFlowErrorHandler = (code: string, message: string) => void;
+type ReactFlowErrorGateProps = {
+  children: React.ReactNode;
+  onError: ReactFlowErrorHandler;
+};
 
 const editorExtensions = [mermaidLanguage()];
 const edgeSelector = '.edgePath, .flowchart-link';
@@ -132,14 +165,39 @@ const edgeTypeOptions: Array<{ label: string; value: EdgeType }> = [
   { label: 'Step', value: 'step' },
   { label: 'Smooth step', value: 'smoothstep' },
 ];
-const flowEdgeTypes = {} satisfies EdgeTypes;
-const flowNodeTypes = {} satisfies NodeTypes;
 const edgeAnchorStyle = {
   pointerEvents: 'all',
 } as const;
 const browserLogger = createBrowserLogger();
 
 let renderCount = 0;
+
+const handleReactFlowError = (code: string, message: string) => {
+  if (code === '002') {
+    return;
+  }
+
+  browserLogger.warn({ code, message }, 'react flow error');
+};
+
+function ReactFlowErrorGate({
+  children,
+  onError,
+}: ReactFlowErrorGateProps) {
+  const store = useStoreApi();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    store.setState({ onError });
+    setIsReady(true);
+  }, [onError, store]);
+
+  if (!isReady) {
+    return null;
+  }
+
+  return children;
+}
 
 mermaid.initialize({
   securityLevel: 'strict',
@@ -624,6 +682,14 @@ const appMachine = setup({
     events: AppEvent;
   },
   actions: {
+    updateSidebar: assign(({ event }) => {
+      assertEvent(event, 'sidebar.update');
+      return { sidebarOpen: event.open };
+    }),
+    updateLayout: assign(({ event }) => {
+      assertEvent(event, 'layout.update');
+      return { isDesktop: event.isDesktop };
+    }),
     updateWorkspace: assign(({ context, event }) => {
       assertEvent(event, 'workspace.update');
 
@@ -650,6 +716,8 @@ const appMachine = setup({
 
       if (!('records' in event)) {
         return Object.assign({}, APP_INITIAL_CONTEXT, {
+          isDesktop: context.isDesktop,
+          sidebarOpen: context.sidebarOpen,
           workspaces: context.workspaces,
         });
       }
@@ -661,10 +729,12 @@ const appMachine = setup({
         workspaces: event.workspaces,
       };
     }),
-    deleteWorkspace: assign(({ event }) => {
+    deleteWorkspace: assign(({ context, event }) => {
       assertEvent(event, 'workspace.delete');
 
       return Object.assign({}, APP_INITIAL_CONTEXT, {
+        isDesktop: context.isDesktop,
+        sidebarOpen: context.sidebarOpen,
         workspaces: event.workspaces,
       });
     }),
@@ -1020,13 +1090,68 @@ const logAppEvent = (name: string, payload: Record<string, unknown> = {}) => {
   browserLogger.debug(eventPayload, 'm2rf app event');
 };
 
+const getWorkspaceLabel = (workspace: GraphWorkspace) => {
+  const name = workspace.name.trim();
+  const isUntitled = name.length === 0 || name === 'Untitled Graph';
+  return isUntitled ? workspace.id : name;
+};
+
+type WorkspaceSidebarProps = {
+  activeId: string;
+  onSelect: (id: string) => void;
+  workspaces: GraphWorkspace[];
+};
+
+function WorkspaceSidebar({ activeId, onSelect, workspaces }: WorkspaceSidebarProps) {
+  const { setOpenMobile } = useSidebar();
+  const items = workspaces.map((workspace) => {
+    const label = getWorkspaceLabel(workspace);
+    const isActive = workspace.id === activeId;
+    const handleSelect = () => {
+      onSelect(workspace.id);
+      setOpenMobile(false);
+    };
+
+    return (
+      <SidebarMenuItem key={workspace.id}>
+        <SidebarMenuButton isActive={isActive} onClick={handleSelect} title={label} type="button">
+          <Workflow aria-hidden="true" />
+          <span>{label}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  });
+  const hasWorkspaces = workspaces.length > 0;
+  const content = hasWorkspaces ? (
+    <SidebarMenu>{items}</SidebarMenu>
+  ) : (
+    <p className="px-2 py-4 text-sm text-muted-foreground">No saved graphs</p>
+  );
+
+  return (
+    <Sidebar>
+      <SidebarHeader className="border-b px-4 py-4">
+        <h2 className="text-sm font-semibold">Saved graphs</h2>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <nav aria-label="Saved graphs">{content}</nav>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
+  );
+}
+
 export default function Home() {
   const [snapshot, send] = useMachine(appMachine);
   const context = snapshot.context;
-  const { input, translation, workspace, workspaces } = context;
+  const { input, isDesktop, translation, workspace, workspaces } = context;
+  const panelOrientation = isDesktop ? 'horizontal' : 'vertical';
+  const panelMinimumSize = isDesktop ? '320px' : '520px';
   const settings = translation.settings;
   const canDelete = workspace.id !== LOCAL_WORKSPACE_ID;
-  const hasWorkspaceNavigation = workspaces.length > 1;
   const isSaving = snapshot.hasTag('saving');
   const savedViewport = translation.view.viewport;
   const selectedEdgeIds = getActiveEdgeIds(
@@ -1051,6 +1176,17 @@ export default function Home() {
     selectedNodeIds.length,
     selectedEdgeIds.length
   );
+
+  useEffect(() => {
+    const viewport = window.matchMedia(DESKTOP_MEDIA_QUERY);
+    const updateLayout = () => {
+      send({ type: 'layout.update', isDesktop: viewport.matches });
+    };
+
+    updateLayout();
+    viewport.addEventListener('change', updateLayout);
+    return () => viewport.removeEventListener('change', updateLayout);
+  }, [send]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -1298,6 +1434,12 @@ export default function Home() {
     logAppEvent('workspace.create');
     send({ type: 'workspace.create' });
   };
+  const handleWorkspaceSelect = (id: string) => {
+    void loadGraph(id, send);
+  };
+  const handleSidebarUpdate = (open: boolean) => {
+    send({ type: 'sidebar.update', open });
+  };
   const handleDelete = () => {
     logAppEvent('workspace.delete');
     void deleteGraph(context, send);
@@ -1389,176 +1531,171 @@ export default function Home() {
     <div className="p-4 text-sm text-destructive">{translation.error}</div>
   );
   const flowContent = (
-    <ReactFlow
-      defaultViewport={savedViewport}
-      edgeTypes={flowEdgeTypes}
-      edges={translation.elements.edges}
-      fitView={shouldFitView}
-      nodeTypes={flowNodeTypes}
-      nodes={translation.elements.nodes}
-      onEdgesChange={handleEdgesUpdate}
-      onMoveEnd={handleViewportUpdate}
-      onNodesChange={handleNodesUpdate}
-      onSelectionChange={handleSelectionUpdate}
-    >
-      {selectedNodeIndicator}
-      {selectedEdgeIndicator}
-      <Background />
-      <Controls />
-    </ReactFlow>
+    <ReactFlowProvider>
+      <ReactFlowErrorGate onError={handleReactFlowError}>
+        <ReactFlow
+          defaultViewport={savedViewport}
+          edges={translation.elements.edges}
+          fitView={shouldFitView}
+          nodes={translation.elements.nodes}
+          onEdgesChange={handleEdgesUpdate}
+          onError={handleReactFlowError}
+          onMoveEnd={handleViewportUpdate}
+          onNodesChange={handleNodesUpdate}
+          onSelectionChange={handleSelectionUpdate}
+        >
+          {selectedNodeIndicator}
+          {selectedEdgeIndicator}
+          <Background />
+          <Controls />
+        </ReactFlow>
+      </ReactFlowErrorGate>
+    </ReactFlowProvider>
   );
   const graphContent = translation.error ? errorContent : flowContent;
 
   return (
-    <main className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
-        <h1 className="text-sm font-semibold">m2rf Studio</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            aria-label="Graph name"
-            className="h-8 w-44"
-            placeholder="Untitled Graph"
-            value={workspace.name}
-            onChange={handleNameUpdate}
-          />
-          <Button
-            className="min-w-16"
-            disabled={isSaving}
-            size="sm"
-            type="button"
-            onClick={handleSave}
-          >
-            {saveLabel}
-          </Button>
-          <Button
-            disabled={!hasGraph}
-            size="sm"
-            type="button"
-            variant="outline"
-            onClick={handleSvgExport}
-          >
-            Export SVG
-          </Button>
-          <Button
-            disabled={!hasGraph}
-            size="sm"
-            type="button"
-            variant="outline"
-            onClick={handlePngExport}
-          >
-            Export PNG
-          </Button>
-          <Button
-            disabled={!hasGraph}
-            size="sm"
-            type="button"
-            variant="outline"
-            onClick={handleGifExport}
-          >
-            Export GIF
-          </Button>
-          <Button
-            disabled={!hasGraph}
-            size="sm"
-            type="button"
-            variant="outline"
-            onClick={handleGifOnceExport}
-          >
-            Export GIF Once
-          </Button>
-          <Button
-            size="sm"
-            type="button"
-            variant="outline"
-            onClick={handleCreate}
-          >
-            New
-          </Button>
-          <Button
-            disabled={!canDelete}
-            size="sm"
-            type="button"
-            variant="outline"
-            onClick={handleDelete}
-          >
-            Delete
-          </Button>
-        </div>
-      </header>
-
-      {hasWorkspaceNavigation ? (
-        <div className="flex items-center gap-2 border-b px-4 py-2">
-          <span className="text-xs text-muted-foreground">Saved</span>
-          {workspaces.map((savedWorkspace) => (
+    <SidebarProvider open={context.sidebarOpen} onOpenChange={handleSidebarUpdate}>
+      <WorkspaceSidebar activeId={workspace.id} onSelect={handleWorkspaceSelect} workspaces={workspaces} />
+      <SidebarInset className="min-h-dvh min-w-0 text-foreground lg:h-dvh">
+        <header className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger title="Toggle saved graphs" />
+            <h1 className="text-sm font-semibold">m2rf Studio</h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              aria-label="Graph name"
+              className="h-8 w-44"
+              placeholder="Untitled Graph"
+              value={workspace.name}
+              onChange={handleNameUpdate}
+            />
             <Button
-              key={savedWorkspace.id}
+              className="min-w-16"
+              disabled={isSaving}
               size="sm"
               type="button"
-              variant={savedWorkspace.id === workspace.id ? 'default' : 'outline'}
-              onClick={() => {
-                void loadGraph(savedWorkspace.id, send);
-              }}
+              onClick={handleSave}
             >
-              {savedWorkspace.name || 'Untitled Graph'}
+              {saveLabel}
             </Button>
-          ))}
-        </div>
-      ) : null}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button disabled={!hasGraph} size="sm" type="button" variant="outline">
+                  <Download aria-hidden="true" className="size-4" />
+                  Download
+                  <ChevronDown aria-hidden="true" className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={handleSvgExport}>
+                  <FileCode aria-hidden="true" /> SVG
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handlePngExport}>
+                  <FileImage aria-hidden="true" /> PNG
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={handleGifExport}>
+                  <Film aria-hidden="true" /> GIF (loop)
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleGifOnceExport}>
+                  <Film aria-hidden="true" /> GIF (once)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              size="sm"
+              type="button"
+              variant="outline"
+              onClick={handleCreate}
+            >
+              New
+            </Button>
+            <Button
+              disabled={!canDelete}
+              size="sm"
+              type="button"
+              variant="outline"
+              onClick={handleDelete}
+            >
+              Delete
+            </Button>
+          </div>
+        </header>
 
-      <section className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
-        <Card className="flex min-h-[520px] flex-col overflow-hidden">
-          <CardHeader>
-            <CardTitle className="text-sm">Mermaid input</CardTitle>
-          </CardHeader>
-          <CardContent className="min-h-0 flex-1 p-0">
-            <CodeMirror
-              basicSetup
-              extensions={editorExtensions}
-              height="100%"
-              value={input.source}
-              onChange={handleSourceUpdate}
+        <section className="h-[70rem] shrink-0 p-4 lg:h-auto lg:min-h-0 lg:flex-1">
+          <ResizablePanelGroup
+            className="gap-4"
+            disabled={!isDesktop}
+            id="studio-panels"
+            orientation={panelOrientation}
+          >
+            <ResizablePanel defaultSize="45%" id="mermaid-panel" minSize={panelMinimumSize}>
+              <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="text-sm">Mermaid input</CardTitle>
+                </CardHeader>
+                <CardContent className="min-h-0 flex-1 p-0">
+                  <CodeMirror
+                    basicSetup
+                    extensions={editorExtensions}
+                    height="100%"
+                    value={input.source}
+                    onChange={handleSourceUpdate}
+                  />
+                </CardContent>
+              </Card>
+            </ResizablePanel>
+
+            <ResizableHandle
+              aria-label="Resize Mermaid and React Flow panels"
+              className="hidden lg:flex"
+              withHandle
             />
-          </CardContent>
-        </Card>
 
-        <Card className="flex min-h-[520px] flex-col overflow-hidden">
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm">React Flow output</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                type="button"
-                variant="outline"
-                onClick={handleLayoutReset}
-              >
-                Reset layout
-              </Button>
-              <Popover defaultOpen>
-                <PopoverTrigger asChild>
-                  <Button size="sm" type="button" variant="outline">
-                    Toolkit: {toolkitScope}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="end"
-                  className="w-80 bg-background text-foreground"
-                >
-                  <div className="grid gap-4">
-                    <div className="text-xs font-medium text-muted-foreground">
-                      {toolkitScope}
-                    </div>
-                    {hasSelectedEdge ? null : renderNodeTools(nodeToolProps)}
-                    {hasSelectedNode ? null : renderEdgeTools(edgeToolProps)}
+            <ResizablePanel defaultSize="55%" id="flow-panel" minSize={panelMinimumSize}>
+              <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+                <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
+                  <CardTitle className="text-sm">React Flow output</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      onClick={handleLayoutReset}
+                    >
+                      Reset layout
+                    </Button>
+                    <Popover defaultOpen>
+                      <PopoverTrigger asChild>
+                        <Button size="sm" type="button" variant="outline">
+                          Toolkit: {toolkitScope}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="end"
+                        className="w-80 bg-background text-foreground"
+                      >
+                        <div className="grid gap-4">
+                          <div className="text-xs font-medium text-muted-foreground">
+                            {toolkitScope}
+                          </div>
+                          {hasSelectedEdge ? null : renderNodeTools(nodeToolProps)}
+                          {hasSelectedNode ? null : renderEdgeTools(edgeToolProps)}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </CardHeader>
-          <CardContent className="min-h-0 flex-1 p-0">
-            {graphContent}
-          </CardContent>
-        </Card>
-      </section>
-    </main>
+                </CardHeader>
+                <CardContent className="min-h-0 flex-1 p-0">
+                  {graphContent}
+                </CardContent>
+              </Card>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </section>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
