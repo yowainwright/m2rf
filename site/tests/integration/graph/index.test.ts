@@ -8,6 +8,7 @@ import type { CreateGraphRecordsInput } from '@/graph';
 const settings = {
   edgeAnimation: 'none',
   edgeColor: '#171717',
+  edgeMarker: 'arrowclosed',
   edgeType: 'default',
   edgeWidth: 2,
   fontFamily: 'Arial, Helvetica, sans-serif',
