@@ -1,9 +1,13 @@
 import 'fake-indexeddb/auto';
 
+import Dexie from 'dexie';
+import { createElement } from 'react';
+import { cleanup, renderHook, waitFor } from '@testing-library/react';
 import type { Edge, Node } from 'reactflow';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { graphRepository } from '@/graph';
 import type { CreateGraphRecordsInput } from '@/graph';
+import { StudioContext } from '@/app';
 
 const settings = {
   edgeAnimation: 'none',
@@ -69,9 +73,111 @@ const deleteWorkspaces = async () => {
   await Promise.allSettled(deletions);
 };
 
+const saveVersion = (workspaceId: string, source: string) => {
+  return graphRepository.update({
+    input: { source },
+    translation: input.translation,
+    workspace: { id: workspaceId, name: 'Versioned graph' },
+  });
+};
+
+const createFiveVersions = async () => {
+  const records = await graphRepository.create(input);
+  const id = records.workspace.id;
+  await saveVersion(id, 'version 2');
+  await saveVersion(id, 'version 3');
+  await saveVersion(id, 'version 4');
+  await saveVersion(id, 'version 5');
+  return records;
+};
+
 describe('graphRepository', () => {
   afterEach(async () => {
+    cleanup();
+    vi.useRealTimers();
     await deleteWorkspaces();
+  });
+
+  it('restores a saved graph through React StrictMode startup without reporting cancellation as a failure', async () => {
+    const saved = await graphRepository.create(input);
+    const { result } = renderHook(() => StudioContext.useSelector((state) => state.context), {
+      reactStrictMode: true,
+      wrapper: ({ children }) => createElement(StudioContext.Provider, null, children),
+    });
+
+    await waitFor(() => expect(result.current.workspace.id).toBe(saved.workspace.id));
+    expect(result.current.operationError).toBeNull();
+    expect(result.current.workspaces).toHaveLength(1);
+    expect(result.current.input.id).toBe(saved.input.id);
+    expect(result.current.translation.elements.nodes).toHaveLength(1);
+  });
+
+  it('keeps five versions and saves the oldest as newest without changing other items', async () => {
+    const first = await createFiveVersions();
+    const other = await graphRepository.create(input);
+    const id = first.workspace.id;
+    const oldest = await graphRepository.read(id, first.input.id);
+    expect(oldest?.input.source).toBe(source);
+    const saved = await saveVersion(id, `${oldest?.input.source}\n%% edited`);
+
+    expect(saved.versions.map((version) => version.version)).toEqual([6, 5, 4, 3, 2]);
+    expect(saved.input.id).not.toBe(first.input.id);
+    expect(await graphRepository.read(id, first.input.id)).toBeNull();
+    expect((await graphRepository.read(id))?.input.source).toContain('%% edited');
+    expect((await graphRepository.read(other.workspace.id))?.versions).toHaveLength(1);
+    expect(await graphRepository.read(id, other.input.id)).toBeNull();
+  });
+
+  it('serializes concurrent saves even when their timestamps match', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-09T12:00:00.000Z'));
+    const first = await graphRepository.create(input);
+    const updates = Array.from({ length: 7 }, (_, index) => {
+      return saveVersion(first.workspace.id, `save ${index}`);
+    });
+    const results = await Promise.allSettled(updates);
+    expect(results.every((result) => result.status === 'fulfilled')).toBe(true);
+    const latest = await graphRepository.read(first.workspace.id);
+    expect(latest?.versions.map((version) => version.version)).toEqual([8, 7, 6, 5, 4]);
+    const timestamps = latest?.versions.map((version) => version.updatedAt);
+    expect(new Set(timestamps).size).toBe(1);
+  });
+
+  it('rolls back a failed snapshot without pruning saved versions', async () => {
+    const first = await createFiveVersions();
+    const workspaceId = first.workspace.id;
+    const before = await graphRepository.read(workspaceId);
+    const invalidNode = Object.assign({}, node, { data: { callback: () => {} } });
+    const translation = Object.assign({}, input.translation, {
+      elements: { nodes: [invalidNode], edges: [] },
+    });
+
+    await expect(graphRepository.update({
+      input: { source: 'failed save' },
+      translation,
+      workspace: { id: workspaceId, name: 'Should roll back' },
+    })).rejects.toThrow();
+
+    expect(await graphRepository.read(workspaceId)).toEqual(before);
+    expect(await graphRepository.read(workspaceId, first.input.id)).not.toBeNull();
+  });
+
+  it('prunes input and translation records and deletes every remaining version', async () => {
+    const first = await createFiveVersions();
+    const id = first.workspace.id;
+    await saveVersion(id, 'version 6');
+    const database = await new Dexie('m2rf-studio').open();
+    try {
+      expect(await database.table('inputs').count()).toBe(5);
+      expect(await database.table('translations').count()).toBe(5);
+      expect(await database.table('translations').get(first.translation.id)).toBeUndefined();
+      await graphRepository.delete(id);
+      expect(await database.table('inputs').count()).toBe(0);
+      expect(await database.table('translations').count()).toBe(0);
+      expect(await graphRepository.list()).toHaveLength(0);
+    } finally {
+      database.close();
+    }
   });
 
   it('persists translation visual edits and view data', async () => {

@@ -1,6 +1,10 @@
 import type { Edge, Node, Viewport } from 'reactflow';
+import type Dexie from 'dexie';
+import type { EntityTable } from 'dexie';
 
 export type GraphInputFormat = 'mermaid';
+
+export type FlowNodeRecord = { domId: string; id: string; label: string };
 
 export type GraphElements = {
   edges: Edge[];
@@ -18,7 +22,14 @@ export type GraphTranslationSettings = {
   primaryColor: string;
 };
 
+export type GraphCanvasSettings = {
+  gridVisible: boolean;
+  locked: boolean;
+  snapToGrid: boolean;
+};
+
 export type GraphTranslationView = {
+  canvas?: GraphCanvasSettings;
   selection?: {
     edgeIds: string[];
     nodeIds: string[];
@@ -39,8 +50,11 @@ export type GraphInput = {
   id: string;
   source: string;
   updatedAt: string;
+  version: number;
   workspaceId: string;
 };
+
+export type GraphVersion = Pick<GraphInput, 'id' | 'updatedAt' | 'version'>;
 
 export type GraphTranslation = {
   elements: GraphElements;
@@ -55,11 +69,12 @@ export type GraphTranslation = {
 export type GraphRecords = {
   input: GraphInput;
   translation: GraphTranslation;
+  versions: GraphVersion[];
   workspace: GraphWorkspace;
 };
 
 export type CreateGraphRecordsInput = {
-  input: Omit<GraphInput, 'id' | 'updatedAt' | 'workspaceId'>;
+  input: Omit<GraphInput, 'id' | 'updatedAt' | 'version' | 'workspaceId'>;
   translation: Omit<GraphTranslation, 'id' | 'inputId' | 'updatedAt'>;
   workspace: Omit<
     GraphWorkspace,
@@ -77,6 +92,17 @@ export type GraphRepository = {
   create(records: CreateGraphRecordsInput): Promise<GraphRecords>;
   delete(workspaceId: string): Promise<void>;
   list(): Promise<GraphWorkspace[]>;
-  read(workspaceId: string): Promise<GraphRecords | null>;
+  read(workspaceId: string, versionId?: string): Promise<GraphRecords | null>;
   update(records: UpdateGraphRecordsInput): Promise<GraphRecords>;
 };
+
+export type GraphDatabase = Dexie & {
+  inputs: EntityTable<GraphInput, 'id'>;
+  translations: EntityTable<GraphTranslation, 'id'>;
+  workspaces: EntityTable<GraphWorkspace, 'id'>;
+};
+
+export type TranslationSettings = GraphTranslationSettings;
+export type EdgeAnimation = TranslationSettings['edgeAnimation'];
+export type EdgeMarkerValue = TranslationSettings['edgeMarker'];
+export type EdgeType = TranslationSettings['edgeType'];

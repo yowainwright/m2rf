@@ -1,34 +1,32 @@
+import { DEFAULT_SETTINGS, EMPTY_ELEMENTS } from '@/graph/constants';
+import type { AppContext } from './types';
+export { DEFAULT_SETTINGS, EMPTY_ELEMENTS } from '@/graph/constants';
+
 export const DEFAULT_SOURCE = `flowchart LR
   Idea[Write Mermaid] -->|parse| Graph[Build graph]
   Graph -->|render| Preview[React Flow preview]
 `;
 
-export const DEFAULT_SETTINGS = {
-  edgeAnimation: 'none',
-  edgeColor: '#171717',
-  edgeMarker: 'arrowclosed',
-  edgeType: 'default',
-  edgeWidth: 2,
-  primaryColor: '#2563eb',
-  inverseColor: '#ffffff',
-  fontFamily: 'Arial, Helvetica, sans-serif',
-} as const;
-
-export const EDGE_WIDTH_LIMITS = { minimum: 1, maximum: 8 } as const;
-
-export const EMPTY_ELEMENTS = {
-  nodes: [],
-  edges: [],
-};
-
 export const INITIAL_UPDATED_AT = '1970-01-01T00:00:00.000Z';
 export const LOCAL_WORKSPACE_ID = 'workspace-local';
 export const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';
 
-export const APP_INITIAL_CONTEXT = {
+export const SAVE_FEEDBACK_MS = 1400;
+export const EDGE_ANCHOR_STYLE = { pointerEvents: 'all' } as const;
+
+export const APP_INITIAL_CONTEXT: AppContext = {
   isDesktop: false,
   sidebarOpen: true,
+  toolkitOpen: true,
+  canvasRevision: 0,
+  needsRender: true,
+  resetLayout: false,
+  operationError: null,
+  exportError: null,
+  loadRequest: null,
+  exportRequest: { format: 'svg', repeat: 'forever' },
   workspaces: [],
+  versions: [],
   workspace: {
     id: LOCAL_WORKSPACE_ID,
     name: '',
@@ -42,6 +40,7 @@ export const APP_INITIAL_CONTEXT = {
     format: 'mermaid' as const,
     source: DEFAULT_SOURCE,
     updatedAt: INITIAL_UPDATED_AT,
+    version: 0,
   },
   translation: {
     id: 'translation-local',
@@ -53,54 +52,3 @@ export const APP_INITIAL_CONTEXT = {
     updatedAt: INITIAL_UPDATED_AT,
   },
 };
-
-export const APP_MACHINE_CONFIG = {
-  id: 'm2rf-studio',
-  initial: 'ready',
-  context: APP_INITIAL_CONTEXT,
-  states: {
-    ready: {},
-    saving: {
-      tags: ['saving'],
-      on: {
-        'workspace.create': {
-          target: '#m2rf-studio.saved',
-          actions: ['createWorkspace'],
-        },
-        'workspace.update': {
-          target: '#m2rf-studio.saved',
-          actions: ['updateWorkspace'],
-        },
-        'workspace.save.error': {
-          target: '#m2rf-studio.saveError',
-        },
-      },
-    },
-    saved: {
-      tags: ['saved'],
-      after: {
-        1400: {
-          target: '#m2rf-studio.ready',
-        },
-      },
-    },
-    saveError: {
-      tags: ['saveError'],
-      after: {
-        2400: {
-          target: '#m2rf-studio.ready',
-        },
-      },
-    },
-  },
-  on: {
-    'layout.update': { actions: ['updateLayout'] },
-    'sidebar.update': { actions: ['updateSidebar'] },
-    'workspace.save': { target: '.saving' },
-    'workspace.create': { actions: ['createWorkspace'] },
-    'workspace.update': { target: '.ready', actions: ['updateWorkspace'] },
-    'workspace.delete': { actions: ['deleteWorkspace'] },
-    'input.update': { actions: ['updateInput'] },
-    'translation.update': { actions: ['updateTranslation'] },
-  },
-} as const;

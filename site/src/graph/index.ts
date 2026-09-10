@@ -1,6 +1,36 @@
+export {
+  parseMermaidSvg,
+  clampEdgeWidth,
+  createNodeStyle,
+  createEdgeStyle,
+  createEdgeMarker,
+  getEdgeType,
+  getEdgeAnimationClassName,
+  getEdgeAnimated,
+  getSelectedNodes,
+  getSelectedEdges,
+  getElementIds,
+  updateSelectedNodes,
+  updateSelectedEdges,
+  getSelectedNode,
+  getSelectedEdge,
+  getNodeFillValue,
+  getNodeTextValue,
+  getEdgeColorValue,
+  getEdgeWidthValue,
+  getEdgeMarkerValue,
+  getEdgeTypeValue,
+  getEdgeAnimationValue,
+  getEdgeAnchor,
+  applySettings,
+  getTranslation,
+  applySavedAppearance,
+  getWorkspaceLabel,
+} from './utils';
 export { graphRepository } from './utils';
 export type {
   CreateGraphRecordsInput,
+  GraphCanvasSettings,
   GraphElements,
   GraphInput,
   GraphInputFormat,
@@ -9,6 +39,9 @@ export type {
   GraphTranslation,
   GraphTranslationSettings,
   GraphTranslationView,
+  GraphVersion,
   GraphWorkspace,
   UpdateGraphRecordsInput,
 } from './types';
+
+export type { EdgeAnimation, EdgeMarkerValue, EdgeType, TranslationSettings } from './types';
