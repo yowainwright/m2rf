@@ -28,12 +28,12 @@ const clearIndexedDb = async (page: Page) => {
   });
 };
 
-const updateEditor = async (page: Page) => {
+const updateEditor = async (page: Page, content = source) => {
   const editor = page.locator('.cm-content');
 
   await editor.click();
   await page.keyboard.press('Meta+A');
-  await page.keyboard.insertText(source);
+  await page.keyboard.insertText(content);
 };
 
 const setColorInput = async (
@@ -84,6 +84,78 @@ const readMarker = (edge: Locator) => {
   });
 };
 
+const versionSource = (version: number) => {
+  return `flowchart LR\n  A[Snapshot ${version}] --> B[Saved graph]`;
+};
+
+const saveSnapshot = async (page: Page, version: number) => {
+  await page.getByRole('button', { name: /^(Save|Saved)$/ }).click();
+  const history = page.getByRole('region', { name: 'Version history' });
+  await expect(history.getByRole('button', { name: `Version ${version}`, exact: true })).toHaveAttribute('aria-pressed', 'true');
+};
+
+const editSnapshot = async (page: Page, version: number) => {
+  await updateEditor(page, versionSource(version));
+  await expect(page.locator('.react-flow__node').filter({ hasText: `Snapshot ${version}` })).toBeVisible();
+};
+
+test('restores version styling and saves the oldest as newest while keeping five', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await editSnapshot(page, 1);
+  await page.getByRole('textbox', { name: 'Graph name' }).fill('Versioned diagram');
+  await page.getByRole('button', { name: 'Toolkit: Global' }).click();
+  await setColorInput(page.getByLabel('Fill'), '#ef4444');
+  await page.keyboard.press('Escape');
+  await saveSnapshot(page, 1);
+  const viewport = page.locator('.react-flow__viewport');
+  const firstCamera = await viewport.evaluate((element) => getComputedStyle(element).transform);
+
+  await editSnapshot(page, 2);
+  const node = page.locator('.react-flow__node[data-id="A"]');
+  await node.click();
+  await page.getByRole('button', { name: 'Toolkit: 1 node' }).click();
+  await setColorInput(page.getByLabel('Fill'), '#22c55e');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'zoom in', exact: true }).click();
+  await expect(viewport).not.toHaveCSS('transform', firstCamera);
+  await saveSnapshot(page, 2);
+  await editSnapshot(page, 3);
+  await saveSnapshot(page, 3);
+  await editSnapshot(page, 4);
+  await saveSnapshot(page, 4);
+  await editSnapshot(page, 5);
+  await saveSnapshot(page, 5);
+
+  const history = page.getByRole('region', { name: 'Version history' });
+  await expect(history.getByRole('button')).toHaveCount(5);
+  await history.getByRole('button', { name: 'Version 1', exact: true }).click();
+  await expect(page.locator('.cm-content')).toContainText('Snapshot 1');
+  await expect(node).toHaveCSS('background-color', 'rgb(239, 68, 68)');
+  await expect(viewport).toHaveCSS('transform', firstCamera);
+  await editSnapshot(page, 6);
+  await saveSnapshot(page, 6);
+  await expect(history.getByRole('button')).toHaveText(['Version 6', 'Version 5', 'Version 4', 'Version 3', 'Version 2']);
+  await page.screenshot({ path: testInfo.outputPath('version-history-desktop.png') });
+
+  await page.reload();
+  await expect(page.locator('.cm-content')).toContainText('Snapshot 6');
+  await page.keyboard.press('Escape');
+  await expect(history.getByRole('button', { name: 'Version 6', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await history.getByRole('button', { name: 'Version 2', exact: true }).click();
+  await expect(node).toHaveCSS('background-color', 'rgb(34, 197, 94)');
+  await expect(page.locator('.cm-content')).toContainText('Snapshot 2');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Sidebar', exact: true });
+  await expect(drawer.getByRole('button', { name: 'Version 6', exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('version-history-mobile.png') });
+  await drawer.getByRole('button', { name: 'Version 6', exact: true }).click();
+  await expect(drawer).toBeHidden();
+  await expect(page.locator('.cm-content')).toContainText('Snapshot 6');
+});
+
 test('lists, renames, switches, and deletes saved graphs in the sidebar', async ({ page }, testInfo) => {
   let reactFlowWarnings: string[] = [];
 
@@ -104,14 +176,15 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   expect(reactFlowWarnings).toHaveLength(0);
   await page.keyboard.press('Escape');
   const navigation = page.getByRole('navigation', { name: 'Saved graphs' });
+  const graphButtons = navigation.locator('[data-sidebar="menu-button"]');
   const graphName = page.getByRole('textbox', { name: 'Graph name' });
   await expect(navigation.getByText('No saved graphs')).toBeVisible();
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
-  await expect(navigation.getByRole('button')).toHaveCount(1);
-  await expect(navigation.getByRole('button')).toHaveText(/^[a-f0-9-]{36}$/);
-  const savedId = await navigation.getByRole('button').innerText();
+  await expect(graphButtons).toHaveCount(1);
+  await expect(graphButtons).toHaveText(/^[a-f0-9-]{36}$/);
+  const savedId = await graphButtons.innerText();
   await expect(graphName).toHaveAttribute('placeholder', savedId.trim());
 
   await page.getByRole('textbox', { name: 'Graph name' }).fill('Release plan');
@@ -123,14 +196,14 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await updateEditor(page);
   await expect(page.locator('[data-id="Alpha"]')).toBeVisible();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(navigation.getByRole('button')).toHaveCount(2);
+  await expect(graphButtons).toHaveCount(2);
 
   await navigation.getByRole('button', { name: 'Release plan' }).click();
   await expect(graphName).toHaveValue('Release plan');
   await expect(page.locator('.cm-content')).toContainText('Idea');
   await expect(navigation.getByRole('button', { name: 'Release plan' })).toHaveAttribute('data-active', 'true');
   await page.reload();
-  await expect(navigation.getByRole('button')).toHaveCount(2);
+  await expect(graphButtons).toHaveCount(2);
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Download', exact: true }).click();
   await expect(page.getByRole('menu', { name: 'Download', exact: true })).toBeVisible();
@@ -146,7 +219,7 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await navigation.getByRole('button', { name: 'Release plan' }).click();
   await expect(graphName).toHaveValue('Release plan');
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
-  await expect(navigation.getByRole('button')).toHaveCount(1);
+  await expect(graphButtons).toHaveCount(1);
   await expect(navigation.getByRole('button', { name: 'API dependencies' })).toBeVisible();
 });
 
@@ -188,6 +261,7 @@ test('changes edge markers and matching colors globally and per edge, then resto
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
   await page.reload();
+  await expect(firstEdge).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Marker', exact: true })).toHaveText('None');
   await expect.poll(() => readMarker(firstEdge)).toBeNull();
   await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke', 'rgb(34, 197, 94)');
@@ -393,6 +467,8 @@ test('saves selected node visual edits after Mermaid update', async ({ page }) =
   });
 
   await expect(reloadedNode).toHaveCSS('background-color', 'rgb(239, 68, 68)');
+  await expect(page.getByLabel('Fill')).toBeVisible();
+  await expect(page.getByLabel('Fill')).toHaveValue('#ef4444');
 
   const downloadPromise = page.waitForEvent('download');
 
