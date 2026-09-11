@@ -4,6 +4,11 @@ import type { EntityTable } from 'dexie';
 
 export type GraphInputFormat = 'mermaid';
 
+export type CanvasBackground = 'aurora' | 'dot-pattern' | 'gradient-mesh' | 'grid';
+export type NodeBorder = 'dashed' | 'dotted' | 'none' | 'solid';
+export type NodeShadow = 'none' | 'soft' | 'strong';
+export type NodeSurface = 'gradient-ocean' | 'gradient-sunset' | 'pattern-dots' | 'pattern-grid' | 'solid';
+
 export type FlowNodeRecord = { domId: string; id: string; label: string };
 
 export type GraphElements = {
@@ -12,17 +17,21 @@ export type GraphElements = {
 };
 
 export type GraphTranslationSettings = {
-  edgeAnimation: 'flow' | 'none' | 'pulse';
+  edgeAnimation: 'flow' | 'none' | 'pulse' | 'surge';
   edgeColor: string;
   edgeMarker: 'arrow' | 'arrowclosed' | 'none';
   edgeType: 'default' | 'smoothstep' | 'step' | 'straight';
   edgeWidth: number;
   fontFamily: string;
   inverseColor: string;
+  nodeBorder: NodeBorder;
+  nodeShadow: NodeShadow;
+  nodeSurface: NodeSurface;
   primaryColor: string;
 };
 
 export type GraphCanvasSettings = {
+  background: CanvasBackground;
   gridVisible: boolean;
   locked: boolean;
   snapToGrid: boolean;

@@ -9,15 +9,34 @@ import {
   EDGE_MARKER_OPTIONS,
   EDGE_TYPE_OPTIONS,
   EDGE_WIDTH_LIMITS,
+  CANVAS_BACKGROUND_OPTIONS,
+  NODE_BORDER_OPTIONS,
+  NODE_SHADOW_OPTIONS,
+  NODE_SURFACE_OPTIONS,
   TOOLKIT_LABELS,
 } from './constants';
 import type { CanvasToolProps, EdgeToolProps, NodeToolProps } from './types';
 
 export const NodeTools = (props: NodeToolProps) => {
+  const borders = NODE_BORDER_OPTIONS.map((option) => (
+    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+  ));
+  const shadows = NODE_SHADOW_OPTIONS.map((option) => (
+    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+  ));
+  const surfaces = NODE_SURFACE_OPTIONS.map((option) => (
+    <SelectItem key={option.value} value={option.value}>
+      <span className="flex items-center gap-2">
+        <span aria-hidden="true" className="size-4 shrink-0 rounded-sm border" style={{ background: option.preview }} />
+        {option.label}
+      </span>
+    </SelectItem>
+  ));
+
   return (
     <FieldSet className="gap-2">
       <FieldLegend className="mb-0" variant="label">{TOOLKIT_LABELS.nodes}</FieldLegend>
-      <FieldGroup className="grid grid-cols-4 gap-3">
+      <FieldGroup className="grid grid-cols-2 gap-x-3 gap-y-2">
         <Field className="min-w-0 gap-1">
           <FieldLabel className="text-xs" htmlFor="node-fill">{TOOLKIT_LABELS.fill}</FieldLabel>
           <Input className="h-8 cursor-pointer p-0.5" id="node-fill" type="color" value={props.fillValue} onChange={props.onFillUpdate} />
@@ -25,6 +44,27 @@ export const NodeTools = (props: NodeToolProps) => {
         <Field className="min-w-0 gap-1">
           <FieldLabel className="text-xs" htmlFor="node-text">{TOOLKIT_LABELS.text}</FieldLabel>
           <Input className="h-8 cursor-pointer p-0.5" id="node-text" type="color" value={props.textValue} onChange={props.onTextUpdate} />
+        </Field>
+        <Field className="min-w-0 gap-1">
+          <FieldLabel className="text-xs" htmlFor="node-border">{TOOLKIT_LABELS.border}</FieldLabel>
+          <Select onValueChange={props.onBorderUpdate} value={props.borderValue}>
+            <SelectTrigger className="h-8 px-2 text-xs" id="node-border"><SelectValue /></SelectTrigger>
+            <SelectContent>{borders}</SelectContent>
+          </Select>
+        </Field>
+        <Field className="min-w-0 gap-1">
+          <FieldLabel className="text-xs" htmlFor="node-shadow">{TOOLKIT_LABELS.shadow}</FieldLabel>
+          <Select onValueChange={props.onShadowUpdate} value={props.shadowValue}>
+            <SelectTrigger className="h-8 px-2 text-xs" id="node-shadow"><SelectValue /></SelectTrigger>
+            <SelectContent>{shadows}</SelectContent>
+          </Select>
+        </Field>
+        <Field className="col-span-2 min-w-0 gap-1">
+          <FieldLabel className="text-xs" htmlFor="node-surface">{TOOLKIT_LABELS.surface}</FieldLabel>
+          <Select onValueChange={props.onSurfaceUpdate} value={props.surfaceValue}>
+            <SelectTrigger className="h-8 px-2 text-xs" id="node-surface"><SelectValue /></SelectTrigger>
+            <SelectContent>{surfaces}</SelectContent>
+          </Select>
         </Field>
       </FieldGroup>
     </FieldSet>
@@ -81,10 +121,26 @@ export const EdgeTools = (props: EdgeToolProps) => {
 };
 
 export const CanvasTools = (props: CanvasToolProps) => {
+  const backgrounds = CANVAS_BACKGROUND_OPTIONS.map((option) => (
+    <SelectItem key={option.value} value={option.value}>
+      <span className="flex items-center gap-2">
+        <span aria-hidden="true" className="size-4 shrink-0 rounded-sm border" style={{ background: option.preview, backgroundSize: '8px 8px' }} />
+        {option.label}
+      </span>
+    </SelectItem>
+  ));
+
   return (
     <FieldSet className="gap-2">
       <FieldLegend className="mb-0" variant="label">{TOOLKIT_LABELS.canvas}</FieldLegend>
       <FieldGroup className="grid grid-cols-2 gap-x-3 gap-y-2">
+        <Field className="col-span-2 min-w-0 gap-1">
+          <FieldLabel className="text-xs" htmlFor="canvas-background">{TOOLKIT_LABELS.background}</FieldLabel>
+          <Select onValueChange={props.onBackgroundUpdate} value={props.settings.background}>
+            <SelectTrigger className="h-8 px-2 text-xs" id="canvas-background"><SelectValue /></SelectTrigger>
+            <SelectContent>{backgrounds}</SelectContent>
+          </Select>
+        </Field>
         <Field orientation="horizontal">
           <FieldLabel className="text-xs" htmlFor="canvas-grid">{TOOLKIT_LABELS.grid}</FieldLabel>
           <Switch checked={props.settings.gridVisible} id="canvas-grid" onCheckedChange={props.onGridUpdate} />

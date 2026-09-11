@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
 import { Number as EffectNumber } from 'effect';
+import type { CSSProperties } from 'react';
 import { MarkerType, type Edge, type EdgeMarker, type Node } from 'reactflow';
 import {
   DEFAULT_SETTINGS, EDGE_ID_PATTERN, EDGE_MARKER_OPTIONS, EDGE_SELECTOR,
@@ -11,6 +12,10 @@ import type {
   GraphDatabase, GraphElements, GraphInput, GraphRecords, GraphRepository,
   GraphTranslation, GraphWorkspace, TranslationSettings, UpdateGraphRecordsInput,
 } from './types';
+
+const SURGE_EDGE_TYPE = 'surge';
+const NODE_COLOR_VARIABLE = '--m2rf-node-primary';
+const NODE_SURFACE_VARIABLE = '--m2rf-node-surface';
 
 const database = new Dexie(GRAPH_DATABASE_NAME) as GraphDatabase;
 const tables = [GRAPH_TABLES.workspaces, GRAPH_TABLES.inputs, GRAPH_TABLES.translations];
@@ -127,13 +132,79 @@ export const graphRepository: GraphRepository = {
 
 export const clampEdgeWidth = EffectNumber.clamp(EDGE_WIDTH_LIMITS);
 
+const getNodeSurfaceImage = (surface: TranslationSettings['nodeSurface']) => {
+  if (surface === 'gradient-ocean') {
+    return 'linear-gradient(135deg, var(--m2rf-node-primary), #06b6d4)';
+  }
+
+  if (surface === 'gradient-sunset') {
+    return 'linear-gradient(135deg, var(--m2rf-node-primary), #f97316)';
+  }
+
+  if (surface === 'pattern-grid') {
+    return 'linear-gradient(rgba(255,255,255,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.22) 1px, transparent 1px)';
+  }
+
+  if (surface === 'pattern-dots') {
+    return 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)';
+  }
+
+  return 'none';
+};
+
+const getNodeShadow = (shadow: TranslationSettings['nodeShadow']) => {
+  if (shadow === 'soft') return '0 6px 18px rgba(15, 23, 42, 0.18)';
+  if (shadow === 'strong') return '0 12px 28px rgba(15, 23, 42, 0.32)';
+  return 'none';
+};
+
+const getNodeStyleValue = (style: CSSProperties | undefined, key: string) => {
+  if (!style) return undefined;
+  return (style as CSSProperties & Record<string, unknown>)[key];
+};
+
+const getNodeBorder = (style: CSSProperties | undefined, fallback: TranslationSettings['nodeBorder']) => {
+  const value = getNodeStyleValue(style, 'borderStyle');
+  if (typeof value === 'string') return value as TranslationSettings['nodeBorder'];
+  const border = getNodeStyleValue(style, 'border');
+  if (typeof border === 'string') {
+    const option = ['solid', 'dashed', 'dotted', 'none'].find((item) => border.includes(item));
+    if (option) return option as TranslationSettings['nodeBorder'];
+  }
+  return fallback;
+};
+
+const getNodeSurface = (style: CSSProperties | undefined, fallback: TranslationSettings['nodeSurface']) => {
+  const value = getNodeStyleValue(style, NODE_SURFACE_VARIABLE);
+  const hasSurface = typeof value === 'string';
+  if (hasSurface) return value as TranslationSettings['nodeSurface'];
+  return fallback;
+};
+
+const getNodeShadowValue = (style: CSSProperties | undefined, fallback: TranslationSettings['nodeShadow']) => {
+  const value = getNodeStyleValue(style, 'boxShadow');
+  if (value === getNodeShadow('soft')) return 'soft';
+  if (value === getNodeShadow('strong')) return 'strong';
+  if (value === 'none') return 'none';
+  return fallback;
+};
+
 export const createNodeStyle = (settings: TranslationSettings) => {
-  return {
+  const borderWidth = settings.nodeBorder === 'none' ? 0 : 2;
+  const backgroundSize = settings.nodeSurface.startsWith('pattern-') ? '16px 16px' : 'auto';
+  const colorVariable = { [NODE_COLOR_VARIABLE]: settings.primaryColor };
+  const surfaceVariable = { [NODE_SURFACE_VARIABLE]: settings.nodeSurface };
+  return Object.assign({}, {
     backgroundColor: settings.primaryColor,
-    border: `2px solid ${settings.primaryColor}`,
+    borderColor: settings.primaryColor,
+    borderStyle: settings.nodeBorder,
+    borderWidth,
+    boxShadow: getNodeShadow(settings.nodeShadow),
     color: settings.inverseColor,
     fontFamily: settings.fontFamily,
-  };
+    backgroundImage: getNodeSurfaceImage(settings.nodeSurface),
+    backgroundSize,
+  }, colorVariable, surfaceVariable) as CSSProperties;
 };
 
 export const createEdgeStyle = (settings: TranslationSettings) => {
@@ -193,10 +264,26 @@ const createNodeStyleUpdate = (
   node: Node,
   settings: Partial<TranslationSettings>
 ) => {
-  const style = Object.assign({}, node.style);
+  const style = Object.assign({}, node.style) as CSSProperties & Record<string, unknown>;
+  const currentColor = getColorValue(
+    style[NODE_COLOR_VARIABLE],
+    getColorValue(style.backgroundColor, DEFAULT_SETTINGS.primaryColor)
+  );
   if (settings.primaryColor !== undefined) {
     style.backgroundColor = settings.primaryColor;
-    style.border = `2px solid ${settings.primaryColor}`;
+    style.borderColor = settings.primaryColor;
+    style[NODE_COLOR_VARIABLE] = settings.primaryColor;
+  }
+  if (settings.nodeBorder !== undefined) {
+    style.borderStyle = settings.nodeBorder;
+    style.borderWidth = settings.nodeBorder === 'none' ? 0 : 2;
+    style.borderColor = style.borderColor || currentColor;
+  }
+  if (settings.nodeShadow !== undefined) style.boxShadow = getNodeShadow(settings.nodeShadow);
+  if (settings.nodeSurface !== undefined) {
+    style.backgroundImage = getNodeSurfaceImage(settings.nodeSurface);
+    style.backgroundSize = settings.nodeSurface.startsWith('pattern-') ? '16px 16px' : 'auto';
+    style[NODE_SURFACE_VARIABLE] = settings.nodeSurface;
   }
   if (settings.inverseColor !== undefined) style.color = settings.inverseColor;
   if (settings.fontFamily !== undefined) style.fontFamily = settings.fontFamily;
@@ -211,12 +298,23 @@ const createEdgeUpdate = (
   const keepsAnimation = settings.edgeAnimation === undefined;
   const keepsType = settings.edgeType === undefined;
   const keepsMarker = settings.edgeMarker === undefined;
+  const currentType = getEdgeTypeValue(edge, DEFAULT_SETTINGS);
+  const animation = keepsAnimation ? getEdgeAnimationValue(edge, DEFAULT_SETTINGS) : edgeSettings.edgeAnimation;
+  const isSurge = animation === 'surge';
   const animated = keepsAnimation ? edge.animated : getEdgeAnimated(edgeSettings);
   const className = keepsAnimation
     ? edge.className
     : getEdgeAnimationClassName(edgeSettings);
-  const type = keepsType ? edge.type : getEdgeType(edgeSettings);
+  const edgeType = keepsType ? currentType : edgeSettings.edgeType;
+  const type = isSurge ? SURGE_EDGE_TYPE : edgeType;
   const style = Object.assign({}, edge.style);
+  const data = Object.assign({}, edge.data);
+
+  if (isSurge) {
+    data.edgeType = edgeType;
+  } else {
+    delete data.edgeType;
+  }
 
   if (settings.edgeColor) {
     style.stroke = settings.edgeColor;
@@ -239,6 +337,7 @@ const createEdgeUpdate = (
     markerStart,
     style,
     type,
+    data,
   });
 };
 
@@ -318,6 +417,21 @@ export const getNodeTextValue = (
   return getColorValue(node?.style?.color, settings.inverseColor);
 };
 
+export const getNodeBorderValue = (
+  node: Node | undefined,
+  settings: TranslationSettings
+) => getNodeBorder(node?.style, settings.nodeBorder);
+
+export const getNodeShadowValueForNode = (
+  node: Node | undefined,
+  settings: TranslationSettings
+) => getNodeShadowValue(node?.style, settings.nodeShadow);
+
+export const getNodeSurfaceValue = (
+  node: Node | undefined,
+  settings: TranslationSettings
+) => getNodeSurface(node?.style, settings.nodeSurface);
+
 export const getEdgeColorValue = (
   edge: Edge | undefined,
   settings: TranslationSettings
@@ -358,6 +472,12 @@ export const getEdgeTypeValue = (
     return settings.edgeType;
   }
 
+  if (edge.type === SURGE_EDGE_TYPE) {
+    const edgeType = edge.data?.edgeType;
+    const option = EDGE_TYPE_OPTIONS.find((item) => item.value === edgeType);
+    return option?.value || settings.edgeType;
+  }
+
   const option = EDGE_TYPE_OPTIONS.find((item) => item.value === edge.type);
 
   return option?.value || settings.edgeType;
@@ -368,6 +488,9 @@ export const getEdgeAnimationValue = (
   settings: TranslationSettings
 ): EdgeAnimation => {
   if (!edge) return settings.edgeAnimation;
+  if (edge.type === SURGE_EDGE_TYPE) {
+    return 'surge';
+  }
   if (edge?.animated) {
     return 'flow';
   }
@@ -435,7 +558,8 @@ const hydrateElementSettings = (
   settings: TranslationSettings
 ): GraphElements => {
   const nodes = elements.nodes.map((node) => {
-    const style = Object.assign({}, createNodeStyle(settings), node.style);
+    const combinedStyle = Object.assign({}, createNodeStyle(settings), node.style);
+    const style = normalizeNodeStyle(combinedStyle, settings);
 
     return Object.assign({}, node, { style });
   });
@@ -447,6 +571,11 @@ const hydrateElementSettings = (
     const markerStart = colorEdgeMarker(edge.markerStart, color);
     const hasAnimation = edge.animated !== undefined || edge.className !== undefined;
     const defaultClassName = hasAnimation ? '' : getEdgeAnimationClassName(settings);
+    const isSurge = edge.type === SURGE_EDGE_TYPE;
+    const edgeType = getEdgeTypeValue(edge, settings);
+    const data = isSurge
+      ? Object.assign({}, edge.data, { edgeType })
+      : edge.data;
 
     return Object.assign({}, edge, {
       animated: edge.animated ?? getEdgeAnimated(settings),
@@ -454,7 +583,8 @@ const hydrateElementSettings = (
       markerEnd,
       markerStart,
       style,
-      type: edge.type ?? getEdgeType(settings),
+      type: edge.type ?? edgeType,
+      data,
     });
   });
 
@@ -466,6 +596,15 @@ const getSettings = (
 ): TranslationSettings => {
   const edgeWidth = clampEdgeWidth(settings.edgeWidth ?? DEFAULT_SETTINGS.edgeWidth);
   return Object.assign({}, DEFAULT_SETTINGS, settings, { edgeWidth });
+};
+
+const normalizeNodeStyle = (style: CSSProperties, settings: TranslationSettings) => {
+  const legacyBorder = getNodeStyleValue(style, 'border');
+  if (legacyBorder === undefined) return style;
+  const normalized = Object.assign({}, style) as CSSProperties & Record<string, unknown>;
+  normalized.borderColor = normalized.borderColor || getColorValue(style.backgroundColor, settings.primaryColor);
+  delete normalized.border;
+  return normalized;
 };
 
 export const getTranslation = (translation: GraphTranslation): GraphTranslation => {
@@ -498,6 +637,7 @@ const restoreEdgeAppearance = (edge: Edge, savedEdges: Map<string, Edge>) => {
     selected: saved.selected,
     style: saved.style,
     type: saved.type,
+    data: saved.data,
   });
 };
 
@@ -631,6 +771,9 @@ const createFlowEdge = (
   const targetFallback = nodes[index + 1]?.id || '';
   const sourceId = getEndpoint(source, endpointMap, sourceFallback);
   const targetId = getEndpoint(target, endpointMap, targetFallback);
+  const isSurge = settings.edgeAnimation === 'surge';
+  const data = isSurge ? { edgeType: settings.edgeType } : undefined;
+  const type = isSurge ? SURGE_EDGE_TYPE : getEdgeType(settings);
 
   return {
     id: `edge-${index}`,
@@ -638,10 +781,11 @@ const createFlowEdge = (
     target: targetId,
     animated: getEdgeAnimated(settings),
     className: getEdgeAnimationClassName(settings),
+    data,
     label: getText(edge, 'title'),
     markerEnd: createEdgeMarker(settings.edgeMarker, settings.edgeColor),
     style: createEdgeStyle(settings),
-    type: getEdgeType(settings),
+    type,
   };
 };
 

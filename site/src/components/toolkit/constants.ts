@@ -1,4 +1,15 @@
-export { CANVAS_GRID, DEFAULT_CANVAS_SETTINGS, EDGE_ANIMATION_OPTIONS, EDGE_MARKER_OPTIONS, EDGE_TYPE_OPTIONS, EDGE_WIDTH_LIMITS } from '@/graph/constants';
+export {
+  CANVAS_BACKGROUND_OPTIONS,
+  CANVAS_GRID,
+  DEFAULT_CANVAS_SETTINGS,
+  EDGE_ANIMATION_OPTIONS,
+  EDGE_MARKER_OPTIONS,
+  EDGE_TYPE_OPTIONS,
+  EDGE_WIDTH_LIMITS,
+  NODE_BORDER_OPTIONS,
+  NODE_SHADOW_OPTIONS,
+  NODE_SURFACE_OPTIONS,
+} from '@/graph/constants';
 
 export const TOOLKIT_LABELS = {
   title: 'Graph toolkit',
@@ -6,6 +17,9 @@ export const TOOLKIT_LABELS = {
   global: 'Global',
   nodes: 'Nodes',
   fill: 'Fill',
+  border: 'Border',
+  shadow: 'Shadow',
+  surface: 'Surface',
   text: 'Text',
   edges: 'Edges',
   type: 'Type',
@@ -14,6 +28,7 @@ export const TOOLKIT_LABELS = {
   width: 'Width',
   color: 'Color',
   canvas: 'Canvas (global)',
+  background: 'Background',
   grid: 'Show grid',
   snap: 'Snap to grid',
   lock: 'Lock canvas',
@@ -40,4 +55,3 @@ export const TOOLKIT_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
   hour: 'numeric',
   minute: '2-digit',
 };
-

@@ -15,6 +15,9 @@ export {
   getSelectedNode,
   getSelectedEdge,
   getNodeFillValue,
+  getNodeBorderValue,
+  getNodeShadowValueForNode,
+  getNodeSurfaceValue,
   getNodeTextValue,
   getEdgeColorValue,
   getEdgeWidthValue,
@@ -44,4 +47,7 @@ export type {
   UpdateGraphRecordsInput,
 } from './types';
 
-export type { EdgeAnimation, EdgeMarkerValue, EdgeType, TranslationSettings } from './types';
+export type {
+  CanvasBackground, EdgeAnimation, EdgeMarkerValue, EdgeType, NodeBorder, NodeShadow, NodeSurface,
+  TranslationSettings,
+} from './types';

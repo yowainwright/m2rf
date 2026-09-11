@@ -15,6 +15,9 @@ import {
   getEdgeTypeValue,
   getEdgeAnimationValue,
   getEdgeAnchor,
+  getNodeBorderValue,
+  getNodeShadowValueForNode,
+  getNodeSurfaceValue,
   getWorkspaceLabel,
 } from '@/graph';
 import type { TranslationSettings } from '@/graph';
@@ -36,14 +39,20 @@ import ReactFlow, {
   useStore,
 } from 'reactflow';
 import { Button } from '@/ui/button';
+import { CanvasBackground } from '@/components/canvas/background';
+import { SURGE_EDGE_TYPES } from '@/components/edges/surge-edge';
 import { CanvasTools, EdgeTools, NodeTools } from '@/components/toolkit';
 import { ToolkitMetadata } from '@/components/toolkit/metadata';
 import {
+  CANVAS_BACKGROUND_OPTIONS,
   CANVAS_GRID,
   DEFAULT_CANVAS_SETTINGS,
   EDGE_ANIMATION_OPTIONS,
   EDGE_MARKER_OPTIONS,
   EDGE_TYPE_OPTIONS,
+  NODE_BORDER_OPTIONS,
+  NODE_SHADOW_OPTIONS,
+  NODE_SURFACE_OPTIONS,
   TOOLKIT_LABELS,
 } from '@/components/toolkit/constants';
 import TimelineCommitLog from '@/components/blocks/timeline/timeline-commit-log';
@@ -86,6 +95,7 @@ import type { ReactFlowErrorGateProps } from './types';
 import { FieldSet } from '@/ui/field';
 
 const editorExtensions = [mermaidLanguage()];
+const edgeTypes = SURGE_EDGE_TYPES;
 
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), {
   ssr: false,
@@ -407,7 +417,11 @@ function GraphPreview() {
   const canvas = Object.assign({}, DEFAULT_CANVAS_SETTINGS, translation.view.canvas);
   const canEditCanvas = canEditDraft && !isRendering && !canvas.locked;
   const canvasDeleteKey = canEditCanvas ? 'Backspace' : null;
-  const background = canvas.gridVisible ? <Background gap={CANVAS_GRID[0]} /> : null;
+  const canvasBackground = <CanvasBackground preset={canvas.background} />;
+  const shouldShowFlowGrid = canvas.gridVisible && canvas.background !== 'grid';
+  const backgroundGrid = shouldShowFlowGrid
+    ? <Background gap={CANVAS_GRID[0]} />
+    : null;
   const savedViewport = translation.view.viewport;
   const selectedEdgeIds = getElementIds(getSelectedEdges(translation.elements.edges));
   const selectedNodeIds = getElementIds(getSelectedNodes(translation.elements.nodes));
@@ -432,6 +446,21 @@ function GraphPreview() {
   const handleInverseUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
     send({ type: 'nodes.style', settings: { inverseColor: event.target.value } });
   };
+  const handleNodeSettingsUpdate = (settings: Partial<TranslationSettings>) => {
+    send({ type: 'nodes.style', settings });
+  };
+  const handleNodeBorderUpdate = (value: string) => {
+    const option = NODE_BORDER_OPTIONS.find((item) => item.value === value);
+    if (option) handleNodeSettingsUpdate({ nodeBorder: option.value });
+  };
+  const handleNodeShadowUpdate = (value: string) => {
+    const option = NODE_SHADOW_OPTIONS.find((item) => item.value === value);
+    if (option) handleNodeSettingsUpdate({ nodeShadow: option.value });
+  };
+  const handleNodeSurfaceUpdate = (value: string) => {
+    const option = NODE_SURFACE_OPTIONS.find((item) => item.value === value);
+    if (option) handleNodeSettingsUpdate({ nodeSurface: option.value });
+  };
   const handleEdgeSettingsUpdate = (settings: Partial<TranslationSettings>) => {
     send({ type: 'edges.style', settings });
   };
@@ -451,6 +480,10 @@ function GraphPreview() {
     send({ type: 'canvas.update', settings: update });
   };
   const handleGridUpdate = (gridVisible: boolean) => handleCanvasUpdate({ gridVisible });
+  const handleBackgroundUpdate = (value: string) => {
+    const option = CANVAS_BACKGROUND_OPTIONS.find((item) => item.value === value);
+    if (option) handleCanvasUpdate({ background: option.value });
+  };
   const handleSnapUpdate = (snapToGrid: boolean) => handleCanvasUpdate({ snapToGrid });
   const handleLockUpdate = (locked: boolean) => handleCanvasUpdate({ locked });
   const handleToolkitUpdate = (open: boolean) => send({ type: 'toolkit.update', open });
@@ -494,9 +527,15 @@ function GraphPreview() {
     selectedNodeIds, version: activeVersion, workspaceName: workspaceLabel,
   };
   const nodeToolProps = {
+    borderValue: getNodeBorderValue(selectedNode, settings),
     fillValue: getNodeFillValue(selectedNode, settings),
+    onBorderUpdate: handleNodeBorderUpdate,
     onFillUpdate: handlePrimaryUpdate,
+    onShadowUpdate: handleNodeShadowUpdate,
+    onSurfaceUpdate: handleNodeSurfaceUpdate,
     onTextUpdate: handleInverseUpdate,
+    shadowValue: getNodeShadowValueForNode(selectedNode, settings),
+    surfaceValue: getNodeSurfaceValue(selectedNode, settings),
     textValue: getNodeTextValue(selectedNode, settings),
   };
   const edgeToolProps = {
@@ -516,6 +555,7 @@ function GraphPreview() {
   const nodeToolsSeparator = showNodeTools && showEdgeTools ? <Separator /> : null;
   const canvasTools = (
     <CanvasTools
+      onBackgroundUpdate={handleBackgroundUpdate}
       onGridUpdate={handleGridUpdate}
       onLockUpdate={handleLockUpdate}
       onSnapUpdate={handleSnapUpdate}
@@ -556,6 +596,7 @@ function GraphPreview() {
           defaultViewport={savedViewport}
           deleteKeyCode={canvasDeleteKey}
           edges={translation.elements.edges}
+          edgeTypes={edgeTypes}
           edgesFocusable={canEditCanvas}
           edgesUpdatable={canEditCanvas}
           elementsSelectable={canEditCanvas}
@@ -574,7 +615,8 @@ function GraphPreview() {
           <InitialViewportSync />
           {selectedNodeIndicator}
           {selectedEdgeIndicator}
-          {background}
+          {canvasBackground}
+          {backgroundGrid}
           <Controls showInteractive={false} />
         </ReactFlow>
       </ReactFlowErrorGate>

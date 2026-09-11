@@ -17,9 +17,15 @@ export type NodeMetadataProps = { node: Node };
 export type EdgeMetadataProps = { edge: Edge };
 
 export type NodeToolProps = {
+  borderValue: GraphTranslationSettings['nodeBorder'];
   fillValue: string;
+  onBorderUpdate: (value: string) => void;
   onFillUpdate: ChangeEventHandler<HTMLInputElement>;
+  onShadowUpdate: (value: string) => void;
+  onSurfaceUpdate: (value: string) => void;
   onTextUpdate: ChangeEventHandler<HTMLInputElement>;
+  shadowValue: GraphTranslationSettings['nodeShadow'];
+  surfaceValue: GraphTranslationSettings['nodeSurface'];
   textValue: string;
 };
 export type EdgeToolProps = {
@@ -35,6 +41,7 @@ export type EdgeToolProps = {
   widthValue: number;
 };
 export type CanvasToolProps = {
+  onBackgroundUpdate: (value: string) => void;
   onGridUpdate: (checked: boolean) => void;
   onLockUpdate: (checked: boolean) => void;
   onSnapUpdate: (checked: boolean) => void;
