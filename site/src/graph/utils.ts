@@ -21,6 +21,12 @@ const NODE_GRADIENT_A_VARIABLE = '--m2rf-node-gradient-a';
 const NODE_GRADIENT_B_VARIABLE = '--m2rf-node-gradient-b';
 const NODE_GRADIENT_DIRECTION_VARIABLE = '--m2rf-node-gradient-direction';
 const NODE_GRADIENT_SPLIT_VARIABLE = '--m2rf-node-gradient-split';
+const NODE_SHAPE_VARIABLE = '--m2rf-node-shape';
+const NODE_SHAPE_STYLE_KEYS = [
+  'aspectRatio', 'borderRadius', 'clipPath', 'display', 'alignItems', 'justifyContent',
+  'minHeight', 'minWidth', 'padding', 'textAlign', 'width',
+] as const;
+const NODE_SHAPE_VALUES = new Set(['circle', 'cylinder', 'diamond', 'square']);
 
 const database = new Dexie(GRAPH_DATABASE_NAME) as GraphDatabase;
 const tables = [GRAPH_TABLES.workspaces, GRAPH_TABLES.inputs, GRAPH_TABLES.translations];
@@ -176,6 +182,42 @@ const getNodeShadow = (shadow: TranslationSettings['nodeShadow']) => {
   return 'none';
 };
 
+const getNodeShapeStyles = (shape: TranslationSettings['nodeShape']): CSSProperties => {
+  if (shape === 'rectangle') return {};
+  const contentStyles = {
+    alignItems: 'center',
+    display: 'flex',
+    justifyContent: 'center',
+    minHeight: '6rem',
+    minWidth: '6rem',
+    padding: '0.75rem 1rem',
+    textAlign: 'center',
+    width: 'max-content',
+  } satisfies CSSProperties;
+  if (shape === 'cylinder') {
+    return Object.assign({}, contentStyles, {
+      aspectRatio: '1.5 / 1',
+      borderRadius: '50% / 15%',
+      minHeight: '5rem',
+      minWidth: '8rem',
+    });
+  }
+  if (shape === 'diamond') {
+    return Object.assign({}, contentStyles, {
+      aspectRatio: '1 / 1',
+      clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+      padding: '1.5rem 2rem',
+    });
+  }
+  const roundShapeStyles = { aspectRatio: '1 / 1' };
+  if (shape === 'circle') return Object.assign({}, contentStyles, roundShapeStyles, { borderRadius: '50%' });
+  return Object.assign({}, contentStyles, roundShapeStyles);
+};
+
+const clearNodeShapeStyles = (style: CSSProperties & Record<string, unknown>) => {
+  NODE_SHAPE_STYLE_KEYS.forEach((key) => delete style[key]);
+};
+
 const getNodeStyleValue = (style: CSSProperties | undefined, key: string) => {
   if (!style) return undefined;
   return (style as CSSProperties & Record<string, unknown>)[key];
@@ -223,11 +265,19 @@ const getNodeShadowValue = (style: CSSProperties | undefined, fallback: Translat
   return fallback;
 };
 
+const getNodeShape = (style: CSSProperties | undefined, fallback: TranslationSettings['nodeShape']) => {
+  const value = getNodeStyleValue(style, NODE_SHAPE_VARIABLE);
+  const isKnownShape = typeof value === 'string' && NODE_SHAPE_VALUES.has(value);
+  if (isKnownShape) return value as TranslationSettings['nodeShape'];
+  return fallback;
+};
+
 export const createNodeStyle = (settings: TranslationSettings) => {
   const borderWidth = settings.nodeBorder === 'none' ? 0 : 2;
   const backgroundSize = settings.nodeSurface.startsWith('pattern-') ? '16px 16px' : 'auto';
   const colorVariable = { [NODE_COLOR_VARIABLE]: settings.primaryColor };
   const surfaceVariable = { [NODE_SURFACE_VARIABLE]: settings.nodeSurface };
+  const shapeVariable = { [NODE_SHAPE_VARIABLE]: settings.nodeShape };
   const gradientVariables = {
     [NODE_GRADIENT_A_VARIABLE]: settings.nodeGradient.colorA,
     [NODE_GRADIENT_B_VARIABLE]: settings.nodeGradient.colorB,
@@ -244,7 +294,7 @@ export const createNodeStyle = (settings: TranslationSettings) => {
     fontFamily: settings.fontFamily,
     backgroundImage: getNodeSurfaceImage(settings.nodeSurface, settings.nodeGradient),
     backgroundSize,
-  }, colorVariable, surfaceVariable, gradientVariables) as CSSProperties;
+  }, colorVariable, surfaceVariable, shapeVariable, gradientVariables, getNodeShapeStyles(settings.nodeShape)) as CSSProperties;
 };
 
 export const createEdgeStyle = (settings: TranslationSettings) => {
@@ -311,6 +361,7 @@ const createNodeStyleUpdate = (
   );
   const currentSurface = getNodeSurface(node.style, DEFAULT_SETTINGS.nodeSurface);
   const currentGradient = getNodeGradient(node.style, DEFAULT_SETTINGS.nodeGradient);
+  const currentShape = getNodeShape(node.style, DEFAULT_SETTINGS.nodeShape);
   const nextSurface = settings.nodeSurface || currentSurface;
   const nextGradient = settings.nodeGradient || currentGradient;
   if (settings.primaryColor !== undefined) {
@@ -336,6 +387,14 @@ const createNodeStyleUpdate = (
     style[NODE_GRADIENT_B_VARIABLE] = nextGradient.colorB;
     style[NODE_GRADIENT_DIRECTION_VARIABLE] = nextGradient.direction;
     style[NODE_GRADIENT_SPLIT_VARIABLE] = nextGradient.split;
+  }
+  if (settings.nodeShape !== undefined) {
+    clearNodeShapeStyles(style);
+    Object.assign(style, getNodeShapeStyles(settings.nodeShape));
+    style[NODE_SHAPE_VARIABLE] = settings.nodeShape;
+  } else if (style[NODE_SHAPE_VARIABLE] === undefined) {
+    style[NODE_SHAPE_VARIABLE] = currentShape;
+    Object.assign(style, getNodeShapeStyles(currentShape));
   }
   if (settings.inverseColor !== undefined) style.color = settings.inverseColor;
   if (settings.fontFamily !== undefined) style.fontFamily = settings.fontFamily;
@@ -488,6 +547,11 @@ export const getNodeSurfaceValue = (
   node: Node | undefined,
   settings: TranslationSettings
 ) => getNodeSurface(node?.style, settings.nodeSurface);
+
+export const getNodeShapeValue = (
+  node: Node | undefined,
+  settings: TranslationSettings
+) => getNodeShape(node?.style, settings.nodeShape);
 
 export const getEdgeColorValue = (
   edge: Edge | undefined,

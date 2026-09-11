@@ -1,20 +1,65 @@
 'use client';
 
 import { AuroraShaders } from '@/components/ui/aurora';
-import { DotPattern } from '@/components/ui/dot-pattern';
 import { GradientMeshShaders } from '@/components/ui/gradient-mesh';
-import { GridPattern } from '@/components/ui/grid-pattern';
 import { createGradientImage } from '@/graph';
-import type { CanvasBackground as CanvasBackgroundPreset, GraphGradientSettings } from '@/graph';
+import type { CSSProperties } from 'react';
+import type {
+  CanvasBackground as CanvasBackgroundPreset,
+  GraphGradientSettings,
+  GraphPatternSettings,
+  GraphShaderSettings,
+} from '@/graph';
 
 type CanvasBackgroundProps = {
   gradient: GraphGradientSettings;
+  pattern: GraphPatternSettings;
   preset: CanvasBackgroundPreset;
+  shader: GraphShaderSettings;
 };
 
 const backgroundClassName = 'pointer-events-none absolute inset-0 z-0 overflow-hidden';
+const PATTERN_MAX_SIZE = 64;
+const PATTERN_MIN_SIZE = 8;
 
-export const CanvasBackground = ({ gradient, preset }: CanvasBackgroundProps) => {
+const getPatternSize = (density: number) => {
+  const boundedDensity = Math.min(100, Math.max(0, density));
+  const densityRatio = boundedDensity / 100;
+  const sizeRange = PATTERN_MAX_SIZE - PATTERN_MIN_SIZE;
+  const patternSize = PATTERN_MAX_SIZE - densityRatio * sizeRange;
+  return Math.round(patternSize);
+};
+
+const getPatternImage = (preset: CanvasBackgroundPreset, color: string, size: number) => {
+  if (preset === 'grid') {
+    return `linear-gradient(${color} 1px, transparent 1px), linear-gradient(90deg, ${color} 1px, transparent 1px)`;
+  }
+
+  if (preset === 'dot-pattern') {
+    return `radial-gradient(${color} 1.5px, transparent 1.5px)`;
+  }
+
+  if (preset === 'pattern-diagonal') {
+    return `repeating-linear-gradient(135deg, ${color} 0 1px, transparent 1px ${size}px)`;
+  }
+
+  if (preset === 'pattern-checkerboard') {
+    return `conic-gradient(${color} 25%, transparent 0 50%, ${color} 0 75%, transparent 0)`;
+  }
+
+  return `linear-gradient(45deg, transparent 42%, ${color} 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, ${color} 42% 58%, transparent 58%)`;
+};
+
+const getPatternStyle = (
+  preset: CanvasBackgroundPreset,
+  pattern: GraphPatternSettings
+): CSSProperties => {
+  const size = getPatternSize(pattern.density);
+  const backgroundImage = getPatternImage(preset, pattern.color, size);
+  return { backgroundColor: pattern.backgroundColor, backgroundImage, backgroundSize: `${size}px ${size}px` };
+};
+
+export const CanvasBackground = ({ gradient, pattern, preset, shader }: CanvasBackgroundProps) => {
   if (preset === 'gradient') {
     return (
       <div
@@ -27,7 +72,7 @@ export const CanvasBackground = ({ gradient, preset }: CanvasBackgroundProps) =>
   if (preset === 'aurora') {
     return (
       <div className={backgroundClassName}>
-        <AuroraShaders className="absolute inset-0 opacity-70" />
+        <AuroraShaders className="absolute inset-0 opacity-70" {...shader.aurora} />
       </div>
     );
   }
@@ -35,20 +80,10 @@ export const CanvasBackground = ({ gradient, preset }: CanvasBackgroundProps) =>
   if (preset === 'gradient-mesh') {
     return (
       <div className={backgroundClassName}>
-        <GradientMeshShaders className="absolute inset-0 opacity-70" />
+        <GradientMeshShaders className="absolute inset-0 opacity-70" {...shader.gradientMesh} />
       </div>
     );
   }
 
-  if (preset === 'dot-pattern') {
-    return (
-      <DotPattern
-        className={`${backgroundClassName} bg-slate-950/95`}
-        glowColor="#22d3ee"
-        waveSpeed={0.25}
-      />
-    );
-  }
-
-  return <GridPattern className={`${backgroundClassName} opacity-60`} />;
+  return <div className={backgroundClassName} style={getPatternStyle(preset, pattern)} />;
 };

@@ -19,6 +19,7 @@ export {
   getNodeBorderValue,
   getNodeGradientValue,
   getNodeShadowValueForNode,
+  getNodeShapeValue,
   getNodeSurfaceValue,
   getNodeTextValue,
   getEdgeColorValue,
@@ -51,6 +52,6 @@ export type {
 
 export type {
   CanvasBackground, EdgeAnimation, EdgeMarkerValue, EdgeType, GradientDirection, GraphGradientSettings,
-  NodeBorder, NodeShadow, NodeSurface,
+  GraphPatternSettings, GraphShaderSettings, NodeBorder, NodeShape, NodeShadow, NodeSurface,
   TranslationSettings,
 } from './types';

@@ -4,7 +4,15 @@ import type { EntityTable } from 'dexie';
 
 export type GraphInputFormat = 'mermaid';
 
-export type CanvasBackground = 'aurora' | 'dot-pattern' | 'gradient' | 'gradient-mesh' | 'grid';
+export type CanvasBackground =
+  | 'aurora'
+  | 'dot-pattern'
+  | 'gradient'
+  | 'gradient-mesh'
+  | 'grid'
+  | 'pattern-checkerboard'
+  | 'pattern-diamond'
+  | 'pattern-diagonal';
 export type GradientDirection = 'horizontal' | 'radial' | 'vertical';
 export type GraphGradientSettings = {
   colorA: string;
@@ -12,7 +20,24 @@ export type GraphGradientSettings = {
   direction: GradientDirection;
   split: number;
 };
+export type GraphPatternSettings = {
+  backgroundColor: string;
+  color: string;
+  density: number;
+};
+export type GraphShaderSettings = {
+  aurora: {
+    colorA: string;
+    colorB: string;
+    colorC: string;
+  };
+  gradientMesh: {
+    colorA: string;
+    colorB: string;
+  };
+};
 export type NodeBorder = 'dashed' | 'dotted' | 'none' | 'solid';
+export type NodeShape = 'circle' | 'cylinder' | 'diamond' | 'rectangle' | 'square';
 export type NodeShadow = 'none' | 'soft' | 'strong';
 export type NodeSurface = 'gradient' | 'pattern-dots' | 'pattern-grid' | 'solid';
 
@@ -33,6 +58,7 @@ export type GraphTranslationSettings = {
   inverseColor: string;
   nodeGradient: GraphGradientSettings;
   nodeBorder: NodeBorder;
+  nodeShape: NodeShape;
   nodeShadow: NodeShadow;
   nodeSurface: NodeSurface;
   primaryColor: string;
@@ -41,6 +67,8 @@ export type GraphTranslationSettings = {
 export type GraphCanvasSettings = {
   background: CanvasBackground;
   gradient: GraphGradientSettings;
+  pattern: GraphPatternSettings;
+  shader: GraphShaderSettings;
   gridVisible: boolean;
   locked: boolean;
   snapToGrid: boolean;

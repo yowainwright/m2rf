@@ -1,5 +1,5 @@
 import type {
-  CanvasBackground, GradientDirection, GraphInputFormat, GraphTranslationSettings, NodeBorder, NodeShadow, NodeSurface,
+  CanvasBackground, GradientDirection, GraphInputFormat, GraphTranslationSettings, NodeBorder, NodeShape, NodeShadow, NodeSurface,
 } from './types';
 
 export const GRAPH_DATABASE_NAME = 'm2rf-studio';
@@ -29,6 +29,7 @@ export const DEFAULT_SETTINGS = {
     split: 50,
   },
   nodeBorder: 'solid',
+  nodeShape: 'rectangle',
   nodeShadow: 'none',
   nodeSurface: 'gradient',
 } as const;
@@ -48,6 +49,22 @@ export const DEFAULT_CANVAS_SETTINGS = {
     direction: 'vertical',
     split: 50,
   },
+  pattern: {
+    backgroundColor: '#0f172a',
+    color: '#22d3ee',
+    density: 50,
+  },
+  shader: {
+    aurora: {
+      colorA: '#0f172a',
+      colorB: '#22d3ee',
+      colorC: '#818cf8',
+    },
+    gradientMesh: {
+      colorA: '#0f172a',
+      colorB: '#6366f1',
+    },
+  },
   gridVisible: true,
   locked: false,
   snapToGrid: false,
@@ -60,17 +77,27 @@ export const EDGE_ANIMATION_OPTIONS: Array<{ label: string; value: GraphTranslat
   { label: 'Surge', value: 'surge' },
 ];
 export const CANVAS_BACKGROUND_OPTIONS: Array<{ label: string; preview: string; value: CanvasBackground }> = [
-  { label: 'Grid', preview: 'linear-gradient(#d4d4d8 1px, transparent 1px), linear-gradient(90deg, #d4d4d8 1px, transparent 1px)', value: 'grid' },
-  { label: 'Two-color gradient', preview: 'linear-gradient(180deg, #0f172a, #2563eb)', value: 'gradient' },
-  { label: 'Aurora shader', preview: 'linear-gradient(135deg, #052e16, #0891b2, #7e22ce)', value: 'aurora' },
-  { label: 'Gradient mesh shader', preview: 'linear-gradient(135deg, #312e81, #db2777, #f59e0b)', value: 'gradient-mesh' },
-  { label: 'Dot pattern', preview: 'radial-gradient(#22d3ee 1px, transparent 1px)', value: 'dot-pattern' },
+  { label: 'Grid', preview: 'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)', value: 'grid' },
+  { label: 'Two-color gradient', preview: 'linear-gradient(180deg, currentColor, transparent)', value: 'gradient' },
+  { label: 'Aurora shader', preview: 'linear-gradient(135deg, currentColor, transparent 70%)', value: 'aurora' },
+  { label: 'Gradient mesh shader', preview: 'radial-gradient(circle at 25% 25%, currentColor, transparent 60%), linear-gradient(135deg, currentColor, transparent)', value: 'gradient-mesh' },
+  { label: 'Dot pattern', preview: 'radial-gradient(currentColor 1px, transparent 1px)', value: 'dot-pattern' },
+  { label: 'Diagonal stripes', preview: 'repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 8px)', value: 'pattern-diagonal' },
+  { label: 'Checkerboard', preview: 'conic-gradient(currentColor 25%, transparent 0 50%, currentColor 0 75%, transparent 0)', value: 'pattern-checkerboard' },
+  { label: 'Diamond grid', preview: 'linear-gradient(45deg, transparent 42%, currentColor 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, currentColor 42% 58%, transparent 58%)', value: 'pattern-diamond' },
 ];
 export const NODE_BORDER_OPTIONS: Array<{ label: string; value: NodeBorder }> = [
   { label: 'Solid', value: 'solid' },
   { label: 'Dashed', value: 'dashed' },
   { label: 'Dotted', value: 'dotted' },
   { label: 'None', value: 'none' },
+];
+export const NODE_SHAPE_OPTIONS: Array<{ label: string; value: NodeShape }> = [
+  { label: 'Rectangle', value: 'rectangle' },
+  { label: 'Square', value: 'square' },
+  { label: 'Circle', value: 'circle' },
+  { label: 'Diamond', value: 'diamond' },
+  { label: 'Cylinder', value: 'cylinder' },
 ];
 export const NODE_SHADOW_OPTIONS: Array<{ label: string; value: NodeShadow }> = [
   { label: 'None', value: 'none' },
@@ -83,10 +110,10 @@ export const GRADIENT_DIRECTION_OPTIONS: Array<{ label: string; value: GradientD
   { label: 'Radial', value: 'radial' },
 ];
 export const NODE_SURFACE_OPTIONS: Array<{ label: string; preview: string; value: NodeSurface }> = [
-  { label: 'Two-color gradient', preview: 'linear-gradient(180deg, #2563eb, #06b6d4)', value: 'gradient' },
-  { label: 'Solid', preview: 'linear-gradient(135deg, #2563eb, #2563eb)', value: 'solid' },
-  { label: 'Grid pattern', preview: 'linear-gradient(#ffffff40 1px, transparent 1px), linear-gradient(90deg, #ffffff40 1px, transparent 1px)', value: 'pattern-grid' },
-  { label: 'Dot pattern', preview: 'radial-gradient(#ffffff99 1px, transparent 1px)', value: 'pattern-dots' },
+  { label: 'Two-color gradient', preview: 'linear-gradient(180deg, currentColor, transparent)', value: 'gradient' },
+  { label: 'Solid', preview: 'linear-gradient(135deg, currentColor, currentColor)', value: 'solid' },
+  { label: 'Grid pattern', preview: 'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)', value: 'pattern-grid' },
+  { label: 'Dot pattern', preview: 'radial-gradient(currentColor 1px, transparent 1px)', value: 'pattern-dots' },
 ];
 export const EDGE_TYPE_OPTIONS: Array<{ label: string; value: GraphTranslationSettings['edgeType'] }> = [
   { label: 'Default', value: 'default' },

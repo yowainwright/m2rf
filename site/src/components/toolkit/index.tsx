@@ -1,5 +1,6 @@
 'use client';
 
+import type { ChangeEvent } from 'react';
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/ui/field';
 import { Input } from '@/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
@@ -13,18 +14,22 @@ import {
   CANVAS_BACKGROUND_OPTIONS,
   GRADIENT_DIRECTION_OPTIONS,
   NODE_BORDER_OPTIONS,
+  NODE_SHAPE_OPTIONS,
   NODE_SHADOW_OPTIONS,
   NODE_SURFACE_OPTIONS,
   TOOLKIT_LABELS,
 } from './constants';
-import type { GraphGradientSettings } from '@/graph';
-import type { CanvasToolProps, EdgeToolProps, NodeToolProps } from './types';
-
-type GradientToolsProps = {
-  gradient: GraphGradientSettings;
-  idPrefix: string;
-  onUpdate: (gradient: GraphGradientSettings) => void;
-};
+import type { GraphGradientSettings, GraphPatternSettings, GraphShaderSettings } from '@/graph';
+import type {
+  CanvasToolProps,
+  EdgeToolProps,
+  GradientToolsProps,
+  NodeToolProps,
+  PatternToolsProps,
+  ShaderColorFieldProps,
+  ShaderColorKey,
+  ShaderToolsProps,
+} from './types';
 
 const GradientTools = ({ gradient, idPrefix, onUpdate }: GradientToolsProps) => {
   const split = Math.min(100, Math.max(0, gradient.split));
@@ -84,11 +89,110 @@ const GradientTools = ({ gradient, idPrefix, onUpdate }: GradientToolsProps) => 
   );
 };
 
+const PatternTools = ({ idPrefix, onUpdate, pattern }: PatternToolsProps) => {
+  const colorId = `${idPrefix}-pattern-color`;
+  const backgroundColorId = `${idPrefix}-pattern-background-color`;
+  const densityId = `${idPrefix}-pattern-density`;
+  const density = Math.min(100, Math.max(0, pattern.density));
+  const updatePattern = (update: Partial<GraphPatternSettings>) => {
+    onUpdate(Object.assign({}, pattern, update));
+  };
+
+  return (
+    <FieldGroup className="col-span-2 grid grid-cols-2 gap-x-3 gap-y-2">
+      <Field className="min-w-0 gap-1">
+        <FieldLabel className="text-xs" htmlFor={colorId}>{TOOLKIT_LABELS.patternColor}</FieldLabel>
+        <Input className="h-8 cursor-pointer p-0.5" id={colorId} type="color" value={pattern.color} onChange={(event) => updatePattern({ color: event.target.value })} />
+      </Field>
+      <Field className="min-w-0 gap-1">
+        <FieldLabel className="text-xs" htmlFor={backgroundColorId}>{TOOLKIT_LABELS.patternBackgroundColor}</FieldLabel>
+        <Input className="h-8 cursor-pointer p-0.5" id={backgroundColorId} type="color" value={pattern.backgroundColor} onChange={(event) => updatePattern({ backgroundColor: event.target.value })} />
+      </Field>
+      <Field className="col-span-2 min-w-0 gap-1">
+        <FieldLabel className="justify-between text-xs" htmlFor={densityId}>
+          <span>{TOOLKIT_LABELS.patternDensity}</span>
+          <span className="text-muted-foreground">{density}%</span>
+        </FieldLabel>
+        <Slider
+          aria-label={TOOLKIT_LABELS.patternDensity}
+          id={densityId}
+          max={100}
+          min={0}
+          onValueChange={(values) => {
+            const [nextDensity] = values;
+            if (nextDensity !== undefined) updatePattern({ density: nextDensity });
+          }}
+          step={1}
+          value={[density]}
+        />
+      </Field>
+    </FieldGroup>
+  );
+};
+
+const ShaderColorField = ({ id, label, onChange, value }: ShaderColorFieldProps) => (
+  <Field className="min-w-0 gap-1">
+    <FieldLabel className="text-xs" htmlFor={id}>{label}</FieldLabel>
+    <Input className="h-8 cursor-pointer p-0.5" id={id} type="color" value={value} onChange={onChange} />
+  </Field>
+);
+
+const updateShaderColor = (
+  shader: GraphShaderSettings,
+  isAurora: boolean,
+  key: ShaderColorKey,
+  value: string
+) => {
+  const isAuroraColorA = isAurora && key === 'colorA';
+  const isAuroraColorB = isAurora && key === 'colorB';
+  if (isAuroraColorA) return Object.assign({}, shader, { aurora: Object.assign({}, shader.aurora, { colorA: value }) });
+  if (isAuroraColorB) return Object.assign({}, shader, { aurora: Object.assign({}, shader.aurora, { colorB: value }) });
+  if (isAurora) return Object.assign({}, shader, { aurora: Object.assign({}, shader.aurora, { colorC: value }) });
+  if (key === 'colorA') return Object.assign({}, shader, { gradientMesh: Object.assign({}, shader.gradientMesh, { colorA: value }) });
+  return Object.assign({}, shader, { gradientMesh: Object.assign({}, shader.gradientMesh, { colorB: value }) });
+};
+
+const createShaderColorHandler = (
+  shader: GraphShaderSettings,
+  isAurora: boolean,
+  key: ShaderColorKey,
+  onUpdate: (shader: GraphShaderSettings) => void
+) => (event: ChangeEvent<HTMLInputElement>) => {
+  onUpdate(updateShaderColor(shader, isAurora, key, event.target.value));
+};
+
+const ShaderTools = ({ background, onUpdate, shader }: ShaderToolsProps) => {
+  const isAurora = background === 'aurora';
+  const colors = isAurora ? shader.aurora : shader.gradientMesh;
+  const handleColorAUpdate = createShaderColorHandler(shader, isAurora, 'colorA', onUpdate);
+  const handleColorBUpdate = createShaderColorHandler(shader, isAurora, 'colorB', onUpdate);
+  const handleColorCUpdate = createShaderColorHandler(shader, isAurora, 'colorC', onUpdate);
+  const colorCField = isAurora ? (
+    <ShaderColorField
+      id="canvas-shader-color-c"
+      label={TOOLKIT_LABELS.shaderColorC}
+      onChange={handleColorCUpdate}
+      value={shader.aurora.colorC}
+    />
+  ) : null;
+
+  return (
+    <FieldGroup className="col-span-2 grid grid-cols-2 gap-x-3 gap-y-2">
+      <ShaderColorField id="canvas-shader-color-a" label={TOOLKIT_LABELS.shaderColorA} onChange={handleColorAUpdate} value={colors.colorA} />
+      <ShaderColorField id="canvas-shader-color-b" label={TOOLKIT_LABELS.shaderColorB} onChange={handleColorBUpdate} value={colors.colorB} />
+      {colorCField}
+    </FieldGroup>
+  );
+};
+
 export const NodeTools = (props: NodeToolProps) => {
   const borders = NODE_BORDER_OPTIONS.map((option) => (
     <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
   ));
   const shadows = NODE_SHADOW_OPTIONS.map((option) => (
+    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+  ));
+  const shapes = NODE_SHAPE_OPTIONS.map((option) => (
     <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
   ));
   const surfaces = NODE_SURFACE_OPTIONS.map((option) => (
@@ -124,6 +228,13 @@ export const NodeTools = (props: NodeToolProps) => {
           <Select onValueChange={props.onShadowUpdate} value={props.shadowValue}>
             <SelectTrigger className="h-8 px-2 text-xs" id="node-shadow"><SelectValue /></SelectTrigger>
             <SelectContent>{shadows}</SelectContent>
+          </Select>
+        </Field>
+        <Field className="col-span-2 min-w-0 gap-1">
+          <FieldLabel className="text-xs" htmlFor="node-shape">{TOOLKIT_LABELS.shape}</FieldLabel>
+          <Select onValueChange={props.onShapeUpdate} value={props.shapeValue}>
+            <SelectTrigger className="h-8 px-2 text-xs" id="node-shape"><SelectValue /></SelectTrigger>
+            <SelectContent>{shapes}</SelectContent>
           </Select>
         </Field>
         <Field className="col-span-2 min-w-0 gap-1">
@@ -191,6 +302,11 @@ export const EdgeTools = (props: EdgeToolProps) => {
 };
 
 export const CanvasTools = (props: CanvasToolProps) => {
+  const isGradientBackground = props.settings.background === 'gradient';
+  const isAuroraBackground = props.settings.background === 'aurora';
+  const isMeshBackground = props.settings.background === 'gradient-mesh';
+  const isShaderBackground = isAuroraBackground || isMeshBackground;
+  const isPatternBackground = !isGradientBackground && !isShaderBackground;
   const backgrounds = CANVAS_BACKGROUND_OPTIONS.map((option) => (
     <SelectItem key={option.value} value={option.value}>
       <span className="flex items-center gap-2">
@@ -213,6 +329,12 @@ export const CanvasTools = (props: CanvasToolProps) => {
         </Field>
         {props.settings.background === 'gradient' ? (
           <GradientTools gradient={props.gradient} idPrefix="canvas" onUpdate={props.onGradientUpdate} />
+        ) : null}
+        {isShaderBackground ? (
+          <ShaderTools background={props.settings.background} onUpdate={props.onShaderUpdate} shader={props.shader} />
+        ) : null}
+        {isPatternBackground ? (
+          <PatternTools idPrefix="canvas" onUpdate={props.onPatternUpdate} pattern={props.pattern} />
         ) : null}
         <Field orientation="horizontal">
           <FieldLabel className="text-xs" htmlFor="canvas-grid">{TOOLKIT_LABELS.grid}</FieldLabel>
