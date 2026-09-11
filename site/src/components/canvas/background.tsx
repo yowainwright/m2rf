@@ -4,15 +4,26 @@ import { AuroraShaders } from '@/components/ui/aurora';
 import { DotPattern } from '@/components/ui/dot-pattern';
 import { GradientMeshShaders } from '@/components/ui/gradient-mesh';
 import { GridPattern } from '@/components/ui/grid-pattern';
-import type { CanvasBackground as CanvasBackgroundPreset } from '@/graph';
+import { createGradientImage } from '@/graph';
+import type { CanvasBackground as CanvasBackgroundPreset, GraphGradientSettings } from '@/graph';
 
 type CanvasBackgroundProps = {
+  gradient: GraphGradientSettings;
   preset: CanvasBackgroundPreset;
 };
 
 const backgroundClassName = 'pointer-events-none absolute inset-0 z-0 overflow-hidden';
 
-export const CanvasBackground = ({ preset }: CanvasBackgroundProps) => {
+export const CanvasBackground = ({ gradient, preset }: CanvasBackgroundProps) => {
+  if (preset === 'gradient') {
+    return (
+      <div
+        className={backgroundClassName}
+        style={{ backgroundImage: createGradientImage(gradient) }}
+      />
+    );
+  }
+
   if (preset === 'aurora') {
     return (
       <div className={backgroundClassName}>

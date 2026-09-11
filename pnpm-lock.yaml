@@ -198,12 +198,12 @@ importers:
       react-resizable-panels:
         specifier: ^4.12.4
         version: 4.12.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      react-shaders:
-        specifier: ^0.0.4
-        version: 0.0.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       reactflow:
         specifier: ^11.11.4
         version: 11.11.4(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      shaders:
+        specifier: ^3.2.469
+        version: 3.2.469(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
@@ -3842,12 +3842,6 @@ packages:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
 
-  react-shaders@0.0.4:
-    resolution: {integrity: sha512-uh42UkMeS4DXyoyYzx+SJryCbULJi6eOMZSLO8Xp1+ogn1WjkIwoP5ucjoYfYu3qouYw3vVIi/Amu0/xZ4/wsg==}
-    peerDependencies:
-      react: ^18.2.0
-      react-dom: ^18.2.0
-
   react-style-singleton@2.2.3:
     resolution: {integrity: sha512-b6jSvxvVnyptAiLjbkWLE/lOnR4lfTtDAl+eUC7RZy+QQWc6wRzIV2CE6xBuMmDxc2qIihtDCZD5NPOFl7fRBQ==}
     engines: {node: '>=10'}
@@ -3969,6 +3963,27 @@ packages:
     resolution: {integrity: sha512-UU2mFNusW8C5rvadKdH69vERYZqUlOOlXBcf0MYhYLdTGP6DPti7X4qovCu+RTfCqsAgq/T+YfE0Vnttxh9aiw==}
     engines: {node: '>=20.18.1'}
     hasBin: true
+
+  shaders@3.2.469:
+    resolution: {integrity: sha512-7XpWLfVgjdSVw6jVGVh0y2qHp/19O8+1+xrpMqJ8dKkvK2jFnGpK9Wb6IBlOHCu0HX/hhmFVv9GkRAcsMUbhSA==}
+    hasBin: true
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+      solid-js: ^1.8.0
+      svelte: ^5
+      vue: ^3.5.0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      solid-js:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
 
   sharp@0.35.4:
     resolution: {integrity: sha512-n++8XWcj+jCOr2IOl7h8LbKnGBDY4aPbmprMONBNFdn0ImXqpGVv5zliDs0V9HbmbCQLpbuo2ej9rAoOQTvMDA==}
@@ -4148,6 +4163,10 @@ packages:
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
 
+  tinyest@0.3.3:
+    resolution: {integrity: sha512-LUDiIzyDUQ1mGo8Bam9c7Dubid6Psx14zMzGNwwvOEmNs03FWNUtOrHVXd+TcCorzogQ24Rk0fcfdZ+9rGr1Fw==}
+    engines: {node: '>=12.20.0'}
+
   tinyexec@1.3.0:
     resolution: {integrity: sha512-QKAl9m8gWWGHV8jZcPeym6j+XULi6tOf1mT83WYJ4Lk2ytW/uwAWkrP0uFsdoYMdueVJ0qs26wZ+23xeB4ibNQ==}
     engines: {node: '>=18'}
@@ -4203,6 +4222,9 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
+  tsover-runtime@0.0.7:
+    resolution: {integrity: sha512-FHHwMJzZbnP23+fU1PxXljy7j0RRRosL2r1/CRUNTqfW+l7m35JsUkM615x/cAzw4GqRdXPIl3axKMj9qzpZtQ==}
+
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
@@ -4210,6 +4232,14 @@ packages:
   type-is@2.1.0:
     resolution: {integrity: sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==}
     engines: {node: '>= 18'}
+
+  typed-binary@4.3.3:
+    resolution: {integrity: sha512-W2hLsSzt3k/tg38gDE4Fn/QiwcoqGuUHBc2cb3mXuH7KcYxe/GM57vzW14s2/bawB4R5knGgGq8Xb57vsaJ4Sg==}
+
+  typegpu@0.12.3:
+    resolution: {integrity: sha512-zYwQEhnPPwhq5vQKmollXRK1LCVjStOnL+2B0PiebqvAzYPr25rPNR4r3olLoow5sKKjyj3kzHKEcpD5SyDzGQ==}
+    engines: {node: '>=12.20.0'}
+    hasBin: true
 
   typescript-eslint@8.68.0:
     resolution: {integrity: sha512-MHy0Y0ynqeEbx/S45+i/bBssdy3X6KNBfmJAP35GrgtNxu2TQ5K5xsFDhAnmsq1jvpdoZOPG1LGtJo0HWqYCrQ==}
@@ -7956,11 +7986,6 @@ snapshots:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
 
-  react-shaders@0.0.4(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
-    dependencies:
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-
   react-style-singleton@2.2.3(@types/react@19.2.18)(react@19.2.8):
     dependencies:
       get-nonce: 1.0.1
@@ -8149,6 +8174,13 @@ snapshots:
       - supports-color
       - typescript
 
+  shaders@3.2.469(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+    dependencies:
+      typegpu: 0.12.3
+    optionalDependencies:
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+
   sharp@0.35.4(@types/node@26.4.0):
     dependencies:
       '@img/colour': 1.1.0
@@ -8320,6 +8352,8 @@ snapshots:
 
   tinybench@2.9.0: {}
 
+  tinyest@0.3.3: {}
+
   tinyexec@1.3.0: {}
 
   tinyglobby@0.2.17:
@@ -8368,6 +8402,8 @@ snapshots:
 
   tslib@2.8.1: {}
 
+  tsover-runtime@0.0.7: {}
+
   type-check@0.4.0:
     dependencies:
       prelude-ls: 1.2.1
@@ -8377,6 +8413,14 @@ snapshots:
       content-type: 2.1.0
       media-typer: 1.1.1
       mime-types: 3.0.2
+
+  typed-binary@4.3.3: {}
+
+  typegpu@0.12.3:
+    dependencies:
+      tinyest: 0.3.3
+      tsover-runtime: 0.0.7
+      typed-binary: 4.3.3
 
   typescript-eslint@8.68.0(eslint@10.9.1(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@7.0.2):
     dependencies:

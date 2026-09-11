@@ -3,6 +3,7 @@
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/ui/field';
 import { Input } from '@/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
+import { Slider } from '@/ui/slider';
 import { Switch } from '@/ui/switch';
 import {
   EDGE_ANIMATION_OPTIONS,
@@ -10,12 +11,78 @@ import {
   EDGE_TYPE_OPTIONS,
   EDGE_WIDTH_LIMITS,
   CANVAS_BACKGROUND_OPTIONS,
+  GRADIENT_DIRECTION_OPTIONS,
   NODE_BORDER_OPTIONS,
   NODE_SHADOW_OPTIONS,
   NODE_SURFACE_OPTIONS,
   TOOLKIT_LABELS,
 } from './constants';
+import type { GraphGradientSettings } from '@/graph';
 import type { CanvasToolProps, EdgeToolProps, NodeToolProps } from './types';
+
+type GradientToolsProps = {
+  gradient: GraphGradientSettings;
+  idPrefix: string;
+  onUpdate: (gradient: GraphGradientSettings) => void;
+};
+
+const GradientTools = ({ gradient, idPrefix, onUpdate }: GradientToolsProps) => {
+  const split = Math.min(100, Math.max(0, gradient.split));
+  const colorAId = `${idPrefix}-gradient-color-a`;
+  const colorBId = `${idPrefix}-gradient-color-b`;
+  const directionId = `${idPrefix}-gradient-direction`;
+  const balanceId = `${idPrefix}-gradient-balance`;
+  const updateGradient = (update: Partial<GraphGradientSettings>) => {
+    onUpdate(Object.assign({}, gradient, update));
+  };
+  const handleDirectionUpdate = (value: string) => {
+    const option = GRADIENT_DIRECTION_OPTIONS.find((item) => item.value === value);
+    if (option) updateGradient({ direction: option.value });
+  };
+  const handleSplitUpdate = (values: number[]) => {
+    const [nextSplit] = values;
+    if (nextSplit !== undefined) updateGradient({ split: nextSplit });
+  };
+
+  return (
+    <FieldGroup className="col-span-2 grid grid-cols-2 gap-x-3 gap-y-2">
+      <Field className="min-w-0 gap-1">
+        <FieldLabel className="text-xs" htmlFor={colorAId}>{TOOLKIT_LABELS.gradientColorA}</FieldLabel>
+        <Input className="h-8 cursor-pointer p-0.5" id={colorAId} type="color" value={gradient.colorA} onChange={(event) => updateGradient({ colorA: event.target.value })} />
+      </Field>
+      <Field className="min-w-0 gap-1">
+        <FieldLabel className="text-xs" htmlFor={colorBId}>{TOOLKIT_LABELS.gradientColorB}</FieldLabel>
+        <Input className="h-8 cursor-pointer p-0.5" id={colorBId} type="color" value={gradient.colorB} onChange={(event) => updateGradient({ colorB: event.target.value })} />
+      </Field>
+      <Field className="col-span-2 min-w-0 gap-1">
+        <FieldLabel className="text-xs" htmlFor={directionId}>{TOOLKIT_LABELS.gradientDirection}</FieldLabel>
+        <Select onValueChange={handleDirectionUpdate} value={gradient.direction}>
+          <SelectTrigger className="h-8 px-2 text-xs" id={directionId}><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {GRADIENT_DIRECTION_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field className="col-span-2 min-w-0 gap-1">
+        <FieldLabel className="justify-between text-xs" htmlFor={balanceId}>
+          <span>{TOOLKIT_LABELS.gradientBalance}</span>
+          <span className="text-muted-foreground">{split}% / {100 - split}%</span>
+        </FieldLabel>
+        <Slider
+          aria-label={TOOLKIT_LABELS.gradientBalance}
+          id={balanceId}
+          max={100}
+          min={0}
+          onValueChange={handleSplitUpdate}
+          step={1}
+          value={[split]}
+        />
+      </Field>
+    </FieldGroup>
+  );
+};
 
 export const NodeTools = (props: NodeToolProps) => {
   const borders = NODE_BORDER_OPTIONS.map((option) => (
@@ -66,6 +133,9 @@ export const NodeTools = (props: NodeToolProps) => {
             <SelectContent>{surfaces}</SelectContent>
           </Select>
         </Field>
+        {props.surfaceValue === 'gradient' ? (
+          <GradientTools gradient={props.gradient} idPrefix="node" onUpdate={props.onGradientUpdate} />
+        ) : null}
       </FieldGroup>
     </FieldSet>
   );
@@ -141,6 +211,9 @@ export const CanvasTools = (props: CanvasToolProps) => {
             <SelectContent>{backgrounds}</SelectContent>
           </Select>
         </Field>
+        {props.settings.background === 'gradient' ? (
+          <GradientTools gradient={props.gradient} idPrefix="canvas" onUpdate={props.onGradientUpdate} />
+        ) : null}
         <Field orientation="horizontal">
           <FieldLabel className="text-xs" htmlFor="canvas-grid">{TOOLKIT_LABELS.grid}</FieldLabel>
           <Switch checked={props.settings.gridVisible} id="canvas-grid" onCheckedChange={props.onGridUpdate} />

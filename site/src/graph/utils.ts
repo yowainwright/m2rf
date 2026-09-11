@@ -10,12 +10,17 @@ import {
 import type {
   CreateGraphRecordsInput, EdgeAnimation, EdgeMarkerValue, EdgeType, FlowNodeRecord,
   GraphDatabase, GraphElements, GraphInput, GraphRecords, GraphRepository,
-  GraphTranslation, GraphWorkspace, TranslationSettings, UpdateGraphRecordsInput,
+  GraphGradientSettings, GraphTranslation, GraphWorkspace, GradientDirection, TranslationSettings,
+  UpdateGraphRecordsInput,
 } from './types';
 
 const SURGE_EDGE_TYPE = 'surge';
 const NODE_COLOR_VARIABLE = '--m2rf-node-primary';
 const NODE_SURFACE_VARIABLE = '--m2rf-node-surface';
+const NODE_GRADIENT_A_VARIABLE = '--m2rf-node-gradient-a';
+const NODE_GRADIENT_B_VARIABLE = '--m2rf-node-gradient-b';
+const NODE_GRADIENT_DIRECTION_VARIABLE = '--m2rf-node-gradient-direction';
+const NODE_GRADIENT_SPLIT_VARIABLE = '--m2rf-node-gradient-split';
 
 const database = new Dexie(GRAPH_DATABASE_NAME) as GraphDatabase;
 const tables = [GRAPH_TABLES.workspaces, GRAPH_TABLES.inputs, GRAPH_TABLES.translations];
@@ -132,15 +137,28 @@ export const graphRepository: GraphRepository = {
 
 export const clampEdgeWidth = EffectNumber.clamp(EDGE_WIDTH_LIMITS);
 
-const getNodeSurfaceImage = (surface: TranslationSettings['nodeSurface']) => {
-  if (surface === 'gradient-ocean') {
-    return 'linear-gradient(135deg, var(--m2rf-node-primary), #06b6d4)';
-  }
+const getGradientDirection = (direction: GradientDirection) => {
+  if (direction === 'horizontal') return 'to right';
+  if (direction === 'vertical') return 'to bottom';
+  return 'circle';
+};
 
-  if (surface === 'gradient-sunset') {
-    return 'linear-gradient(135deg, var(--m2rf-node-primary), #f97316)';
-  }
+const clampGradientSplit = (split: number) => Math.min(100, Math.max(0, split));
 
+export const createGradientImage = (gradient: GraphGradientSettings) => {
+  const split = clampGradientSplit(gradient.split);
+  const firstStop = `${gradient.colorA} 0%, ${gradient.colorA} ${split}%`;
+  const secondStop = `${gradient.colorB} 100%`;
+  const direction = getGradientDirection(gradient.direction);
+  const gradientType = gradient.direction === 'radial' ? 'radial-gradient' : 'linear-gradient';
+  return `${gradientType}(${direction}, ${firstStop}, ${secondStop})`;
+};
+
+const getNodeSurfaceImage = (
+  surface: TranslationSettings['nodeSurface'],
+  gradient: GraphGradientSettings
+) => {
+  if (surface === 'gradient') return createGradientImage(gradient);
   if (surface === 'pattern-grid') {
     return 'linear-gradient(rgba(255,255,255,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.22) 1px, transparent 1px)';
   }
@@ -181,6 +199,22 @@ const getNodeSurface = (style: CSSProperties | undefined, fallback: TranslationS
   return fallback;
 };
 
+const getGradientDirectionValue = (value: unknown, fallback: GradientDirection) => {
+  const hasKnownDirection = value === 'horizontal' || value === 'radial';
+  if (hasKnownDirection) return value;
+  return fallback;
+};
+
+const getNodeGradient = (style: CSSProperties | undefined, fallback: GraphGradientSettings) => {
+  const colorA = getColorValue(getNodeStyleValue(style, NODE_GRADIENT_A_VARIABLE), fallback.colorA);
+  const colorB = getColorValue(getNodeStyleValue(style, NODE_GRADIENT_B_VARIABLE), fallback.colorB);
+  const directionValue = getNodeStyleValue(style, NODE_GRADIENT_DIRECTION_VARIABLE);
+  const direction = getGradientDirectionValue(directionValue, fallback.direction);
+  const splitValue = getNodeStyleValue(style, NODE_GRADIENT_SPLIT_VARIABLE);
+  const split = typeof splitValue === 'number' ? splitValue : fallback.split;
+  return { colorA, colorB, direction, split };
+};
+
 const getNodeShadowValue = (style: CSSProperties | undefined, fallback: TranslationSettings['nodeShadow']) => {
   const value = getNodeStyleValue(style, 'boxShadow');
   if (value === getNodeShadow('soft')) return 'soft';
@@ -194,6 +228,12 @@ export const createNodeStyle = (settings: TranslationSettings) => {
   const backgroundSize = settings.nodeSurface.startsWith('pattern-') ? '16px 16px' : 'auto';
   const colorVariable = { [NODE_COLOR_VARIABLE]: settings.primaryColor };
   const surfaceVariable = { [NODE_SURFACE_VARIABLE]: settings.nodeSurface };
+  const gradientVariables = {
+    [NODE_GRADIENT_A_VARIABLE]: settings.nodeGradient.colorA,
+    [NODE_GRADIENT_B_VARIABLE]: settings.nodeGradient.colorB,
+    [NODE_GRADIENT_DIRECTION_VARIABLE]: settings.nodeGradient.direction,
+    [NODE_GRADIENT_SPLIT_VARIABLE]: settings.nodeGradient.split,
+  };
   return Object.assign({}, {
     backgroundColor: settings.primaryColor,
     borderColor: settings.primaryColor,
@@ -202,9 +242,9 @@ export const createNodeStyle = (settings: TranslationSettings) => {
     boxShadow: getNodeShadow(settings.nodeShadow),
     color: settings.inverseColor,
     fontFamily: settings.fontFamily,
-    backgroundImage: getNodeSurfaceImage(settings.nodeSurface),
+    backgroundImage: getNodeSurfaceImage(settings.nodeSurface, settings.nodeGradient),
     backgroundSize,
-  }, colorVariable, surfaceVariable) as CSSProperties;
+  }, colorVariable, surfaceVariable, gradientVariables) as CSSProperties;
 };
 
 export const createEdgeStyle = (settings: TranslationSettings) => {
@@ -269,6 +309,10 @@ const createNodeStyleUpdate = (
     style[NODE_COLOR_VARIABLE],
     getColorValue(style.backgroundColor, DEFAULT_SETTINGS.primaryColor)
   );
+  const currentSurface = getNodeSurface(node.style, DEFAULT_SETTINGS.nodeSurface);
+  const currentGradient = getNodeGradient(node.style, DEFAULT_SETTINGS.nodeGradient);
+  const nextSurface = settings.nodeSurface || currentSurface;
+  const nextGradient = settings.nodeGradient || currentGradient;
   if (settings.primaryColor !== undefined) {
     style.backgroundColor = settings.primaryColor;
     style.borderColor = settings.primaryColor;
@@ -281,9 +325,17 @@ const createNodeStyleUpdate = (
   }
   if (settings.nodeShadow !== undefined) style.boxShadow = getNodeShadow(settings.nodeShadow);
   if (settings.nodeSurface !== undefined) {
-    style.backgroundImage = getNodeSurfaceImage(settings.nodeSurface);
+    style.backgroundImage = getNodeSurfaceImage(settings.nodeSurface, nextGradient);
     style.backgroundSize = settings.nodeSurface.startsWith('pattern-') ? '16px 16px' : 'auto';
     style[NODE_SURFACE_VARIABLE] = settings.nodeSurface;
+  }
+  if (settings.nodeGradient !== undefined) {
+    style.backgroundImage = getNodeSurfaceImage(nextSurface, nextGradient);
+    style.backgroundSize = nextSurface.startsWith('pattern-') ? '16px 16px' : 'auto';
+    style[NODE_GRADIENT_A_VARIABLE] = nextGradient.colorA;
+    style[NODE_GRADIENT_B_VARIABLE] = nextGradient.colorB;
+    style[NODE_GRADIENT_DIRECTION_VARIABLE] = nextGradient.direction;
+    style[NODE_GRADIENT_SPLIT_VARIABLE] = nextGradient.split;
   }
   if (settings.inverseColor !== undefined) style.color = settings.inverseColor;
   if (settings.fontFamily !== undefined) style.fontFamily = settings.fontFamily;
@@ -421,6 +473,11 @@ export const getNodeBorderValue = (
   node: Node | undefined,
   settings: TranslationSettings
 ) => getNodeBorder(node?.style, settings.nodeBorder);
+
+export const getNodeGradientValue = (
+  node: Node | undefined,
+  settings: TranslationSettings
+) => getNodeGradient(node?.style, settings.nodeGradient);
 
 export const getNodeShadowValueForNode = (
   node: Node | undefined,

@@ -9,6 +9,7 @@ export {
   NODE_BORDER_OPTIONS,
   NODE_SHADOW_OPTIONS,
   NODE_SURFACE_OPTIONS,
+  GRADIENT_DIRECTION_OPTIONS,
 } from '@/graph/constants';
 
 export const TOOLKIT_LABELS = {
@@ -17,6 +18,10 @@ export const TOOLKIT_LABELS = {
   global: 'Global',
   nodes: 'Nodes',
   fill: 'Fill',
+  gradientColorA: 'Color A',
+  gradientColorB: 'Color B',
+  gradientDirection: 'Direction',
+  gradientBalance: 'Color balance',
   border: 'Border',
   shadow: 'Shadow',
   surface: 'Surface',

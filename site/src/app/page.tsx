@@ -16,11 +16,12 @@ import {
   getEdgeAnimationValue,
   getEdgeAnchor,
   getNodeBorderValue,
+  getNodeGradientValue,
   getNodeShadowValueForNode,
   getNodeSurfaceValue,
   getWorkspaceLabel,
 } from '@/graph';
-import type { TranslationSettings } from '@/graph';
+import type { GraphCanvasSettings, GraphGradientSettings, TranslationSettings } from '@/graph';
 import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
 import { ChevronDown, Download, FileImage, FileCode, Film, Workflow } from 'lucide-react';
@@ -87,7 +88,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/ui/popover';
-import type { GraphCanvasSettings } from '@/graph';
 import { DESKTOP_MEDIA_QUERY, EDGE_ANCHOR_STYLE } from './constants';
 import { StudioContext } from './index';
 import { getSaveLabel, getSelectionLabel, handleReactFlowError, logAppEvent } from './utils';
@@ -417,7 +417,7 @@ function GraphPreview() {
   const canvas = Object.assign({}, DEFAULT_CANVAS_SETTINGS, translation.view.canvas);
   const canEditCanvas = canEditDraft && !isRendering && !canvas.locked;
   const canvasDeleteKey = canEditCanvas ? 'Backspace' : null;
-  const canvasBackground = <CanvasBackground preset={canvas.background} />;
+  const canvasBackground = <CanvasBackground gradient={canvas.gradient} preset={canvas.background} />;
   const shouldShowFlowGrid = canvas.gridVisible && canvas.background !== 'grid';
   const backgroundGrid = shouldShowFlowGrid
     ? <Background gap={CANVAS_GRID[0]} />
@@ -461,6 +461,9 @@ function GraphPreview() {
     const option = NODE_SURFACE_OPTIONS.find((item) => item.value === value);
     if (option) handleNodeSettingsUpdate({ nodeSurface: option.value });
   };
+  const handleNodeGradientUpdate = (gradient: GraphGradientSettings) => {
+    handleNodeSettingsUpdate({ nodeGradient: gradient });
+  };
   const handleEdgeSettingsUpdate = (settings: Partial<TranslationSettings>) => {
     send({ type: 'edges.style', settings });
   };
@@ -483,6 +486,9 @@ function GraphPreview() {
   const handleBackgroundUpdate = (value: string) => {
     const option = CANVAS_BACKGROUND_OPTIONS.find((item) => item.value === value);
     if (option) handleCanvasUpdate({ background: option.value });
+  };
+  const handleCanvasGradientUpdate = (gradient: GraphGradientSettings) => {
+    handleCanvasUpdate({ gradient });
   };
   const handleSnapUpdate = (snapToGrid: boolean) => handleCanvasUpdate({ snapToGrid });
   const handleLockUpdate = (locked: boolean) => handleCanvasUpdate({ locked });
@@ -529,8 +535,10 @@ function GraphPreview() {
   const nodeToolProps = {
     borderValue: getNodeBorderValue(selectedNode, settings),
     fillValue: getNodeFillValue(selectedNode, settings),
+    gradient: getNodeGradientValue(selectedNode, settings),
     onBorderUpdate: handleNodeBorderUpdate,
     onFillUpdate: handlePrimaryUpdate,
+    onGradientUpdate: handleNodeGradientUpdate,
     onShadowUpdate: handleNodeShadowUpdate,
     onSurfaceUpdate: handleNodeSurfaceUpdate,
     onTextUpdate: handleInverseUpdate,
@@ -555,7 +563,9 @@ function GraphPreview() {
   const nodeToolsSeparator = showNodeTools && showEdgeTools ? <Separator /> : null;
   const canvasTools = (
     <CanvasTools
+      gradient={canvas.gradient}
       onBackgroundUpdate={handleBackgroundUpdate}
+      onGradientUpdate={handleCanvasGradientUpdate}
       onGridUpdate={handleGridUpdate}
       onLockUpdate={handleLockUpdate}
       onSnapUpdate={handleSnapUpdate}

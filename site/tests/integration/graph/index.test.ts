@@ -18,6 +18,15 @@ const settings = {
   fontFamily: 'Arial, Helvetica, sans-serif',
   inverseColor: '#ffffff',
   primaryColor: '#2563eb',
+  nodeGradient: {
+    colorA: '#2563eb',
+    colorB: '#06b6d4',
+    direction: 'vertical',
+    split: 50,
+  },
+  nodeBorder: 'solid',
+  nodeShadow: 'none',
+  nodeSurface: 'gradient',
 } as const;
 
 const source = `flowchart LR

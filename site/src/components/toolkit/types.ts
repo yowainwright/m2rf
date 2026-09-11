@@ -1,6 +1,8 @@
 import type { ChangeEventHandler } from 'react';
 import type { Edge, Node } from 'reactflow';
-import type { GraphCanvasSettings, GraphElements, GraphTranslationSettings, GraphVersion } from '@/graph';
+import type {
+  GraphCanvasSettings, GraphElements, GraphGradientSettings, GraphTranslationSettings, GraphVersion,
+} from '@/graph';
 
 export type ToolkitMetadataProps = {
   elements: GraphElements;
@@ -19,8 +21,10 @@ export type EdgeMetadataProps = { edge: Edge };
 export type NodeToolProps = {
   borderValue: GraphTranslationSettings['nodeBorder'];
   fillValue: string;
+  gradient: GraphGradientSettings;
   onBorderUpdate: (value: string) => void;
   onFillUpdate: ChangeEventHandler<HTMLInputElement>;
+  onGradientUpdate: (gradient: GraphGradientSettings) => void;
   onShadowUpdate: (value: string) => void;
   onSurfaceUpdate: (value: string) => void;
   onTextUpdate: ChangeEventHandler<HTMLInputElement>;
@@ -41,6 +45,8 @@ export type EdgeToolProps = {
   widthValue: number;
 };
 export type CanvasToolProps = {
+  gradient: GraphGradientSettings;
+  onGradientUpdate: (gradient: GraphGradientSettings) => void;
   onBackgroundUpdate: (value: string) => void;
   onGridUpdate: (checked: boolean) => void;
   onLockUpdate: (checked: boolean) => void;
