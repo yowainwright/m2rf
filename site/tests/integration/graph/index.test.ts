@@ -5,8 +5,8 @@ import { createElement } from 'react';
 import { cleanup, renderHook, waitFor } from '@testing-library/react';
 import type { Edge, Node } from 'reactflow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { graphRepository } from '@/graph';
-import type { CreateGraphRecordsInput } from '@/graph';
+import { applySettings, createNodeStyle, graphRepository } from '@/graph';
+import type { CreateGraphRecordsInput, NodeShape } from '@/graph';
 import { StudioContext } from '@/app';
 
 const settings = {
@@ -18,6 +18,16 @@ const settings = {
   fontFamily: 'Arial, Helvetica, sans-serif',
   inverseColor: '#ffffff',
   primaryColor: '#2563eb',
+  nodeGradient: {
+    colorA: '#2563eb',
+    colorB: '#06b6d4',
+    direction: 'vertical',
+    split: 50,
+  },
+  nodeBorder: 'solid',
+  nodeShape: 'rectangle',
+  nodeShadow: 'none',
+  nodeSurface: 'gradient',
 } as const;
 
 const source = `flowchart LR
@@ -245,5 +255,34 @@ describe('graphRepository', () => {
     expect(reloaded?.translation.elements.edges[0]?.style?.strokeWidth).toBe(4);
     expect(reloaded?.translation.view.selection?.nodeIds).toEqual(['Idea']);
     expect(reloaded?.translation.view.viewport?.zoom).toBe(1.4);
+  });
+});
+
+describe('node shapes', () => {
+  const createShapeSettings = (nodeShape: NodeShape) => Object.assign({}, settings, { nodeShape });
+
+  it('keeps content sizing while applying each shape style', () => {
+    const rectangle = createNodeStyle(createShapeSettings('rectangle'));
+    const square = createNodeStyle(createShapeSettings('square'));
+    const circle = createNodeStyle(createShapeSettings('circle'));
+    const diamond = createNodeStyle(createShapeSettings('diamond'));
+    const cylinder = createNodeStyle(createShapeSettings('cylinder'));
+
+    expect(rectangle.aspectRatio).toBeUndefined();
+    expect(square.aspectRatio).toBe('1 / 1');
+    expect(circle.borderRadius).toBe('50%');
+    expect(diamond.clipPath).toContain('polygon');
+    expect(cylinder.borderRadius).toBe('50% / 15%');
+    expect(square.width).toBe('max-content');
+  });
+
+  it('removes the previous shape geometry when changing back to a rectangle', () => {
+    const shaped = Object.assign({}, node, { style: createNodeStyle(createShapeSettings('circle')) });
+    const updated = applySettings({ nodes: [shaped], edges: [edge] }, { nodeShape: 'rectangle' });
+    const style = updated.nodes[0]?.style;
+
+    expect(style?.aspectRatio).toBeUndefined();
+    expect(style?.borderRadius).toBeUndefined();
+    expect(style?.width).toBeUndefined();
   });
 });

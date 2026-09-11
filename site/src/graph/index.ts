@@ -1,6 +1,7 @@
 export {
   parseMermaidSvg,
   clampEdgeWidth,
+  createGradientImage,
   createNodeStyle,
   createEdgeStyle,
   createEdgeMarker,
@@ -15,6 +16,11 @@ export {
   getSelectedNode,
   getSelectedEdge,
   getNodeFillValue,
+  getNodeBorderValue,
+  getNodeGradientValue,
+  getNodeShadowValueForNode,
+  getNodeShapeValue,
+  getNodeSurfaceValue,
   getNodeTextValue,
   getEdgeColorValue,
   getEdgeWidthValue,
@@ -44,4 +50,8 @@ export type {
   UpdateGraphRecordsInput,
 } from './types';
 
-export type { EdgeAnimation, EdgeMarkerValue, EdgeType, TranslationSettings } from './types';
+export type {
+  CanvasBackground, EdgeAnimation, EdgeMarkerValue, EdgeType, GradientDirection, GraphGradientSettings,
+  GraphPatternSettings, GraphShaderSettings, NodeBorder, NodeShape, NodeShadow, NodeSurface,
+  TranslationSettings,
+} from './types';

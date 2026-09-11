@@ -4,6 +4,43 @@ import type { EntityTable } from 'dexie';
 
 export type GraphInputFormat = 'mermaid';
 
+export type CanvasBackground =
+  | 'aurora'
+  | 'dot-pattern'
+  | 'gradient'
+  | 'gradient-mesh'
+  | 'grid'
+  | 'pattern-checkerboard'
+  | 'pattern-diamond'
+  | 'pattern-diagonal';
+export type GradientDirection = 'horizontal' | 'radial' | 'vertical';
+export type GraphGradientSettings = {
+  colorA: string;
+  colorB: string;
+  direction: GradientDirection;
+  split: number;
+};
+export type GraphPatternSettings = {
+  backgroundColor: string;
+  color: string;
+  density: number;
+};
+export type GraphShaderSettings = {
+  aurora: {
+    colorA: string;
+    colorB: string;
+    colorC: string;
+  };
+  gradientMesh: {
+    colorA: string;
+    colorB: string;
+  };
+};
+export type NodeBorder = 'dashed' | 'dotted' | 'none' | 'solid';
+export type NodeShape = 'circle' | 'cylinder' | 'diamond' | 'rectangle' | 'square';
+export type NodeShadow = 'none' | 'soft' | 'strong';
+export type NodeSurface = 'gradient' | 'pattern-dots' | 'pattern-grid' | 'solid';
+
 export type FlowNodeRecord = { domId: string; id: string; label: string };
 
 export type GraphElements = {
@@ -12,17 +49,26 @@ export type GraphElements = {
 };
 
 export type GraphTranslationSettings = {
-  edgeAnimation: 'flow' | 'none' | 'pulse';
+  edgeAnimation: 'flow' | 'none' | 'pulse' | 'surge';
   edgeColor: string;
   edgeMarker: 'arrow' | 'arrowclosed' | 'none';
   edgeType: 'default' | 'smoothstep' | 'step' | 'straight';
   edgeWidth: number;
   fontFamily: string;
   inverseColor: string;
+  nodeGradient: GraphGradientSettings;
+  nodeBorder: NodeBorder;
+  nodeShape: NodeShape;
+  nodeShadow: NodeShadow;
+  nodeSurface: NodeSurface;
   primaryColor: string;
 };
 
 export type GraphCanvasSettings = {
+  background: CanvasBackground;
+  gradient: GraphGradientSettings;
+  pattern: GraphPatternSettings;
+  shader: GraphShaderSettings;
   gridVisible: boolean;
   locked: boolean;
   snapToGrid: boolean;
