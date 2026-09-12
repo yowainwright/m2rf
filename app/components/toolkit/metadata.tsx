@@ -1,40 +1,59 @@
 'use client';
 
-import { Field, FieldDescription, FieldGroup, FieldLegend, FieldSet, FieldTitle } from '@/app/components/ui/field';
+import { Badge } from '@/app/components/ui/badge';
+import { Field, FieldDescription, FieldGroup, FieldSet, FieldTitle } from '@/app/components/ui/field';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/app/components/ui/tooltip';
+import { cn } from '@/app/lib/utils';
 import { TOOLKIT_DATE_OPTIONS, TOOLKIT_METADATA_LABELS as LABELS } from './constants';
 import type { EdgeMetadataProps, MetadataFieldsProps, NodeMetadataProps, ToolkitMetadataProps } from './types';
 
-function MetadataFields({ fields }: MetadataFieldsProps) {
-  const items = fields.map(({ label, value, hideLabel }) => {
+const metadataBadgeClassName = 'px-2 py-0 text-xs';
+const TITLE_TOOLTIP_MAX_LENGTH = 24;
+
+function MetadataFields({ className, fields }: MetadataFieldsProps) {
+  const items = fields.map(({ emphasized, label, value, hideLabel }) => {
     const text = String(value);
+    const descriptionClassName = emphasized
+      ? 'min-w-0 max-w-full flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold leading-5 text-foreground'
+      : 'min-w-0 shrink-0 truncate text-xs leading-4 text-foreground';
+    const description = <FieldDescription className={descriptionClassName} title={emphasized ? undefined : text}>{text}</FieldDescription>;
+    const needsTooltip = emphasized && text.length > TITLE_TOOLTIP_MAX_LENGTH;
+    const content = needsTooltip ? (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="block min-w-0 max-w-full flex-1">{description}</div>
+        </TooltipTrigger>
+        <TooltipContent>{text}</TooltipContent>
+      </Tooltip>
+    ) : description;
     const caption = hideLabel ? null : (
       <FieldTitle className="shrink-0 text-xs font-normal text-muted-foreground">{label}</FieldTitle>
     );
+    const fieldClassName = cn('w-auto min-w-0 max-w-full gap-1', emphasized ? 'flex-1' : 'shrink-0');
     return (
-      <Field aria-label={label} className="w-auto min-w-0 max-w-full gap-1" key={label} orientation="horizontal">
+      <Field aria-label={label} className={fieldClassName} key={label} orientation="horizontal">
         {caption}
-        <FieldDescription className="min-w-0 truncate text-xs leading-4 text-foreground" title={text}>{text}</FieldDescription>
+        {content}
       </Field>
     );
   });
-  return <FieldGroup className="flex-row flex-wrap gap-x-3 gap-y-0.5">{items}</FieldGroup>;
+  return <FieldGroup className={cn('flex-row flex-wrap gap-x-3 gap-y-0.5', className)}>{items}</FieldGroup>;
 }
 
-function GlobalMetadata({ elements, version, workspaceName }: ToolkitMetadataProps) {
-  const versionNumber = version ? `v${version.version}` : LABELS.unsaved;
+function GlobalMetadata({ version, workspaceName }: ToolkitMetadataProps) {
   const saved = version
     ? new Date(version.updatedAt).toLocaleString(undefined, TOOLKIT_DATE_OPTIONS)
     : null;
   const savedFields = saved ? [{ label: LABELS.saved, value: saved, hideLabel: true }] : [];
   const summaryFields: MetadataFieldsProps['fields'] = [
-    { label: LABELS.name, value: workspaceName, hideLabel: true },
-    { label: LABELS.version, value: versionNumber, hideLabel: true },
+    { label: LABELS.name, value: workspaceName, hideLabel: true, emphasized: true },
   ];
-  const fields = summaryFields.concat(savedFields, [
-    { label: LABELS.nodes, value: elements.nodes.length },
-    { label: LABELS.edges, value: elements.edges.length },
-  ]);
-  return <MetadataFields fields={fields} />;
+  return (
+    <>
+      <MetadataFields className="w-full pt-1" fields={summaryFields} />
+      <MetadataFields className="w-full" fields={savedFields} />
+    </>
+  );
 }
 
 function NodeMetadata({ node }: NodeMetadataProps) {
@@ -80,10 +99,16 @@ function ToolkitDetails(props: ToolkitMetadataProps) {
 }
 
 export function ToolkitMetadata(props: ToolkitMetadataProps) {
+  const versionNumber = props.version ? `v${props.version.version}` : LABELS.unsaved;
   return (
-    <FieldSet className="gap-1">
-      <FieldLegend className="mb-0 data-[variant=label]:text-xs" variant="label">{props.scope}</FieldLegend>
-      <ToolkitDetails {...props} />
-    </FieldSet>
+    <TooltipProvider>
+      <FieldSet className="gap-1">
+        <div className="flex items-center justify-between gap-2">
+          <Badge className={metadataBadgeClassName} variant="outline">{versionNumber}</Badge>
+          <Badge className={metadataBadgeClassName} variant="outline">{props.scope}</Badge>
+        </div>
+        <ToolkitDetails {...props} />
+      </FieldSet>
+    </TooltipProvider>
   );
 }

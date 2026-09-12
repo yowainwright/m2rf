@@ -5,8 +5,14 @@ import { createElement } from 'react';
 import { cleanup, renderHook, waitFor } from '@testing-library/react';
 import type { Edge, Node } from 'reactflow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { applySettings, createNodeStyle, graphRepository } from '@/app/graph';
-import type { CreateGraphRecordsInput, NodeShape } from '@/app/graph';
+import {
+  applySettings,
+  createDiagonalPatternImage,
+  createNodeStyle,
+  createPolkaPinPatternImage,
+  graphRepository,
+} from '@/app/graph';
+import type { CreateGraphRecordsInput, NodeShape, NodeSurface } from '@/app/graph';
 import { StudioContext } from '@/app';
 
 const settings = {
@@ -284,5 +290,19 @@ describe('node shapes', () => {
     expect(style?.aspectRatio).toBeUndefined();
     expect(style?.borderRadius).toBeUndefined();
     expect(style?.width).toBeUndefined();
+  });
+});
+
+describe('node surfaces', () => {
+  const createSurfaceSettings = (nodeSurface: NodeSurface) => Object.assign({}, settings, { nodeSurface });
+
+  it('uses shared diagonal and polka pin pattern geometry', () => {
+    const diagonal = createNodeStyle(createSurfaceSettings('pattern-diagonal'));
+    const polkaPin = createNodeStyle(createSurfaceSettings('pattern-polka-pin'));
+
+    expect(diagonal.backgroundImage).toBe(createDiagonalPatternImage('rgba(255,255,255,0.6)', 8));
+    expect(polkaPin.backgroundImage).toBe(createPolkaPinPatternImage('rgba(255,255,255,0.6)'));
+    expect(diagonal.backgroundSize).toBe('auto');
+    expect(polkaPin.backgroundSize).toBe('8px 8px');
   });
 });

@@ -12,7 +12,8 @@ export type CanvasBackground =
   | 'grid'
   | 'pattern-checkerboard'
   | 'pattern-diamond'
-  | 'pattern-diagonal';
+  | 'pattern-diagonal'
+  | 'pattern-polka-pin';
 export type GradientDirection = 'horizontal' | 'radial' | 'vertical';
 export type GraphGradientSettings = {
   colorA: string;
@@ -39,7 +40,7 @@ export type GraphShaderSettings = {
 export type NodeBorder = 'dashed' | 'dotted' | 'none' | 'solid';
 export type NodeShape = 'circle' | 'cylinder' | 'diamond' | 'rectangle' | 'square';
 export type NodeShadow = 'none' | 'soft' | 'strong';
-export type NodeSurface = 'gradient' | 'pattern-dots' | 'pattern-grid' | 'solid';
+export type NodeSurface = 'gradient' | 'pattern-diagonal' | 'pattern-dots' | 'pattern-grid' | 'pattern-polka-pin' | 'solid';
 
 export type FlowNodeRecord = { domId: string; id: string; label: string };
 

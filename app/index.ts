@@ -53,6 +53,10 @@ export const appMachine = setup({
       assertEvent(event, 'sidebar.update');
       return { sidebarOpen: event.open };
     }),
+    updateVersionHistory: assign(({ event }) => {
+      assertEvent(event, 'version-history.update');
+      return { versionHistoryOpen: event.open };
+    }),
     updateToolkit: assign(({ event }) => {
       assertEvent(event, 'toolkit.update');
       return { toolkitOpen: event.open };
@@ -113,6 +117,7 @@ export const appMachine = setup({
   on: {
     'layout.update': { actions: 'updateLayout' },
     'sidebar.update': { actions: 'updateSidebar' },
+    'version-history.update': { actions: 'updateVersionHistory' },
     'toolkit.update': { actions: 'updateToolkit' },
   },
   states: {

@@ -17,6 +17,7 @@ export const EDGE_ANCHOR_STYLE = { pointerEvents: 'all' } as const;
 export const APP_INITIAL_CONTEXT: AppContext = {
   isDesktop: false,
   sidebarOpen: true,
+  versionHistoryOpen: true,
   toolkitOpen: true,
   canvasRevision: 0,
   needsRender: true,

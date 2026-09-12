@@ -13,7 +13,8 @@ export type ToolkitMetadataProps = {
   workspaceName: string;
 };
 export type MetadataFieldsProps = {
-  fields: Array<{ label: string; value: string | number; hideLabel?: boolean }>;
+  className?: string;
+  fields: Array<{ label: string; value: string | number; hideLabel?: boolean; emphasized?: boolean }>;
 };
 export type NodeMetadataProps = { node: Node };
 export type EdgeMetadataProps = { edge: Edge };

@@ -91,7 +91,7 @@ const versionSource = (version: number) => {
 const saveSnapshot = async (page: Page, version: number) => {
   await page.getByRole('button', { name: /^(Save|Saved)$/ }).click();
   const history = page.getByRole('region', { name: 'Version history' });
-  await expect(history.getByRole('button', { name: `Version ${version}`, exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(history.getByRole('button', { name: new RegExp(`^v${version}\\b`) })).toHaveAttribute('aria-pressed', 'true');
 };
 
 const editSnapshot = async (page: Page, version: number) => {
@@ -108,6 +108,15 @@ test('restores version styling and saves the oldest as newest while keeping five
   await setColorInput(page.getByLabel('Fill'), '#ef4444');
   await page.keyboard.press('Escape');
   await saveSnapshot(page, 1);
+  const history = page.getByRole('region', { name: 'Version history' });
+  const workspaceButton = page.getByRole('button', { name: 'Versioned diagram' });
+  await expect(history).toBeVisible();
+  await expect(workspaceButton).toHaveAttribute('aria-expanded', 'true');
+  await workspaceButton.click();
+  await expect(history).not.toBeVisible();
+  await expect(workspaceButton).toHaveAttribute('aria-expanded', 'false');
+  await workspaceButton.click();
+  await expect(history).toBeVisible();
   const viewport = page.locator('.react-flow__viewport');
   const firstCamera = await viewport.evaluate((element) => getComputedStyle(element).transform);
 
@@ -127,31 +136,30 @@ test('restores version styling and saves the oldest as newest while keeping five
   await editSnapshot(page, 5);
   await saveSnapshot(page, 5);
 
-  const history = page.getByRole('region', { name: 'Version history' });
   await expect(history.getByRole('button')).toHaveCount(5);
-  await history.getByRole('button', { name: 'Version 1', exact: true }).click();
+  await history.getByRole('button', { name: /^v1\b/ }).click();
   await expect(page.locator('.cm-content')).toContainText('Snapshot 1');
   await expect(node).toHaveCSS('background-color', 'rgb(239, 68, 68)');
   await expect(viewport).toHaveCSS('transform', firstCamera);
   await editSnapshot(page, 6);
   await saveSnapshot(page, 6);
-  await expect(history.getByRole('button')).toHaveText(['Version 6', 'Version 5', 'Version 4', 'Version 3', 'Version 2']);
+  await expect(history.getByRole('button').locator('span')).toHaveText(['v6', 'v5', 'v4', 'v3', 'v2']);
   await page.screenshot({ path: testInfo.outputPath('version-history-desktop.png') });
 
   await page.reload();
   await expect(page.locator('.cm-content')).toContainText('Snapshot 6');
   await page.keyboard.press('Escape');
-  await expect(history.getByRole('button', { name: 'Version 6', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await history.getByRole('button', { name: 'Version 2', exact: true }).click();
+  await expect(history.getByRole('button', { name: /^v6\b/ })).toHaveAttribute('aria-pressed', 'true');
+  await history.getByRole('button', { name: /^v2\b/ }).click();
   await expect(node).toHaveCSS('background-color', 'rgb(34, 197, 94)');
   await expect(page.locator('.cm-content')).toContainText('Snapshot 2');
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
   const drawer = page.getByRole('dialog', { name: 'Sidebar', exact: true });
-  await expect(drawer.getByRole('button', { name: 'Version 6', exact: true })).toBeVisible();
+  await expect(drawer.getByRole('button', { name: /^v6\b/ })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('version-history-mobile.png') });
-  await drawer.getByRole('button', { name: 'Version 6', exact: true }).click();
+  await drawer.getByRole('button', { name: /^v6\b/ }).click();
   await expect(drawer).toBeHidden();
   await expect(page.locator('.cm-content')).toContainText('Snapshot 6');
 });

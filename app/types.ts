@@ -11,6 +11,7 @@ export type ExportRequest = { format: 'svg' | 'png' | 'gif'; repeat: GifExportRe
 export type AppContext = {
   isDesktop: boolean;
   sidebarOpen: boolean;
+  versionHistoryOpen: boolean;
   toolkitOpen: boolean;
   canvasRevision: number;
   needsRender: boolean;
@@ -29,6 +30,7 @@ export type AppContext = {
 export type AppEvent =
   | { type: 'layout.update'; isDesktop: boolean }
   | { type: 'sidebar.update'; open: boolean }
+  | { type: 'version-history.update'; open: boolean }
   | { type: 'toolkit.update'; open: boolean }
   | { type: 'workspace.create' }
   | { type: 'workspace.save' }
