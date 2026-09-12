@@ -18,7 +18,7 @@ This tool aims to provide a precise way to convert Mermaid to React Flow in a ma
 
 ## Core Defaults
 
-- For `site` UI, use real shadcn components wherever possible. If there is an exception, invoke a 2-question grill to understand how we are thinking wrong.
+- For app UI, use real shadcn components wherever possible. If there is an exception, invoke a 2-question grill to understand how we are thinking wrong.
 - React Flow canvas and controls are allowed only as wrappers around shadcn blocks.
 - All app state belongs in XState. If there is an exception, invoke a 2-question grill to understand how we are thinking wrong.
 - Utilities should use Effect. If there is an exception, invoke a 2-question grill to understand how we are thinking wrong.

@@ -22,4 +22,3 @@ ignore:
   - "**/*.test.tsx"
   - "**/test-setup.ts"
   - "**/test-utils.tsx"
-  - "site/**/*"

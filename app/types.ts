@@ -1,0 +1,56 @@
+import type { ReactNode } from 'react';
+import type { EdgeChange, NodeChange, Viewport } from 'reactflow';
+import type { GifExportRepeat } from '@/app/export';
+import type {
+  GraphCanvasSettings, GraphInput, GraphRecords, GraphTranslation,
+  GraphVersion, GraphWorkspace, TranslationSettings,
+} from '@/app/graph';
+
+export type WorkspaceRequest = { workspaceId: string; versionId?: string };
+export type ExportRequest = { format: 'svg' | 'png' | 'gif'; repeat: GifExportRepeat };
+export type AppContext = {
+  isDesktop: boolean;
+  sidebarOpen: boolean;
+  toolkitOpen: boolean;
+  canvasRevision: number;
+  needsRender: boolean;
+  resetLayout: boolean;
+  operationError: string | null;
+  exportError: string | null;
+  loadRequest: WorkspaceRequest | null;
+  exportRequest: ExportRequest;
+  input: GraphInput;
+  translation: GraphTranslation;
+  workspace: GraphWorkspace;
+  workspaces: GraphWorkspace[];
+  versions: GraphVersion[];
+};
+
+export type AppEvent =
+  | { type: 'layout.update'; isDesktop: boolean }
+  | { type: 'sidebar.update'; open: boolean }
+  | { type: 'toolkit.update'; open: boolean }
+  | { type: 'workspace.create' }
+  | { type: 'workspace.save' }
+  | { type: 'workspace.rename'; name: string }
+  | { type: 'workspace.load'; request: WorkspaceRequest }
+  | { type: 'workspace.delete' }
+  | { type: 'input.update'; source: string }
+  | { type: 'nodes.update'; changes: NodeChange[] }
+  | { type: 'edges.update'; changes: EdgeChange[] }
+  | { type: 'nodes.style'; settings: Partial<TranslationSettings> }
+  | { type: 'edges.style'; settings: Partial<TranslationSettings> }
+  | { type: 'canvas.update'; settings: Partial<GraphCanvasSettings> }
+  | { type: 'viewport.update'; viewport: Viewport }
+  | { type: 'layout.reset' }
+  | { type: 'export.start'; request: ExportRequest };
+
+export type LoadedWorkspace = {
+  records: GraphRecords | null;
+  workspaces: GraphWorkspace[];
+};
+export type ReactFlowErrorHandler = (code: string, message: string) => void;
+export type ReactFlowErrorGateProps = {
+  children: ReactNode;
+  onError: ReactFlowErrorHandler;
+};

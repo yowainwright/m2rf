@@ -27,11 +27,11 @@ test('launches the pinned shadcn image with a local env file and targeted config
   assert.ok(server.args.includes('--rm'));
   assert.ok(server.args.includes('--read-only'));
   const environmentFileIndex = server.args.indexOf('--env-file');
-  assert.equal(server.args[environmentFileIndex + 1], resolve(root, 'site/.env'));
+  assert.equal(server.args[environmentFileIndex + 1], resolve(root, '.env'));
   const mountIndex = server.args.indexOf('--mount');
   assert.equal(
     server.args[mountIndex + 1],
-    `type=bind,source=${resolve(root, 'site/components.json')},target=${COMPONENTS_TARGET},readonly`,
+    `type=bind,source=${resolve(root, 'components.json')},target=${COMPONENTS_TARGET},readonly`,
   );
   const forbidden = ['--privileged', '--volume', '-v', '--env'];
   assert.equal(server.args.some((argument) => forbidden.includes(argument)), false);

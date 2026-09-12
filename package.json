@@ -1,7 +1,8 @@
 {
   "name": "m2rf",
   "version": "0.0.0",
-  "description": "Render Mermaid diagrams as ReactFlow graphs",
+  "private": true,
+  "description": "The m2rf Mermaid diagram studio",
   "author": "Jeff Wainwright <me@jeffry.in> (https://jeffry.in)",
   "license": "MIT",
   "repository": {
@@ -17,30 +18,17 @@
       "onFail": "error"
     }
   },
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs"
-    },
-    "./styles.css": "./dist/style.css"
-  },
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "dev": "pnpm --dir site dev",
-    "dev:site": "pnpm --dir site dev",
-    "build": "pnpm --dir site build",
-    "deps:check": "codependence --files package.json site/package.json",
+    "dev": "next dev --port ${M2RF_APP_PORT:-54783}",
+    "build": "next build --webpack",
+    "deps:check": "codependence --files package.json",
     "deps:overrides": "pastoralist",
     "deps:security": "pastoralist --checkSecurity --hasWorkspaceSecurityChecks",
     "lint": "pnpm run lint:all",
     "lint:all": "pnpm run lint:oxlint && pnpm run lint:shell",
     "lint:ci": "pnpm run lint:oxlint:strict && pnpm run lint:shell:ci",
-    "lint:oxlint": "oxlint -c .oxlintrc.json site/src site/tests scripts/mcp tests/unit/scripts/mcp",
-    "lint:oxlint:strict": "oxlint -c .oxlintrc.json --deny-warnings site/src site/tests scripts/mcp tests/unit/scripts/mcp",
+    "lint:oxlint": "oxlint -c .oxlintrc.json app tests scripts/mcp tests/unit/scripts/mcp",
+    "lint:oxlint:strict": "oxlint -c .oxlintrc.json --deny-warnings app tests scripts/mcp tests/unit/scripts/mcp",
     "lint/run": "pnpm run lint:all",
     "lint/session": "pnpm run lint:oxlint:strict && pnpm run lint:shell",
     "lint/session/all": "pnpm run lint/session",
@@ -49,43 +37,63 @@
     "lint:shell:ci": "shellcheck -x -S warning scripts/setup.sh",
     "mcp:generate": "node scripts/mcp/index.ts",
     "mcp:check": "node \"$HOME/.agents/lib/mcp/client.js\" --config .agents/mcp/shadcn.json shadcn get_item_examples_from_registries '{\"registries\":[\"@shadcn\"],\"query\":\"resizable-demo\"}'",
-    "typecheck": "pnpm run typecheck:mcp && pnpm --dir site typecheck",
+    "typecheck": "pnpm run typecheck:mcp && tsc --noEmit",
     "typecheck:mcp": "tsc --ignoreConfig --noEmit --module nodenext --target esnext --types node --allowImportingTsExtensions --skipLibCheck scripts/mcp/*.ts tests/unit/scripts/mcp/*.test.ts",
     "test": "pnpm run test:unit && pnpm run test:integration",
-    "test:e2e": "pnpm --dir site test:e2e",
-    "test:integration": "pnpm --dir site test:integration",
+    "test:e2e": "TMPDIR=.next/cache PLAYWRIGHT_LAST_RUN_OUTPUT_FILE=.next/cache/playwright/.last-run.json playwright test --config playwright.config.ts",
+    "test:integration": "TMPDIR=.next/cache vitest run --config vitest.config.mts tests/integration",
     "test:mcp": "node --test tests/unit/scripts/mcp/*.test.ts",
-    "test:unit": "pnpm run test:mcp && pnpm --dir site test:unit",
-    "update:deps": "codependence --files package.json site/package.json --update",
+    "test:unit": "pnpm run test:mcp && TMPDIR=.next/cache vitest run --config vitest.config.mts tests/unit",
+    "update:deps": "codependence --files package.json --update",
     "validate": "pnpm run lint/session && pnpm run typecheck && pnpm run test && pnpm run build",
     "setup": "sh scripts/setup.sh",
-    "prepare": "sh scripts/setup.sh prepare",
-    "prepublishOnly": "pnpm run validate"
-  },
-  "keywords": [
-    "mermaid",
-    "reactflow",
-    "diagrams",
-    "flowchart",
-    "react",
-    "mdx"
-  ],
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0",
-    "xstate": "^5.32.6"
+    "prepare": "sh scripts/setup.sh prepare"
   },
   "dependencies": {
+    "@codemirror/view": "^6.43.9",
+    "@pinojs/redact": "^0.4.0",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-dropdown-menu": "^2.1.24",
+    "@radix-ui/react-label": "^2.1.15",
+    "@radix-ui/react-popover": "^1.1.23",
+    "@radix-ui/react-select": "^2.3.7",
+    "@radix-ui/react-separator": "^1.1.15",
+    "@radix-ui/react-slider": "^1.4.7",
+    "@radix-ui/react-slot": "^1.3.3",
+    "@radix-ui/react-switch": "^1.3.7",
+    "@radix-ui/react-toggle": "^1.1.18",
+    "@radix-ui/react-toggle-group": "^1.1.19",
+    "@radix-ui/react-tooltip": "^1.2.16",
+    "@uiw/react-codemirror": "^4.25.11",
+    "@xstate/react": "^6.1.0",
     "canvg": "^4.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "codemirror-lang-mermaid": "^0.5.0",
     "dagre": "^0.8.5",
+    "date-fns": "^4.4.0",
+    "dexie": "4.4.5",
     "effect": "^3.22.1",
     "gifenc": "^1.0.3",
+    "html-to-image": "^1.11.13",
+    "lucide-react": "^1.37.0",
     "mermaid": "^11.17.2",
+    "motion": "^13.2.0",
+    "next": "^16.3.3",
+    "pino": "^10.3.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-resizable-panels": "^4.12.4",
     "reactflow": "^11.11.4",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "shaders": "^3.2.469",
+    "tailwind-merge": "^3.6.0",
+    "xstate": "^5.32.6"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "^1.62.1",
+    "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@types/dagre": "^0.7.54",
@@ -96,21 +104,17 @@
     "codependence": "^1.0.12",
     "eslint": "10.9.1",
     "eslint-plugin-legibility": "0.3.5",
+    "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.11.6",
     "jsdom": "^30.0.1",
     "oxlint": "1.80.0",
     "pastoralist": "^1.13.1",
     "postcss": "^8.5.26",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
     "rolldown": "^1.2.6",
+    "shadcn": "4.21.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "typescript-eslint": "8.68.0",
-    "vitest": "^4.0.16",
-    "xstate": "^5.32.6"
-  },
-  "workspaces": [
-    "site"
-  ]
+    "vitest": "^4.0.16"
+  }
 }

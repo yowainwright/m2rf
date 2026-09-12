@@ -1,0 +1,30 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "css": "app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/app/components",
+    "utils": "@/app/lib/utils",
+    "ui": "@/app/components/ui",
+    "lib": "@/app/lib",
+    "hooks": "@/app/hooks"
+  },
+  "iconLibrary": "lucide",
+  "registries": {
+    "@react-flow": "https://ui.reactflow.dev/{name}",
+    "@approvals-ui": "https://approvals-ui.vercel.app/r/{name}.json",
+    "@shadcnio": {
+      "url": "https://www.shadcn.io/r/{name}.json",
+      "params": {
+        "token": "${SHADCNIO_TOKEN}"
+      }
+    }
+  }
+}
