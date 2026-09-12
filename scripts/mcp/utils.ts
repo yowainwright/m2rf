@@ -12,8 +12,8 @@ import {
 import type { GeneratedFile, McpConfiguration } from './types.ts';
 
 export const createMcpConfiguration = (root = resolve(import.meta.dirname, '../..')): McpConfiguration => {
-  const environmentFile = resolve(root, 'site/.env');
-  const componentsFile = resolve(root, 'site/components.json');
+  const environmentFile = resolve(root, '.env');
+  const componentsFile = resolve(root, 'components.json');
   const dockerArguments = DOCKER_ARGUMENTS.concat(
     '--env-file', environmentFile,
     '--mount', `type=bind,source=${componentsFile},target=${COMPONENTS_TARGET},readonly`,

@@ -64,7 +64,11 @@
   },
   "overrides": [
     {
-      "files": ["site/src/**/*.ts", "site/src/**/*.tsx", "site/tests/**/*.ts"],
+      "files": [
+        "app/**/*.ts",
+        "app/**/*.tsx",
+        "tests/**/*.ts"
+      ],
       "rules": {
         "require-await": "warn"
       }

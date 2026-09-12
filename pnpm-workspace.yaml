@@ -1,4 +1,0 @@
-pmOnFail: ignore
-
-packages:
-  - site
