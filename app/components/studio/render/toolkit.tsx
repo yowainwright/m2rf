@@ -24,15 +24,15 @@ export function RenderToolkit({
           {TOOLKIT_LABELS.trigger}: {metadata.scope}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" aria-label={TOOLKIT_LABELS.title} className="w-80 max-h-(--radix-popover-content-available-height) overflow-y-auto bg-background p-3 text-foreground">
+      <PopoverContent align="end" aria-label={TOOLKIT_LABELS.title} className="w-80 max-h-(--radix-popover-content-available-height) overflow-y-auto bg-background p-3 pb-5 text-foreground">
         <fieldset disabled={!canEditDraft} className="grid gap-3">
           <ToolkitMetadata {...metadata} />
+          <Separator />
+          {canvasTools}
           <Separator />
           {nodeTools}
           {nodeToolsSeparator}
           {edgeTools}
-          <Separator />
-          {canvasTools}
         </fieldset>
       </PopoverContent>
     </Popover>

@@ -1,7 +1,9 @@
 export {
   parseMermaidSvg,
   clampEdgeWidth,
+  createDiagonalPatternImage,
   createGradientImage,
+  createPolkaPinPatternImage,
   createNodeStyle,
   createEdgeStyle,
   createEdgeMarker,

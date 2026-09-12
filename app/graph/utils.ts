@@ -5,7 +5,7 @@ import { MarkerType, type Edge, type EdgeMarker, type Node } from 'reactflow';
 import {
   DEFAULT_SETTINGS, EDGE_ID_PATTERN, EDGE_MARKER_OPTIONS, EDGE_SELECTOR,
   EDGE_TYPE_OPTIONS, EDGE_WIDTH_LIMITS, GRAPH_DATABASE_NAME, GRAPH_INPUT_FORMAT,
-  GRAPH_TABLES, GRAPH_VERSION_LIMIT, NODE_ID_PATTERN,
+  GRAPH_TABLES, GRAPH_VERSION_LIMIT, NODE_ID_PATTERN, NODE_PATTERN_SIZE,
 } from './constants';
 import type {
   CreateGraphRecordsInput, EdgeAnimation, EdgeMarkerValue, EdgeType, FlowNodeRecord,
@@ -160,6 +160,14 @@ export const createGradientImage = (gradient: GraphGradientSettings) => {
   return `${gradientType}(${direction}, ${firstStop}, ${secondStop})`;
 };
 
+export const createDiagonalPatternImage = (color: string, size: number) => {
+  return `repeating-linear-gradient(45deg, ${color} 0 1px, transparent 1px ${size}px)`;
+};
+
+export const createPolkaPinPatternImage = (color: string) => {
+  return `radial-gradient(circle, ${color} 1px, transparent 1px)`;
+};
+
 const getNodeSurfaceImage = (
   surface: TranslationSettings['nodeSurface'],
   gradient: GraphGradientSettings
@@ -173,7 +181,21 @@ const getNodeSurfaceImage = (
     return 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)';
   }
 
+  if (surface === 'pattern-diagonal') {
+    return createDiagonalPatternImage('rgba(255,255,255,0.6)', NODE_PATTERN_SIZE);
+  }
+
+  if (surface === 'pattern-polka-pin') {
+    return createPolkaPinPatternImage('rgba(255,255,255,0.6)');
+  }
+
   return 'none';
+};
+
+const getNodeBackgroundSize = (surface: TranslationSettings['nodeSurface']) => {
+  if (surface === 'pattern-diagonal') return 'auto';
+  if (surface.startsWith('pattern-')) return `${NODE_PATTERN_SIZE}px ${NODE_PATTERN_SIZE}px`;
+  return 'auto';
 };
 
 const getNodeShadow = (shadow: TranslationSettings['nodeShadow']) => {
@@ -274,7 +296,7 @@ const getNodeShape = (style: CSSProperties | undefined, fallback: TranslationSet
 
 export const createNodeStyle = (settings: TranslationSettings) => {
   const borderWidth = settings.nodeBorder === 'none' ? 0 : 2;
-  const backgroundSize = settings.nodeSurface.startsWith('pattern-') ? '16px 16px' : 'auto';
+  const backgroundSize = getNodeBackgroundSize(settings.nodeSurface);
   const colorVariable = { [NODE_COLOR_VARIABLE]: settings.primaryColor };
   const surfaceVariable = { [NODE_SURFACE_VARIABLE]: settings.nodeSurface };
   const shapeVariable = { [NODE_SHAPE_VARIABLE]: settings.nodeShape };
@@ -377,12 +399,12 @@ const createNodeStyleUpdate = (
   if (settings.nodeShadow !== undefined) style.boxShadow = getNodeShadow(settings.nodeShadow);
   if (settings.nodeSurface !== undefined) {
     style.backgroundImage = getNodeSurfaceImage(settings.nodeSurface, nextGradient);
-    style.backgroundSize = settings.nodeSurface.startsWith('pattern-') ? '16px 16px' : 'auto';
+    style.backgroundSize = getNodeBackgroundSize(settings.nodeSurface);
     style[NODE_SURFACE_VARIABLE] = settings.nodeSurface;
   }
   if (settings.nodeGradient !== undefined) {
     style.backgroundImage = getNodeSurfaceImage(nextSurface, nextGradient);
-    style.backgroundSize = nextSurface.startsWith('pattern-') ? '16px 16px' : 'auto';
+    style.backgroundSize = getNodeBackgroundSize(nextSurface);
     style[NODE_GRADIENT_A_VARIABLE] = nextGradient.colorA;
     style[NODE_GRADIENT_B_VARIABLE] = nextGradient.colorB;
     style[NODE_GRADIENT_DIRECTION_VARIABLE] = nextGradient.direction;

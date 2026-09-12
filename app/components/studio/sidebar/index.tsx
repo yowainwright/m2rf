@@ -1,9 +1,8 @@
 'use client';
 
-import { Workflow } from 'lucide-react';
-import TimelineCommitLog from '@/app/components/blocks/timeline/timeline-commit-log';
+import { cn } from '@/app/lib/utils';
+import { ChevronRight, Workflow } from 'lucide-react';
 import { getWorkspaceLabel } from '@/app/graph';
-import { GRAPH_VERSION_LIMIT } from '@/app/graph/constants';
 import {
   Sidebar,
   SidebarContent,
@@ -16,55 +15,55 @@ import {
   useSidebar,
 } from '@/app/components/ui/sidebar';
 import { StudioContext } from '@/app';
+import VersionTree, { type VersionTreeItem } from './versiontree';
 
 export function WorkspaceSidebar() {
   const { send } = StudioContext.useActorRef();
   const activeId = StudioContext.useSelector((state) => state.context.workspace.id);
   const activeVersionId = StudioContext.useSelector((state) => state.context.input.id);
+  const versionHistoryOpen = StudioContext.useSelector((state) => state.context.versionHistoryOpen);
   const versions = StudioContext.useSelector((state) => state.context.versions);
   const workspaces = StudioContext.useSelector((state) => state.context.workspaces);
   const canNavigate = StudioContext.useSelector((state) => state.can({ type: 'workspace.create' }));
   const { setOpenMobile } = useSidebar();
-  const commits = versions.map((version, index) => {
-    const message = `Version ${version.version}`;
-    const tag = index === 0 ? 'Latest' : undefined;
-    return { id: version.id, message, tag, timestamp: version.updatedAt };
+  const versionItems: VersionTreeItem[] = versions.map((version) => {
+    return { id: version.id, timestamp: version.updatedAt, version: version.version };
   });
   const handleVersionSelect = (versionId: string) => {
     send({ type: 'workspace.load', request: { workspaceId: activeId, versionId } });
     setOpenMobile(false);
   };
-  const handleWorkspaceSelect = (workspaceId: string) => {
+  const handleWorkspaceClick = (workspaceId: string) => {
+    const isCurrent = workspaceId === activeId;
+    if (isCurrent) {
+      send({ type: 'version-history.update', open: !versionHistoryOpen });
+      return;
+    }
     send({ type: 'workspace.load', request: { workspaceId } });
+    send({ type: 'version-history.update', open: true });
     setOpenMobile(false);
   };
   const disabled = !canNavigate;
   const items = workspaces.map((workspace) => {
     const label = getWorkspaceLabel(workspace);
     const isActive = workspace.id === activeId;
-    const history = isActive ? (
-      <TimelineCommitLog
-        activeId={activeVersionId}
-        commits={commits}
-        disabled={disabled}
-        limit={GRAPH_VERSION_LIMIT}
-        onSelect={handleVersionSelect}
-      />
-    ) : null;
-
     return (
       <SidebarMenuItem key={workspace.id}>
         <SidebarMenuButton
+          aria-expanded={isActive ? versionHistoryOpen : false}
           disabled={disabled}
           isActive={isActive}
-          onClick={() => handleWorkspaceSelect(workspace.id)}
+          onClick={() => handleWorkspaceClick(workspace.id)}
           title={label}
           type="button"
         >
+          <ChevronRight aria-hidden="true" className={cn('transition-transform', isActive && versionHistoryOpen && 'rotate-90')} />
           <Workflow aria-hidden="true" />
           <span>{label}</span>
         </SidebarMenuButton>
-        {history}
+        {isActive && versionHistoryOpen ? (
+          <VersionTree activeId={activeVersionId} disabled={disabled} onSelect={handleVersionSelect} versions={versionItems} />
+        ) : null}
       </SidebarMenuItem>
     );
   });

@@ -82,7 +82,8 @@ export const CANVAS_BACKGROUND_OPTIONS: Array<{ label: string; preview: string; 
   { label: 'Aurora shader', preview: 'linear-gradient(135deg, currentColor, transparent 70%)', value: 'aurora' },
   { label: 'Gradient mesh shader', preview: 'radial-gradient(circle at 25% 25%, currentColor, transparent 60%), linear-gradient(135deg, currentColor, transparent)', value: 'gradient-mesh' },
   { label: 'Dot pattern', preview: 'radial-gradient(currentColor 1px, transparent 1px)', value: 'dot-pattern' },
-  { label: 'Diagonal stripes', preview: 'repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 8px)', value: 'pattern-diagonal' },
+  { label: 'Diagonal v3', preview: 'repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 8px)', value: 'pattern-diagonal' },
+  { label: 'Polka Pin', preview: 'radial-gradient(circle, currentColor 1px, transparent 1px)', value: 'pattern-polka-pin' },
   { label: 'Checkerboard', preview: 'conic-gradient(currentColor 25%, transparent 0 50%, currentColor 0 75%, transparent 0)', value: 'pattern-checkerboard' },
   { label: 'Diamond grid', preview: 'linear-gradient(45deg, transparent 42%, currentColor 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, currentColor 42% 58%, transparent 58%)', value: 'pattern-diamond' },
 ];
@@ -114,6 +115,8 @@ export const NODE_SURFACE_OPTIONS: Array<{ label: string; preview: string; value
   { label: 'Solid', preview: 'linear-gradient(135deg, currentColor, currentColor)', value: 'solid' },
   { label: 'Grid pattern', preview: 'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)', value: 'pattern-grid' },
   { label: 'Dot pattern', preview: 'radial-gradient(currentColor 1px, transparent 1px)', value: 'pattern-dots' },
+  { label: 'Diagonal v3', preview: 'repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 8px)', value: 'pattern-diagonal' },
+  { label: 'Polka Pin', preview: 'radial-gradient(circle, currentColor 1px, transparent 1px)', value: 'pattern-polka-pin' },
 ];
 export const EDGE_TYPE_OPTIONS: Array<{ label: string; value: GraphTranslationSettings['edgeType'] }> = [
   { label: 'Default', value: 'default' },
@@ -130,3 +133,4 @@ export const EDGE_MARKER_OPTIONS: Array<{ label: string; value: GraphTranslation
 export const EDGE_SELECTOR = '.edgePath, .flowchart-link';
 export const NODE_ID_PATTERN = /(?:^|-)flowchart-(.+)-\d+$/;
 export const EDGE_ID_PATTERN = /^L-(.+)-(.+)-\d+$/;
+export const NODE_PATTERN_SIZE = 8;

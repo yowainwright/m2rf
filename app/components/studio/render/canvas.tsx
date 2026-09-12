@@ -67,6 +67,7 @@ export function GraphCanvas({
           onError={handleReactFlowError}
           onMoveEnd={onMoveEnd}
           onNodesChange={onNodesChange}
+          proOptions={{ hideAttribution: true }}
           snapGrid={CANVAS_GRID}
           snapToGrid={snapToGrid}
         >
