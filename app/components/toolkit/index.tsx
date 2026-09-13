@@ -308,11 +308,12 @@ export const EdgeTools = (props: EdgeToolProps) => {
 };
 
 export const CanvasTools = (props: CanvasToolProps) => {
-  const isGradientBackground = props.settings.background === 'gradient';
   const isAuroraBackground = props.settings.background === 'aurora';
   const isMeshBackground = props.settings.background === 'gradient-mesh';
   const isShaderBackground = isAuroraBackground || isMeshBackground;
-  const isPatternBackground = !isGradientBackground && !isShaderBackground;
+  const isPatternBackground = props.settings.background === 'grid'
+    || props.settings.background === 'dot-pattern'
+    || props.settings.background.startsWith('pattern-');
   const toggleClassName = isPatternBackground ? 'col-span-6' : 'col-span-4';
   const backgrounds = CANVAS_BACKGROUND_OPTIONS.map((option) => (
     <SelectItem key={option.value} value={option.value}>

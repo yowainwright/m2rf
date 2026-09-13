@@ -1,11 +1,14 @@
 import type {
-  CanvasBackground, GradientDirection, GraphInputFormat, GraphTranslationSettings, NodeBorder, NodeShape, NodeShadow, NodeSurface,
+  CanvasBackground, GradientDirection, GraphCanvasSettings, GraphInputFormat, GraphTranslationSettings, NodeBorder, NodeShape, NodeShadow, NodeSurface,
 } from './types';
 
 export const GRAPH_DATABASE_NAME = 'm2rf-studio';
 export const GRAPH_DATABASE_VERSION = 2;
 export const GRAPH_VERSION_LIMIT = 5;
 export const GRAPH_INPUT_FORMAT: GraphInputFormat = 'mermaid';
+export const GRAPH_DIAGRAM_TYPES = ['flowchart', 'sequence'] as const;
+export const SEQUENCE_PARTICIPANT_NODE_TYPE = 'sequenceParticipant';
+export const SEQUENCE_MESSAGE_EDGE_TYPE = 'sequenceMessage';
 
 export const GRAPH_TABLES = {
   inputs: 'inputs',
@@ -19,8 +22,8 @@ export const DEFAULT_SETTINGS = {
   edgeMarker: 'arrowclosed',
   edgeType: 'default',
   edgeWidth: 2,
-  primaryColor: '#2563eb',
-  inverseColor: '#ffffff',
+  primaryColor: '#cccccc',
+  inverseColor: '#171717',
   fontFamily: 'Arial, Helvetica, sans-serif',
   nodeGradient: {
     colorA: '#2563eb',
@@ -31,7 +34,7 @@ export const DEFAULT_SETTINGS = {
   nodeBorder: 'solid',
   nodeShape: 'rectangle',
   nodeShadow: 'none',
-  nodeSurface: 'gradient',
+  nodeSurface: 'solid',
 } as const;
 
 export const EMPTY_ELEMENTS = {
@@ -41,8 +44,8 @@ export const EMPTY_ELEMENTS = {
 
 export const EDGE_WIDTH_LIMITS = { minimum: 1, maximum: 8 } as const;
 export const CANVAS_GRID: [number, number] = [20, 20];
-export const DEFAULT_CANVAS_SETTINGS = {
-  background: 'grid',
+export const DEFAULT_CANVAS_SETTINGS: GraphCanvasSettings = {
+  background: 'none',
   gradient: {
     colorA: '#0f172a',
     colorB: '#2563eb',
@@ -65,7 +68,7 @@ export const DEFAULT_CANVAS_SETTINGS = {
       colorB: '#6366f1',
     },
   },
-  gridVisible: true,
+  gridVisible: false,
   locked: false,
   snapToGrid: false,
 };
@@ -77,6 +80,7 @@ export const EDGE_ANIMATION_OPTIONS: Array<{ label: string; value: GraphTranslat
   { label: 'Surge', value: 'surge' },
 ];
 export const CANVAS_BACKGROUND_OPTIONS: Array<{ label: string; preview: string; value: CanvasBackground }> = [
+  { label: 'None', preview: 'none', value: 'none' },
   { label: 'Grid', preview: 'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)', value: 'grid' },
   { label: 'Two-color gradient', preview: 'linear-gradient(180deg, currentColor, transparent)', value: 'gradient' },
   { label: 'Aurora shader', preview: 'linear-gradient(135deg, currentColor, transparent 70%)', value: 'aurora' },

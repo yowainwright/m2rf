@@ -22,6 +22,7 @@ export const APP_INITIAL_CONTEXT: AppContext = {
   canvasRevision: 0,
   needsRender: true,
   resetLayout: false,
+  errorDialogDismissed: false,
   operationError: null,
   exportError: null,
   loadRequest: null,
@@ -44,6 +45,7 @@ export const APP_INITIAL_CONTEXT: AppContext = {
     version: 0,
   },
   translation: {
+    diagramType: 'flowchart',
     id: 'translation-local',
     inputId: 'input-local',
     elements: EMPTY_ELEMENTS,

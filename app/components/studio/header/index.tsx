@@ -4,6 +4,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { SidebarTrigger } from '@/app/components/ui/sidebar';
 import { StudioContext } from '@/app';
+import { getWorkspaceLabel } from '@/app/graph';
 import { getSaveLabel, logAppEvent } from '@/app/utils';
 import { ExportMenu } from './export-menu';
 
@@ -18,7 +19,7 @@ export function StudioHeader() {
     type: 'export.start', request: { format: 'svg', repeat: 'forever' },
   }));
   const saveLabel = StudioContext.useSelector(getSaveLabel);
-  const workspaceName = workspace.name === 'Untitled Graph' ? '' : workspace.name;
+  const workspaceName = getWorkspaceLabel(workspace);
   const handleNameUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
     logAppEvent('workspace.update', { hasName: event.target.value.trim().length > 0 });
     send({ type: 'workspace.rename', name: event.target.value });
@@ -49,16 +50,16 @@ export function StudioHeader() {
       <div className="flex items-center gap-2">
         <SidebarTrigger title="Toggle saved graphs" />
         <h1 className="text-sm font-semibold">m2rf Studio</h1>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
         <Input
           aria-label="Graph name"
           disabled={!canEditDraft}
-          className="h-8 w-44"
-          placeholder={workspace.id}
+          className="h-8 min-w-0 flex-1 border-transparent bg-transparent px-1 text-sm font-semibold shadow-none focus-visible:border-input focus-visible:bg-background"
+          placeholder="Graph name"
           value={workspaceName}
           onChange={handleNameUpdate}
         />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
         <Button className="min-w-16" disabled={!canSave} size="sm" type="button" onClick={handleSave}>
           {saveLabel}
         </Button>

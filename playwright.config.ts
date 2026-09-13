@@ -5,7 +5,7 @@ export default defineConfig({
   testDir: './tests/e2e',
   timeout: 30_000,
   use: {
-    baseURL: 'http://localhost:54783',
+    baseURL: `http://localhost:${process.env.M2RF_APP_PORT || '54783'}`,
     trace: 'retain-on-failure',
   },
   projects: [
