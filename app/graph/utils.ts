@@ -6,18 +6,28 @@ import {
   DEFAULT_SETTINGS, EDGE_ID_PATTERN, EDGE_MARKER_OPTIONS, EDGE_SELECTOR,
   EDGE_TYPE_OPTIONS, EDGE_WIDTH_LIMITS, GRAPH_DATABASE_NAME, GRAPH_INPUT_FORMAT,
   GRAPH_TABLES, GRAPH_VERSION_LIMIT, NODE_ID_PATTERN, NODE_PATTERN_SIZE,
-  SEQUENCE_MESSAGE_EDGE_TYPE, SEQUENCE_PARTICIPANT_NODE_TYPE,
+  SEQUENCE_ACTION_NODE_HEIGHT, SEQUENCE_ACTION_NODE_MIN_WIDTH,
+  SEQUENCE_ACTOR_FIGURE_WIDTH, SEQUENCE_ACTION_NODE_TYPE, SEQUENCE_FRAME_NODE_TYPE,
+  SEQUENCE_MESSAGE_EDGE_TYPE, SEQUENCE_NOTE_NODE_TYPE,
+  SEQUENCE_PARTICIPANT_NODE_TYPE, SEQUENCE_SELF_MESSAGE_HEIGHT,
+  SEQUENCE_SELF_MESSAGE_OFFSET,
+  SEQUENCE_NODE_DEFAULTS,
 } from './constants';
 import type {
   CreateGraphRecordsInput, EdgeAnimation, EdgeMarkerValue, EdgeType, FlowNodeRecord,
   GraphDatabase, GraphElements, GraphInput, GraphRecords, GraphRepository,
   GraphDiagramType, GraphGradientSettings, GraphTranslation, GraphWorkspace, GradientDirection,
+  SequenceActionData, SequenceActivation, SequenceFrameData, SequenceFrameSection,
+  SequenceMessageData, SequenceMessageRecord, SequenceMessagePoint, SequenceNoteData,
+  SequenceParticipantData, SequenceParticipantHandle, SequenceParticipantRecord,
   TranslationSettings,
   UpdateGraphRecordsInput,
 } from './types';
 
 const SURGE_EDGE_TYPE = 'surge';
 const SEQUENCE_MESSAGE_KIND = 'sequence-message';
+const SEQUENCE_NODE_KINDS = new Set(['sequence-action', 'sequence-frame', 'sequence-note', 'sequence-participant']);
+const SEQUENCE_FRAME_TYPES = new Set(['alt', 'opt', 'rect']);
 const NODE_COLOR_VARIABLE = '--m2rf-node-primary';
 const NODE_SURFACE_VARIABLE = '--m2rf-node-surface';
 const NODE_GRADIENT_A_VARIABLE = '--m2rf-node-gradient-a';
@@ -375,10 +385,24 @@ export const getElementIds = (elements: Array<Edge | Node>) => {
   return elements.map((element) => element.id);
 };
 
+const getSequenceStyleOverrides = (style: CSSProperties): CSSProperties => {
+  const defaults = createNodeStyle(DEFAULT_SETTINGS) as Record<string, unknown>;
+  const entries = Object.entries(style).filter(([key, value]) => value !== defaults[key]);
+  return Object.fromEntries(entries);
+};
+
+const createSequenceStyle = (settings: TranslationSettings) => getSequenceStyleOverrides(createNodeStyle(settings));
+
 const getNodeAppearanceStyle = (node: Node | undefined) => {
   if (!node) return undefined;
-  if (node.data?.kind !== 'sequence-participant') return node.style;
-  return node.data.style || node.style;
+  if (!SEQUENCE_NODE_KINDS.has(node.data?.kind)) return node.style;
+  const savedStyle = node.data.style || {};
+  if (node.data.styleVersion === 1) return savedStyle;
+  const style = getSequenceStyleOverrides(savedStyle);
+  const isSourceFill = node.data.kind === 'sequence-frame' && style.backgroundColor === node.data.fill;
+  if (!isSourceFill) return style;
+  const { backgroundColor: _backgroundColor, ...overrides } = style;
+  return overrides;
 };
 
 const createNodeStyleUpdate = (
@@ -434,14 +458,14 @@ const createNodeStyleUpdate = (
 };
 
 const applyNodeStyle = (node: Node, style: CSSProperties | undefined) => {
-  const isSequenceParticipant = node.data?.kind === 'sequence-participant';
-  if (!isSequenceParticipant) return Object.assign({}, node, { style });
+  const isSequenceElement = SEQUENCE_NODE_KINDS.has(node.data?.kind);
+  if (!isSequenceElement) return Object.assign({}, node, { style });
   const appearanceStyle = style || getNodeAppearanceStyle(node) || {};
   const frameStyle = {
     height: node.style?.height || appearanceStyle.height,
     width: node.style?.width || appearanceStyle.width,
   };
-  const data = Object.assign({}, node.data, { style: appearanceStyle });
+  const data = Object.assign({}, node.data, { style: appearanceStyle, styleVersion: 1 });
   return Object.assign({}, node, { data, style: frameStyle });
 };
 
@@ -451,6 +475,7 @@ const createEdgeUpdate = (
 ) => {
   const edgeSettings = getSettings(settings);
   const isSequenceMessage = edge.data?.kind === SEQUENCE_MESSAGE_KIND;
+  const isSequenceSourceSegment = isSequenceMessage && edge.data?.segment === 'source';
   const keepsAnimation = settings.edgeAnimation === undefined;
   const keepsType = settings.edgeType === undefined;
   const keepsMarker = settings.edgeMarker === undefined;
@@ -484,10 +509,11 @@ const createEdgeUpdate = (
   }
 
   const color = getColorValue(style.stroke, edgeSettings.edgeColor);
-  const markerEnd = keepsMarker
+  const updatedMarkerEnd = keepsMarker
     ? colorEdgeMarker(edge.markerEnd, color)
     : createEdgeMarker(edgeSettings.edgeMarker, color);
-  const markerStart = colorEdgeMarker(edge.markerStart, color);
+  const markerEnd = isSequenceSourceSegment ? undefined : updatedMarkerEnd;
+  const markerStart = isSequenceSourceSegment ? colorEdgeMarker(edge.markerStart, color) : undefined;
 
   return Object.assign({}, edge, {
     animated,
@@ -560,12 +586,20 @@ const getNumberValue = (value: unknown, fallback: number) => {
   return value;
 };
 
+const getSequenceNodeDefaults = (node: Node | undefined) => {
+  const isRegion = node?.data?.kind === 'sequence-frame' && node.data.frameType === 'rect';
+  const kind = isRegion ? 'sequence-region' : node?.data?.kind;
+  return SEQUENCE_NODE_DEFAULTS[kind];
+};
+
 export const getNodeFillValue = (
   node: Node | undefined,
   settings: TranslationSettings
 ) => {
   const style = getNodeAppearanceStyle(node);
-  return getColorValue(style?.backgroundColor, settings.primaryColor);
+  const defaultFill = getSequenceNodeDefaults(node)?.fill || settings.primaryColor;
+  const sourceFill = node?.data?.fill || defaultFill;
+  return getColorValue(style?.backgroundColor, sourceFill);
 };
 
 export const getNodeTextValue = (
@@ -573,13 +607,17 @@ export const getNodeTextValue = (
   settings: TranslationSettings
 ) => {
   const style = getNodeAppearanceStyle(node);
-  return getColorValue(style?.color, settings.inverseColor);
+  const defaultText = getSequenceNodeDefaults(node) ? '#111827' : settings.inverseColor;
+  return getColorValue(style?.color, defaultText);
 };
 
 export const getNodeBorderValue = (
   node: Node | undefined,
   settings: TranslationSettings
-) => getNodeBorder(getNodeAppearanceStyle(node), settings.nodeBorder);
+) => {
+  const defaultBorder = getSequenceNodeDefaults(node)?.border || settings.nodeBorder;
+  return getNodeBorder(getNodeAppearanceStyle(node), defaultBorder);
+};
 
 export const getNodeGradientValue = (
   node: Node | undefined,
@@ -594,7 +632,13 @@ export const getNodeShadowValueForNode = (
 export const getNodeSurfaceValue = (
   node: Node | undefined,
   settings: TranslationSettings
-) => getNodeSurface(getNodeAppearanceStyle(node), settings.nodeSurface);
+) => {
+  const style = getNodeAppearanceStyle(node);
+  const customFill = node?.data?.fill || style?.backgroundColor;
+  const defaultSurface = getSequenceNodeDefaults(node)?.surface || settings.nodeSurface;
+  const surface = customFill ? 'solid' : defaultSurface;
+  return getNodeSurface(style, surface);
+};
 
 export const getNodeShapeValue = (
   node: Node | undefined,
@@ -733,7 +777,9 @@ const hydrateElementSettings = (
   settings: TranslationSettings
 ): GraphElements => {
   const nodes = elements.nodes.map((node) => {
-    const combinedStyle = Object.assign({}, createNodeStyle(settings), getNodeAppearanceStyle(node));
+    const isSequence = SEQUENCE_NODE_KINDS.has(node.data?.kind);
+    const defaults = isSequence ? {} : createNodeStyle(settings);
+    const combinedStyle = Object.assign({}, defaults, getNodeAppearanceStyle(node));
     const style = normalizeNodeStyle(combinedStyle, settings);
 
     return applyNodeStyle(node, style);
@@ -835,7 +881,9 @@ export const applySavedAppearance = (
     if (!saved) return node;
     const { selected } = saved;
     const style = getNodeAppearanceStyle(saved);
-    const position = resetLayout ? node.position : saved.position;
+    const isLegacySequence = SEQUENCE_NODE_KINDS.has(saved.data?.kind) && saved.data.styleVersion !== 1;
+    const useFreshLayout = resetLayout || isLegacySequence;
+    const position = useFreshLayout ? node.position : saved.position;
     return applyNodeStyle(Object.assign({}, node, { position, selected }), style);
   });
   const edges = elements.edges.map((edge) => restoreEdgeAppearance(edge, savedEdges));
@@ -981,17 +1029,19 @@ const createFlowEdges = (
   });
 };
 
-type SequenceParticipantRecord = {
-  id: string;
-  label: string;
+type SequenceBounds = {
+  height: number;
   width: number;
   x: number;
+  y: number;
 };
 
-type SequenceMessagePoint = {
-  sourceX: number;
-  targetX: number;
-  y: number;
+type SequenceFrameRecord = SequenceBounds & {
+  fill?: string;
+  frameType: SequenceFrameData['frameType'];
+  id: string;
+  label: string;
+  sections: SequenceFrameSection[];
 };
 
 const getNumericAttribute = (element: Element, name: string, fallback: number) => {
@@ -1007,20 +1057,131 @@ const getSequenceHeight = (svg: SVGSVGElement) => {
   return 320;
 };
 
+const readSequenceLifeLines = (svg: SVGSVGElement) => {
+  const lines = Array.from(svg.querySelectorAll('line[data-et="life-line"]'));
+  return new Map(lines.map((line) => [line.getAttribute('data-id') || '', line]));
+};
+
 const readSequenceParticipants = (svg: SVGSVGElement) => {
+  const lifeLines = readSequenceLifeLines(svg);
   return Array.from(svg.querySelectorAll('[data-et="participant"]'))
     .map((participant): SequenceParticipantRecord | null => {
       const id = participant.getAttribute('data-id');
       const rect = participant.querySelector('rect.actor-top');
       if (!id) return null;
-      if (!rect) return null;
-      const label = getText(participant, 'text.actor-box') || id;
-      const x = getNumericAttribute(rect, 'x', 0);
-      const width = getNumericAttribute(rect, 'width', 150);
+      const lifeLine = lifeLines.get(id);
+      const hasGeometry = Boolean(rect) || Boolean(lifeLine);
+      if (!hasGeometry) return null;
+      const label = getText(participant, 'text') || id;
+      const width = rect ? getNumericAttribute(rect, 'width', 150) : SEQUENCE_ACTOR_FIGURE_WIDTH;
+      const lineCenter = lifeLine ? getNumericAttribute(lifeLine, 'x1', 0) : 0;
+      const center = rect ? getNumericAttribute(rect, 'x', 0) + width / 2 : lineCenter;
+      const x = rect ? getNumericAttribute(rect, 'x', 0) : center - width / 2;
       return { id, label, width, x };
     })
     .filter((participant): participant is SequenceParticipantRecord => participant !== null)
     .sort((first, second) => first.x - second.x);
+};
+
+const readSequenceBounds = (lines: Element[]): SequenceBounds | null => {
+  if (lines.length === 0) return null;
+  const xValues = lines.flatMap((line) => [
+    getNumericAttribute(line, 'x1', 0),
+    getNumericAttribute(line, 'x2', 0),
+  ]);
+  const yValues = lines.flatMap((line) => [
+    getNumericAttribute(line, 'y1', 0),
+    getNumericAttribute(line, 'y2', 0),
+  ]);
+  const x = Math.min(...xValues);
+  const y = Math.min(...yValues);
+  return { height: Math.max(...yValues) - y, width: Math.max(...xValues) - x, x, y };
+};
+
+const getSequenceFrameType = (value: string): SequenceFrameData['frameType'] => {
+  const frameType = value.toLowerCase().replaceAll('[', '').replaceAll(']', '');
+  const isKnownFrameType = SEQUENCE_FRAME_TYPES.has(frameType);
+  if (isKnownFrameType) return frameType as SequenceFrameData['frameType'];
+  return 'loop';
+};
+
+const readSequenceSections = (group: Element, bounds: SequenceBounds) => {
+  const sectionY = (section: Element) => getNumericAttribute(section, 'y', bounds.y) - bounds.y;
+  return Array.from(group.querySelectorAll('.sectionTitle')).map((section) => ({
+    label: section.textContent?.trim() || '',
+    y: sectionY(section),
+  }));
+};
+
+const readSequenceControlFrames = (svg: SVGSVGElement): SequenceFrameRecord[] => {
+  const frames = Array.from(svg.querySelectorAll('g[data-et="control-structure"]')).map((group, index) => {
+    const bounds = readSequenceBounds(Array.from(group.querySelectorAll('.loopLine')));
+    if (!bounds) return null;
+    const sections = readSequenceSections(group, bounds);
+    const frameType = getSequenceFrameType(getText(group, '.labelText'));
+    const id = group.getAttribute('data-id') || `control-${index}`;
+    return Object.assign({}, bounds, { frameType, id: `frame-${id}`, label: getText(group, '.loopText'), sections });
+  });
+  return frames.filter((frame): frame is SequenceFrameRecord => frame !== null);
+};
+
+const readSequenceRectFill = (rect: Element) => {
+  const fill = rect.getAttribute('fill');
+  if (fill === 'transparent') return undefined;
+  return fill || undefined;
+};
+
+const readSequenceRectFrames = (svg: SVGSVGElement): SequenceFrameRecord[] => {
+  return Array.from(svg.querySelectorAll('rect.rect')).map((rect, index) => ({
+    fill: readSequenceRectFill(rect),
+    frameType: 'rect',
+    height: getNumericAttribute(rect, 'height', 0),
+    id: `frame-rect-${index}`,
+    label: '',
+    sections: [],
+    width: getNumericAttribute(rect, 'width', 0),
+    x: getNumericAttribute(rect, 'x', 0),
+    y: getNumericAttribute(rect, 'y', 0),
+  }));
+};
+
+const readSequenceFrames = (svg: SVGSVGElement) => {
+  return readSequenceRectFrames(svg).concat(readSequenceControlFrames(svg))
+    .sort((first, second) => first.y - second.y);
+};
+
+const readSequenceNotes = (svg: SVGSVGElement) => {
+  return Array.from(svg.querySelectorAll('g[data-et="note"]')).flatMap((group, index) => {
+    const rect = group.querySelector('rect.note');
+    if (!rect) return [];
+    const bounds: SequenceBounds = {
+      height: getNumericAttribute(rect, 'height', 0),
+      width: getNumericAttribute(rect, 'width', 0),
+      x: getNumericAttribute(rect, 'x', 0),
+      y: getNumericAttribute(rect, 'y', 0),
+    };
+    const id = group.getAttribute('data-id') || `note-${index}`;
+    return [Object.assign({}, bounds, { id: `note-${id}`, label: getText(group, '.noteText') })];
+  });
+};
+
+const readSequenceActivations = (
+  svg: SVGSVGElement,
+  participants: SequenceParticipantRecord[]
+) => {
+  const activations = new Map<string, SequenceActivation[]>();
+  Array.from(svg.querySelectorAll('rect[class^="activation"]')).forEach((rect) => {
+    const x = getNumericAttribute(rect, 'x', 0);
+    const y = getNumericAttribute(rect, 'y', 0);
+    const width = getNumericAttribute(rect, 'width', 0);
+    const height = getNumericAttribute(rect, 'height', 0);
+    const participant = getNearestParticipant(participants, x + width / 2);
+    if (!participant) return;
+    const activation = { height, width, x: x - participant.x, y };
+    const current = activations.get(participant.id) || [];
+    activations.set(participant.id, current.concat(activation));
+  });
+  return activations;
 };
 
 const getPathStart = (element: Element) => {
@@ -1035,11 +1196,10 @@ const readSequenceMessagePoint = (element: Element): SequenceMessagePoint | null
   const lineEnd = element.getAttribute('x2');
   const hasLinePoints = lineStart !== null && lineEnd !== null;
   if (hasLinePoints) {
-    return {
-      sourceX: Number(lineStart),
-      targetX: Number(lineEnd),
-      y: getNumericAttribute(element, 'y1', 0),
-    };
+    const sourceX = Number(lineStart);
+    const targetX = Number(lineEnd);
+    const y = getNumericAttribute(element, 'y1', 0);
+    return { sourceX, targetX, y };
   }
 
   const pathStart = getPathStart(element);
@@ -1061,15 +1221,17 @@ const getNearestParticipant = (participants: SequenceParticipantRecord[], x: num
 const createSequenceNode = (
   participant: SequenceParticipantRecord,
   height: number,
+  activations: SequenceActivation[],
+  handles: SequenceParticipantHandle[],
   settings: TranslationSettings
-): Node => {
-  const appearanceStyle = createNodeStyle(settings);
+): Node<SequenceParticipantData> => {
+  const appearanceStyle = createSequenceStyle(settings);
   const frameStyle = {
     height,
     width: participant.width,
   };
   return {
-    data: { kind: 'sequence-participant', label: participant.label, style: appearanceStyle },
+    data: { activations, handles, kind: 'sequence-participant', label: participant.label, style: appearanceStyle, styleVersion: 1 },
     id: participant.id,
     position: { x: participant.x, y: 0 },
     sourcePosition: Position.Bottom,
@@ -1079,47 +1241,228 @@ const createSequenceNode = (
   };
 };
 
-const createSequenceEdge = (
-  point: SequenceMessagePoint,
-  label: string,
-  index: number,
-  participants: SequenceParticipantRecord[],
-  element: Element,
+const getParticipantCenter = (participant: SequenceParticipantRecord) => {
+  const halfWidth = participant.width / 2;
+  return participant.x + halfWidth;
+};
+
+const getActionCenter = (message: SequenceMessageRecord) => {
+  const sourceCenter = getParticipantCenter(message.source);
+  const targetCenter = getParticipantCenter(message.target);
+  if (sourceCenter === targetCenter) return sourceCenter + SEQUENCE_SELF_MESSAGE_OFFSET;
+  const midpoint = sourceCenter + targetCenter;
+  return midpoint / 2;
+};
+
+const getActionWidth = (label: string, sequenceNumber?: string) => {
+  const content = [sequenceNumber, label].filter(Boolean).join(' ');
+  const estimatedWidth = (content.length * 8) + 16;
+  return Math.max(SEQUENCE_ACTION_NODE_MIN_WIDTH, estimatedWidth);
+};
+
+const getParticipantHandleSide = (participant: SequenceParticipantRecord, actionCenter: number) => {
+  const participantCenter = getParticipantCenter(participant);
+  if (participantCenter < actionCenter) return 'right';
+  return 'left';
+};
+
+const getActionHandleSide = (participant: SequenceParticipantRecord, actionCenter: number) => {
+  const participantCenter = getParticipantCenter(participant);
+  if (participantCenter < actionCenter) return 'left';
+  return 'right';
+};
+
+const createParticipantHandles = (
+  participant: SequenceParticipantRecord,
+  messages: SequenceMessageRecord[]
+) => {
+  return messages
+    .filter((message) => message.source.id === participant.id || message.target.id === participant.id)
+    .map((message) => {
+      const isSelfMessage = message.source.id === message.target.id;
+      const targetY = isSelfMessage ? message.point.y + SEQUENCE_SELF_MESSAGE_HEIGHT : message.point.y;
+      return { id: message.id, sourceY: message.point.y, targetY };
+    });
+};
+
+const createSequenceActionNode = (
+  message: SequenceMessageRecord,
   settings: TranslationSettings
-): Edge => {
-  const source = getNearestParticipant(participants, point.sourceX);
-  const target = getNearestParticipant(participants, point.targetX);
-  if (!source) throw new Error('Mermaid sequence message has no source participant.');
-  if (!target) throw new Error('Mermaid sequence message has no target participant.');
-  const data = {
-    dashed: element.classList.contains('messageLine1'),
-    kind: 'sequence-message',
-    messageY: point.y,
+): Node<SequenceActionData> => {
+  const width = getActionWidth(message.label);
+  const actionCenter = getActionCenter(message);
+  const x = actionCenter - (width / 2);
+  const y = message.point.y - (SEQUENCE_ACTION_NODE_HEIGHT / 2);
+  const style = createSequenceStyle(settings);
+  return {
+    data: {
+      kind: 'sequence-action',
+      label: message.label,
+      sequenceNumber: message.sequenceNumber,
+      style,
+      styleVersion: 1,
+    },
+    id: message.actionId,
+    position: { x, y },
+    style: { height: SEQUENCE_ACTION_NODE_HEIGHT, width },
+    type: SEQUENCE_ACTION_NODE_TYPE,
+  };
+};
+
+const createSequenceNoteNode = (
+  note: SequenceBounds & { id: string; label: string },
+  settings: TranslationSettings
+): Node<SequenceNoteData> => {
+  const style = createSequenceStyle(settings);
+  const { height, id, label, width, x, y } = note;
+  return {
+    data: { kind: 'sequence-note', label, style, styleVersion: 1 },
+    id,
+    position: { x, y },
+    style: { height, width },
+    type: SEQUENCE_NOTE_NODE_TYPE,
+  };
+};
+
+const createSequenceFrameNode = (
+  frame: SequenceFrameRecord,
+  settings: TranslationSettings
+): Node<SequenceFrameData> => {
+  const style = createSequenceStyle(settings);
+  const data: SequenceFrameData = {
+    fill: frame.fill,
+    frameType: frame.frameType,
+    kind: 'sequence-frame',
+    label: frame.label,
+    sections: frame.sections,
+    style,
+    styleVersion: 1,
   };
   return {
     data,
-    id: `message-${index}`,
+    id: frame.id,
+    position: { x: frame.x, y: frame.y },
+    style: { height: frame.height, width: frame.width },
+    type: SEQUENCE_FRAME_NODE_TYPE,
+    zIndex: -1,
+  };
+};
+
+const createSequenceMessageRecord = (
+  element: Element,
+  label: string,
+  index: number,
+  participants: SequenceParticipantRecord[],
+  point: SequenceMessagePoint,
+  sequenceNumber?: string
+): SequenceMessageRecord => {
+  const sourceId = element.getAttribute('data-from');
+  const targetId = element.getAttribute('data-to');
+  const source = participants.find((participant) => participant.id === sourceId)
+    || getNearestParticipant(participants, point.sourceX);
+  const target = participants.find((participant) => participant.id === targetId)
+    || getNearestParticipant(participants, point.targetX);
+  if (!source) throw new Error('Mermaid sequence message has no source participant.');
+  if (!target) throw new Error('Mermaid sequence message has no target participant.');
+  const id = `message-${element.getAttribute('data-id') || index}`;
+  return {
+    actionId: `action-${id}`,
+    dashed: element.classList.contains('messageLine1'),
+    id,
     label,
-    markerEnd: createEdgeMarker(settings.edgeMarker, settings.edgeColor),
-    source: source.id,
+    markerEnd: element.getAttribute('marker-end') !== null,
+    markerStart: element.getAttribute('marker-start') !== null,
+    point,
+    sequenceNumber,
+    source,
+    target,
+  };
+};
+
+const getParticipantHandleId = (messageId: string, type: 'source' | 'target', side: string) => {
+  return `${messageId}-${type}-${side}`;
+};
+
+const getActionHandleId = (type: 'source' | 'target', side: string) => {
+  return `${side}-${type}`;
+};
+
+const createSequenceMessageEdge = (
+  message: SequenceMessageRecord,
+  segment: SequenceMessageData['segment'],
+  settings: TranslationSettings
+): Edge<SequenceMessageData> => {
+  const isSourceSegment = segment === 'source';
+  const participant = isSourceSegment ? message.source : message.target;
+  const actionCenter = getActionCenter(message);
+  const participantSide = getParticipantHandleSide(participant, actionCenter);
+  const actionSide = getActionHandleSide(participant, actionCenter);
+  const hasMermaidMarker = message.markerStart || message.markerEnd;
+  const hasEndMarker = !hasMermaidMarker || message.markerEnd;
+  const markerEnd = !isSourceSegment && hasEndMarker;
+  const markerStart = isSourceSegment && message.markerStart;
+  const data: SequenceMessageData = {
+    dashed: message.dashed,
+    kind: 'sequence-message',
+    markerEnd,
+    markerStart,
+    messageY: message.point.y,
+    segment,
+    selfMessage: message.source.id === message.target.id,
+    sequenceNumber: isSourceSegment ? message.sequenceNumber : undefined,
+  };
+  return {
+    data,
+    id: `${message.id}-${segment}`,
+    markerEnd: markerEnd ? createEdgeMarker(settings.edgeMarker, settings.edgeColor) : undefined,
+    markerStart: markerStart ? createEdgeMarker(settings.edgeMarker, settings.edgeColor) : undefined,
+    source: isSourceSegment ? message.source.id : message.actionId,
+    sourceHandle: isSourceSegment
+      ? getParticipantHandleId(message.id, 'source', participantSide)
+      : getActionHandleId('source', actionSide),
     style: createEdgeStyle(settings),
-    target: target.id,
+    target: isSourceSegment ? message.actionId : message.target.id,
+    targetHandle: isSourceSegment
+      ? getActionHandleId('target', actionSide)
+      : getParticipantHandleId(message.id, 'target', participantSide),
     type: SEQUENCE_MESSAGE_EDGE_TYPE,
   };
+};
+
+const readSequenceMessages = (
+  svg: SVGSVGElement,
+  participants: SequenceParticipantRecord[]
+) => {
+  const messageElements = Array.from(svg.querySelectorAll('[data-et="message"]'));
+  const labels = Array.from(svg.querySelectorAll('.messageText')).map((message) => message.textContent?.trim() || '');
+  const sequenceNumbers = Array.from(svg.querySelectorAll('.sequenceNumber')).map((number) => number.textContent?.trim() || '');
+  return messageElements.flatMap((element, index) => {
+    const point = readSequenceMessagePoint(element);
+    if (!point) return [];
+    return [createSequenceMessageRecord(element, labels[index] || '', index, participants, point, sequenceNumbers[index])];
+  });
 };
 
 const parseSequenceSvg = (svg: SVGSVGElement, settings: TranslationSettings): GraphElements => {
   const participants = readSequenceParticipants(svg);
   const height = getSequenceHeight(svg);
-  const nodes = participants.map((participant) => createSequenceNode(participant, height, settings));
-  const messageElements = Array.from(svg.querySelectorAll('[data-et="message"]'));
-  const labels = Array.from(svg.querySelectorAll('.messageText')).map((message) => message.textContent?.trim() || '');
-  const edges = messageElements.flatMap((element, index) => {
-    const point = readSequenceMessagePoint(element);
-    if (!point) return [];
-    return [createSequenceEdge(point, labels[index] || '', index, participants, element, settings)];
-  });
-  return { nodes, edges };
+  const messages = readSequenceMessages(svg, participants);
+  const activationMap = readSequenceActivations(svg, participants);
+  const frameNodes: Node[] = readSequenceFrames(svg).map((frame) => createSequenceFrameNode(frame, settings));
+  const noteNodes: Node[] = readSequenceNotes(svg).map((note) => createSequenceNoteNode(note, settings));
+  const participantNodes: Node[] = participants.map((participant) => createSequenceNode(
+    participant,
+    height,
+    activationMap.get(participant.id) || [],
+    createParticipantHandles(participant, messages),
+    settings
+  ));
+  const actionNodes = messages.map((message) => createSequenceActionNode(message, settings));
+  const edges = messages.flatMap((message) => [
+    createSequenceMessageEdge(message, 'source', settings),
+    createSequenceMessageEdge(message, 'target', settings),
+  ]);
+  return { nodes: frameNodes.concat(noteNodes, participantNodes, actionNodes), edges };
 };
 
 export const parseMermaidSvg = (

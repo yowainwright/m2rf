@@ -8,7 +8,7 @@ import {
   acceptRenderedElements, acceptSavedWorkspace, deleteWorkspace, exportWorkspace,
   getUpdatedAt, isCurrentDraft, loadInitialWorkspace, loadWorkspace, logAppEvent, renderWorkspace,
   resetWorkspace, restoreWorkspace, runOperation, saveWorkspace, toErrorMessage,
-  updateCanvas, updateEdgeChanges, updateNodeChanges, updateStyles, updateTranslation,
+  shouldRerenderWorkspace, updateCanvas, updateEdgeChanges, updateNodeChanges, updateStyles, updateTranslation,
 } from './utils';
 
 export const appMachine = setup({
@@ -136,6 +136,15 @@ export const appMachine = setup({
             src: 'initialize',
             onDone: [
               {
+                guard: ({ event }) => event.output.records !== null && shouldRerenderWorkspace(event.output.records),
+                target: 'active.rendering',
+                actions: assign(({ context, event }) => {
+                  const { records, workspaces } = event.output;
+                  if (!records) return { workspaces };
+                  return Object.assign({}, restoreWorkspace(context, records), { workspaces });
+                }),
+              },
+              {
                 guard: ({ event }) => event.output.records !== null,
                 target: 'active.ready',
                 actions: assign(({ context, event }) => {
@@ -251,10 +260,17 @@ export const appMachine = setup({
           invoke: {
             src: 'load',
             input: ({ context }) => context,
-            onDone: {
-              target: 'active.ready',
-              actions: assign(({ context, event }) => restoreWorkspace(context, event.output)),
-            },
+            onDone: [
+              {
+                guard: ({ event }) => shouldRerenderWorkspace(event.output),
+                target: 'active.rendering',
+                actions: assign(({ context, event }) => restoreWorkspace(context, event.output)),
+              },
+              {
+                target: 'active.ready',
+                actions: assign(({ context, event }) => restoreWorkspace(context, event.output)),
+              },
+            ],
             onError: {
               target: 'active.recover',
               actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),

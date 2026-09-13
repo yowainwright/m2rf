@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { Edge, Node, Viewport } from 'reactflow';
 import type Dexie from 'dexie';
 import type { EntityTable } from 'dexie';
@@ -59,6 +60,92 @@ export type NodeShadow = 'none' | 'soft' | 'strong';
 export type NodeSurface = 'gradient' | 'pattern-diagonal' | 'pattern-dots' | 'pattern-grid' | 'pattern-polka-pin' | 'solid';
 
 export type FlowNodeRecord = { domId: string; id: string; label: string };
+
+export type SequenceActivation = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+export type SequenceParticipantHandle = {
+  id: string;
+  sourceY: number;
+  targetY: number;
+};
+
+export type SequenceParticipantRecord = {
+  id: string;
+  label: string;
+  width: number;
+  x: number;
+};
+
+export type SequenceMessagePoint = {
+  sourceX: number;
+  targetX: number;
+  y: number;
+};
+
+export type SequenceMessageRecord = {
+  actionId: string;
+  dashed: boolean;
+  id: string;
+  label: string;
+  markerEnd: boolean;
+  markerStart: boolean;
+  point: SequenceMessagePoint;
+  sequenceNumber?: string;
+  source: SequenceParticipantRecord;
+  target: SequenceParticipantRecord;
+};
+
+export type SequenceNodeAppearance = {
+  style: CSSProperties;
+  styleVersion?: 1;
+};
+
+export type SequenceParticipantData = SequenceNodeAppearance & {
+  activations: SequenceActivation[];
+  handles: SequenceParticipantHandle[];
+  kind: 'sequence-participant';
+  label: string;
+};
+
+export type SequenceActionData = SequenceNodeAppearance & {
+  kind: 'sequence-action';
+  label: string;
+  sequenceNumber?: string;
+};
+
+export type SequenceMessageData = {
+  dashed: boolean;
+  kind: 'sequence-message';
+  markerEnd: boolean;
+  markerStart: boolean;
+  messageY: number;
+  segment: 'source' | 'target';
+  selfMessage: boolean;
+  sequenceNumber?: string;
+};
+
+export type SequenceNoteData = SequenceNodeAppearance & {
+  kind: 'sequence-note';
+  label: string;
+};
+
+export type SequenceFrameSection = {
+  label: string;
+  y: number;
+};
+
+export type SequenceFrameData = SequenceNodeAppearance & {
+  fill?: string;
+  frameType: 'alt' | 'loop' | 'opt' | 'rect';
+  kind: 'sequence-frame';
+  label: string;
+  sections: SequenceFrameSection[];
+};
 
 export type GraphElements = {
   edges: Edge[];

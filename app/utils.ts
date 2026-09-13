@@ -16,8 +16,9 @@ import type { AppContext, AppEvent, LoadedWorkspace, WorkspaceRequest } from './
 
 mermaid.initialize({
   securityLevel: 'strict',
-  sequence: { mirrorActors: true },
+  sequence: { mirrorActors: true, actorFontSize: 16, messageFontSize: 16, noteFontSize: 14, messageMargin: 48, boxTextMargin: 10 },
   startOnLoad: false,
+  themeVariables: { rectBkgColor: 'transparent' },
 });
 const browserLogger = createBrowserLogger();
 
@@ -124,6 +125,22 @@ export const renderWorkspace = (context: AppContext) => Effect.tryPromise({
   },
 });
 
+const hasLegacySequenceElements = (records: GraphRecords) => {
+  const translation = records.translation;
+  const isSequence = translation.diagramType === 'sequence';
+  if (!isSequence) return false;
+  const participantNodes = translation.elements.nodes.filter((node) => node.data?.kind === 'sequence-participant');
+  const hasLegacyHandles = participantNodes.some((node) => !Array.isArray(node.data?.handles));
+  const hasMessageEdges = translation.elements.edges.some((edge) => edge.data?.kind === 'sequence-message');
+  const hasActionNodes = translation.elements.nodes.some((node) => node.data?.kind === 'sequence-action');
+  const hasLegacyMessages = hasMessageEdges && !hasActionNodes;
+  const hasLegacyStyles = participantNodes.some((node) => node.data.styleVersion !== 1);
+  const needsUpgrade = hasLegacyHandles || hasLegacyMessages || hasLegacyStyles;
+  return needsUpgrade;
+};
+
+export const shouldRerenderWorkspace = (records: GraphRecords) => hasLegacySequenceElements(records);
+
 export const exportWorkspace = (context: AppContext) => Effect.tryPromise({
   try: async () => {
     const element = getSvgExportElement();
@@ -165,8 +182,9 @@ export const resetWorkspace = (context: AppContext) => {
 export const restoreWorkspace = (context: AppContext, records: GraphRecords) => {
   const translation = getTranslation(records.translation);
   const canvasRevision = context.canvasRevision + 1;
+  const needsRender = shouldRerenderWorkspace(records);
   return Object.assign({}, records, {
-    translation, canvasRevision, needsRender: false, resetLayout: false,
+    translation, canvasRevision, needsRender, resetLayout: needsRender,
     loadRequest: null, operationError: null, exportError: null,
     errorDialogDismissed: false,
   });
@@ -204,7 +222,10 @@ export const updateTranslation = (context: AppContext, update: Partial<GraphTran
 
 export const acceptRenderedElements = (context: AppContext, rendered: GraphRenderResult) => {
   const { diagramType, elements: renderedElements } = rendered;
-  const defaults = applySettings(renderedElements, context.translation.settings);
+  const isSequence = diagramType === 'sequence';
+  const styleTargets = isSequence ? { nodes: [], edges: renderedElements.edges } : renderedElements;
+  const styled = applySettings(styleTargets, context.translation.settings);
+  const defaults = Object.assign({}, styled, { nodes: isSequence ? renderedElements.nodes : styled.nodes });
   const elements = applySavedAppearance(defaults, context.translation.elements, context.resetLayout);
   const update = updateTranslation(context, { diagramType, elements, error: null });
   return Object.assign({}, update, { needsRender: false, resetLayout: false });
