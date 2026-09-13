@@ -374,4 +374,73 @@ describe('sequence diagrams', () => {
     expect(senderSegment?.markerEnd).toBeUndefined();
     expect(receiverSegment?.markerEnd).toMatchObject({ type: 'arrowclosed', color: settings.edgeColor });
   });
+
+  it('connects an unnumbered dashed reply from right to left', () => {
+    const svg = sequenceSvg.replace('</svg>', `
+      <text class="messageText">Reply</text>
+      <line data-et="message" data-id="reply" class="messageLine1" x1="275" x2="75" y1="240" y2="240" marker-end="url(#arrowhead)" />
+    </svg>`);
+    const { nodes, edges } = parseMermaidSvg(svg, settings, 'sequence');
+    const [sender, receiver] = edges.slice(-2);
+
+    expect(sender).toMatchObject({
+      source: 'B', target: 'action-message-reply',
+      sourceHandle: 'message-reply-source-left', targetHandle: 'right-target',
+      data: { dashed: true, segment: 'source', messageY: 240 },
+    });
+    expect(receiver).toMatchObject({
+      source: 'action-message-reply', target: 'A',
+      sourceHandle: 'left-source', targetHandle: 'message-reply-target-right',
+      data: { dashed: true, segment: 'target', messageY: 240 },
+    });
+    expect(sender?.data.sequenceNumber).toBeUndefined();
+    expect(sender?.markerEnd).toBeUndefined();
+    expect(receiver?.markerEnd).toMatchObject({ type: 'arrowclosed' });
+    expect(nodes.find((node) => node.id === 'A')?.data.handles).toContainEqual({
+      id: 'message-reply', sourceY: 240, targetY: 240,
+    });
+  });
+
+  it.each(['alt', 'opt', 'loop'])('retains %s frame bounds, conditions, and branch offsets', (frameType) => {
+    const svg = sequenceSvg.replace('</svg>', `
+      <g data-et="control-structure" data-id="control">
+        <line class="loopLine" x1="50" x2="300" y1="90" y2="90" />
+        <line class="loopLine" x1="50" x2="300" y1="250" y2="250" />
+        <text class="labelText">${frameType}</text>
+        <text class="loopText">[Approved]</text>
+        <text class="sectionTitle" y="170">[Rejected]</text>
+      </g>
+    </svg>`);
+    const { nodes, edges } = parseMermaidSvg(svg, settings, 'sequence');
+    const frame = nodes.find((node) => node.id === 'frame-control');
+
+    expect(frame).toMatchObject({
+      type: 'sequenceFrame', position: { x: 50, y: 90 },
+      style: { height: 160, width: 250 },
+      data: { frameType, label: '[Approved]', sections: [{ label: '[Rejected]', y: 80 }] },
+    });
+    expect(edges.some((edge) => edge.source === frame?.id || edge.target === frame?.id)).toBe(false);
+  });
+
+  it('keeps note geometry separate and attaches activation bars to their participant', () => {
+    const svg = sequenceSvg.replace('</svg>', `
+      <g data-et="note" data-id="n0">
+        <rect class="note" x="300" y="120" width="100" height="40" />
+        <text class="noteText">Check cache</text>
+      </g>
+      <rect class="activation0" x="270" y="115" width="10" height="90" />
+      <rect class="activation1" x="275" y="135" width="10" height="30" />
+    </svg>`);
+    const { nodes } = parseMermaidSvg(svg, settings, 'sequence');
+
+    expect(nodes.find((node) => node.id === 'note-n0')).toMatchObject({
+      type: 'sequenceNote', position: { x: 300, y: 120 },
+      style: { height: 40, width: 100 }, data: { label: 'Check cache' },
+    });
+    expect(nodes.find((node) => node.id === 'B')?.data.activations).toEqual([
+      { x: 70, y: 115, width: 10, height: 90 },
+      { x: 75, y: 135, width: 10, height: 30 },
+    ]);
+    expect(nodes.find((node) => node.id === 'A')?.data.activations).toEqual([]);
+  });
 });
