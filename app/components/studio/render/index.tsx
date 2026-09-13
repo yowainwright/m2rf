@@ -129,7 +129,6 @@ export function GraphPreview() {
       canvasDeleteKey={canvasDeleteKey}
       canvasRevision={canvasRevision}
       edges={translation.elements.edges}
-      error={translation.error}
       nodes={translation.elements.nodes}
       onEdgesChange={actions.handleEdges}
       onMoveEnd={actions.handleViewport}

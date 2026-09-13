@@ -16,6 +16,7 @@ export type AppContext = {
   canvasRevision: number;
   needsRender: boolean;
   resetLayout: boolean;
+  errorDialogDismissed: boolean;
   operationError: string | null;
   exportError: string | null;
   loadRequest: WorkspaceRequest | null;
@@ -45,6 +46,7 @@ export type AppEvent =
   | { type: 'canvas.update'; settings: Partial<GraphCanvasSettings> }
   | { type: 'viewport.update'; viewport: Viewport }
   | { type: 'layout.reset' }
+  | { type: 'error.dismiss' }
   | { type: 'export.start'; request: ExportRequest };
 
 export type LoadedWorkspace = {

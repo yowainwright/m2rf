@@ -3,6 +3,21 @@ import type Dexie from 'dexie';
 import type { EntityTable } from 'dexie';
 
 export type GraphInputFormat = 'mermaid';
+export type GraphDiagramType = 'flowchart' | 'sequence';
+
+export type GraphRenderErrorKind = 'invalid' | 'unsupported';
+
+export class GraphRenderError extends Error {
+  readonly diagramType?: string;
+  readonly kind: GraphRenderErrorKind;
+
+  constructor(kind: GraphRenderErrorKind, message: string, diagramType?: string) {
+    super(message);
+    this.name = 'GraphRenderError';
+    this.diagramType = diagramType;
+    this.kind = kind;
+  }
+}
 
 export type CanvasBackground =
   | 'aurora'
@@ -10,6 +25,7 @@ export type CanvasBackground =
   | 'gradient'
   | 'gradient-mesh'
   | 'grid'
+  | 'none'
   | 'pattern-checkerboard'
   | 'pattern-diamond'
   | 'pattern-diagonal'
@@ -47,6 +63,11 @@ export type FlowNodeRecord = { domId: string; id: string; label: string };
 export type GraphElements = {
   edges: Edge[];
   nodes: Node[];
+};
+
+export type GraphRenderResult = {
+  diagramType: GraphDiagramType;
+  elements: GraphElements;
 };
 
 export type GraphTranslationSettings = {
@@ -104,6 +125,7 @@ export type GraphInput = {
 export type GraphVersion = Pick<GraphInput, 'id' | 'updatedAt' | 'version'>;
 
 export type GraphTranslation = {
+  diagramType?: GraphDiagramType;
   elements: GraphElements;
   error: string | null;
   id: string;
@@ -123,10 +145,10 @@ export type GraphRecords = {
 export type CreateGraphRecordsInput = {
   input: Omit<GraphInput, 'id' | 'updatedAt' | 'version' | 'workspaceId'>;
   translation: Omit<GraphTranslation, 'id' | 'inputId' | 'updatedAt'>;
-  workspace: Omit<
-    GraphWorkspace,
-    'activeInputId' | 'activeTranslationId' | 'id' | 'updatedAt'
-  >;
+  workspace: {
+    id?: string;
+    name: string;
+  };
 };
 
 export type UpdateGraphRecordsInput = {

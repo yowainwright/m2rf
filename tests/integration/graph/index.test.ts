@@ -11,6 +11,7 @@ import {
   createNodeStyle,
   createPolkaPinPatternImage,
   graphRepository,
+  parseMermaidSvg,
 } from '@/app/graph';
 import type { CreateGraphRecordsInput, NodeShape, NodeSurface } from '@/app/graph';
 import { StudioContext } from '@/app';
@@ -304,5 +305,36 @@ describe('node surfaces', () => {
     expect(polkaPin.backgroundImage).toBe(createPolkaPinPatternImage('rgba(255,255,255,0.6)'));
     expect(diagonal.backgroundSize).toBe('auto');
     expect(polkaPin.backgroundSize).toBe('8px 8px');
+  });
+});
+
+describe('sequence diagrams', () => {
+  const sequenceSvg = `<svg viewBox="0 0 450 306">
+    <g data-et="participant" data-id="A"><rect class="actor actor-top" x="0" width="150" /><text class="actor actor-box">Alice</text></g>
+    <g data-et="participant" data-id="B"><rect class="actor actor-top" x="200" width="150" /><text class="actor actor-box">Bob</text></g>
+    <text class="messageText" y="80">Hello</text>
+    <line data-et="message" data-id="i0" class="messageLine0" x1="76" x2="271" y1="115" y2="115" />
+    <text class="messageText" y="130">Think</text>
+    <path data-et="message" data-id="i1" class="messageLine0" d="M 76,165 C 136,155 136,195 76,185" />
+  </svg>`;
+
+  it('translates participants, lifelines, messages, and self-messages into React Flow elements', () => {
+    const elements = parseMermaidSvg(sequenceSvg, settings, 'sequence');
+    const [firstNode, secondNode] = elements.nodes;
+    const [message, selfMessage] = elements.edges;
+
+    expect(elements.nodes.map((node) => node.id)).toEqual(['A', 'B']);
+    expect(firstNode?.type).toBe('sequenceParticipant');
+    expect(firstNode?.data.label).toBe('Alice');
+    expect(firstNode?.style?.height).toBe(306);
+    expect(secondNode?.position).toEqual({ x: 200, y: 0 });
+    expect(message).toMatchObject({
+      label: 'Hello',
+      source: 'A',
+      target: 'B',
+      type: 'sequenceMessage',
+    });
+    expect(message?.data).toMatchObject({ messageY: 115 });
+    expect(selfMessage).toMatchObject({ label: 'Think', source: 'A', target: 'A' });
   });
 });

@@ -39,10 +39,13 @@ export { graphRepository } from './utils';
 export type {
   CreateGraphRecordsInput,
   GraphCanvasSettings,
+  GraphDiagramType,
   GraphElements,
   GraphInput,
   GraphInputFormat,
   GraphRecords,
+  GraphRenderErrorKind,
+  GraphRenderResult,
   GraphRepository,
   GraphTranslation,
   GraphTranslationSettings,
@@ -51,6 +54,7 @@ export type {
   GraphWorkspace,
   UpdateGraphRecordsInput,
 } from './types';
+export { GraphRenderError } from './types';
 
 export type {
   CanvasBackground, EdgeAnimation, EdgeMarkerValue, EdgeType, GradientDirection, GraphGradientSettings,

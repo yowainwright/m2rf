@@ -13,7 +13,6 @@ export type GraphCanvasProps = {
   canvasDeleteKey: 'Backspace' | null;
   canvasRevision: number;
   edges: Edge[];
-  error: string | null;
   nodes: Node[];
   onEdgesChange: (changes: EdgeChange[]) => void;
   onMoveEnd: (event: MouseEvent | TouchEvent, viewport: Viewport) => void;

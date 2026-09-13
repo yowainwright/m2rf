@@ -2,7 +2,7 @@
 
 import { createActorContext } from '@xstate/react';
 import { and, assign, assertEvent, fromPromise, not, setup, stateIn } from 'xstate';
-import { APP_INITIAL_CONTEXT, LOCAL_WORKSPACE_ID, SAVE_FEEDBACK_MS } from './constants';
+import { APP_INITIAL_CONTEXT, SAVE_FEEDBACK_MS } from './constants';
 import type { AppContext, AppEvent, LoadedWorkspace } from './types';
 import {
   acceptRenderedElements, acceptSavedWorkspace, deleteWorkspace, exportWorkspace,
@@ -34,7 +34,7 @@ export const appMachine = setup({
   guards: {
     needsRender: ({ context }) => context.needsRender,
     hasValidGraph: ({ context }) => context.translation.error === null,
-    isSavedWorkspace: ({ context }) => context.workspace.id !== LOCAL_WORKSPACE_ID,
+    isSavedWorkspace: ({ context }) => context.input.id !== APP_INITIAL_CONTEXT.input.id,
     isNotExporting: not(stateIn({ exporting: 'running' })),
     canExport: ({ context }) => {
       const hasNodes = context.translation.elements.nodes.length > 0;
@@ -100,6 +100,11 @@ export const appMachine = setup({
     }),
     resetWorkspace: assign(({ context }) => resetWorkspace(context)),
     clearOperationError: assign({ operationError: null }),
+    clearErrors: assign({
+      errorDialogDismissed: true,
+      operationError: null,
+      exportError: null,
+    }),
     requestWorkspace: assign(({ event }) => {
       assertEvent(event, 'workspace.load');
       return { loadRequest: event.request };
@@ -119,6 +124,7 @@ export const appMachine = setup({
     'sidebar.update': { actions: 'updateSidebar' },
     'version-history.update': { actions: 'updateVersionHistory' },
     'toolkit.update': { actions: 'updateToolkit' },
+    'error.dismiss': { actions: 'clearErrors' },
   },
   states: {
     document: {
@@ -145,7 +151,7 @@ export const appMachine = setup({
             ],
             onError: {
               target: 'active.rendering',
-              actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error) })),
+              actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),
             },
           },
         },
@@ -183,7 +189,7 @@ export const appMachine = setup({
                   actions: assign(({ context, event }) => {
                     const error = toErrorMessage(event.error);
                     const update = updateTranslation(context, { error });
-                    return Object.assign({}, update, { needsRender: false, resetLayout: false });
+                    return Object.assign({}, update, { needsRender: false, resetLayout: false, errorDialogDismissed: false });
                   }),
                 },
               },
@@ -217,11 +223,11 @@ export const appMachine = setup({
                   {
                     guard: 'needsRender',
                     target: 'rendering',
-                    actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error) })),
+                    actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),
                   },
                   {
                     target: 'ready',
-                    actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error) })),
+                    actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),
                   },
                 ],
               },
@@ -251,7 +257,7 @@ export const appMachine = setup({
             },
             onError: {
               target: 'active.recover',
-              actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error) })),
+              actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),
             },
           },
         },
@@ -271,7 +277,7 @@ export const appMachine = setup({
             },
             onError: {
               target: 'active.recover',
-              actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error) })),
+              actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),
             },
           },
         },
@@ -297,7 +303,7 @@ export const appMachine = setup({
             onDone: 'idle',
             onError: {
               target: 'idle',
-              actions: assign(({ event }) => ({ exportError: toErrorMessage(event.error) })),
+              actions: assign(({ event }) => ({ exportError: toErrorMessage(event.error), errorDialogDismissed: false })),
             },
           },
         },

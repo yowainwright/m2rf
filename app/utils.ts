@@ -6,14 +6,19 @@ import {
   getSelectedNodes, getTranslation, graphRepository,
   parseMermaidSvg, updateSelectedEdges, updateSelectedNodes,
 } from '@/app/graph';
-import type { GraphElements, GraphRecords, GraphTranslation, GraphWorkspace } from '@/app/graph';
-import { DEFAULT_CANVAS_SETTINGS } from '@/app/graph/constants';
+import { GraphRenderError } from '@/app/graph';
+import type { GraphCanvasSettings, GraphDiagramType, GraphRecords, GraphRenderResult, GraphTranslation, GraphTranslationSettings, GraphWorkspace } from '@/app/graph';
+import { DEFAULT_CANVAS_SETTINGS, DEFAULT_SETTINGS, GRAPH_DIAGRAM_TYPES } from '@/app/graph/constants';
 import { exportGif, exportPng, exportSvg, getSvgExportElement } from '@/app/export';
 import { createBrowserLogger } from '@/app/lib/observability';
-import { APP_INITIAL_CONTEXT, LOCAL_WORKSPACE_ID } from './constants';
+import { APP_INITIAL_CONTEXT } from './constants';
 import type { AppContext, AppEvent, LoadedWorkspace, WorkspaceRequest } from './types';
 
-mermaid.initialize({ securityLevel: 'strict', startOnLoad: false });
+mermaid.initialize({
+  securityLevel: 'strict',
+  sequence: { mirrorActors: true },
+  startOnLoad: false,
+});
 const browserLogger = createBrowserLogger();
 
 export const getUpdatedAt = () => new Date().toISOString();
@@ -21,6 +26,19 @@ export const getUpdatedAt = () => new Date().toISOString();
 export const toErrorMessage = (error: unknown) => {
   if (error instanceof Error) return error.message;
   return 'The operation could not be completed.';
+};
+
+export const getSupportedDiagramType = (diagramType: string): GraphDiagramType => {
+  const normalizedType = diagramType === 'flowchart-v2' ? 'flowchart' : diagramType;
+  const isSupported = GRAPH_DIAGRAM_TYPES.includes(normalizedType as GraphDiagramType);
+  if (!isSupported) {
+    throw new GraphRenderError(
+      'unsupported',
+      `Mermaid diagram type "${diagramType}" is not supported in the React Flow view yet.`,
+      diagramType
+    );
+  }
+  return normalizedType as GraphDiagramType;
 };
 
 export const runOperation = <Value>(operation: Effect.Effect<Value, Error>, signal: AbortSignal) => {
@@ -59,11 +77,13 @@ export const loadWorkspace = (request: WorkspaceRequest | null) => Effect.tryPro
 
 export const saveWorkspace = (context: AppContext) => Effect.tryPromise({
   try: () => {
-    const { elements, error, settings, view } = context.translation;
-    const translation = { elements, error, settings, view };
+    const { diagramType, elements, error, settings, view } = context.translation;
+    const translation = { diagramType, elements, error, settings, view };
     const input = { format: context.input.format, source: context.input.source };
-    const workspace = { name: context.workspace.name };
-    const isNew = context.workspace.id === LOCAL_WORKSPACE_ID;
+    const isInitialDraft = context.workspace.id === APP_INITIAL_CONTEXT.workspace.id;
+    const workspaceId = isInitialDraft ? undefined : context.workspace.id;
+    const workspace = { id: workspaceId, name: context.workspace.name };
+    const isNew = context.input.id === APP_INITIAL_CONTEXT.input.id;
     if (isNew) return graphRepository.create({ input, translation, workspace });
     const savedWorkspace = Object.assign({}, workspace, { id: context.workspace.id });
     return graphRepository.update({ input, translation, workspace: savedWorkspace });
@@ -76,13 +96,32 @@ export const deleteWorkspace = (id: string) => Effect.tryPromise({
   catch: storageError,
 });
 
+const createDefaultTranslationSettings = (): GraphTranslationSettings => Object.assign({}, DEFAULT_SETTINGS, {
+  nodeGradient: Object.assign({}, DEFAULT_SETTINGS.nodeGradient),
+});
+
+const createDefaultCanvasSettings = (): GraphCanvasSettings => Object.assign({}, DEFAULT_CANVAS_SETTINGS, {
+  background: 'none' as const,
+  gradient: Object.assign({}, DEFAULT_CANVAS_SETTINGS.gradient),
+  pattern: Object.assign({}, DEFAULT_CANVAS_SETTINGS.pattern),
+  shader: Object.assign({}, DEFAULT_CANVAS_SETTINGS.shader, {
+    aurora: Object.assign({}, DEFAULT_CANVAS_SETTINGS.shader.aurora),
+    gradientMesh: Object.assign({}, DEFAULT_CANVAS_SETTINGS.shader.gradientMesh),
+  }),
+});
+
 export const renderWorkspace = (context: AppContext) => Effect.tryPromise({
   try: async () => {
     const id = `m2rf-${crypto.randomUUID()}`;
     const result = await mermaid.render(id, context.input.source);
-    return parseMermaidSvg(result.svg, context.translation.settings);
+    const diagramType = getSupportedDiagramType(result.diagramType);
+    const elements = parseMermaidSvg(result.svg, context.translation.settings, diagramType);
+    return { diagramType, elements } satisfies GraphRenderResult;
   },
-  catch: (cause) => new Error(`Mermaid: ${toErrorMessage(cause)}`, { cause }),
+  catch: (cause) => {
+    if (cause instanceof GraphRenderError) return cause;
+    return new GraphRenderError('invalid', `Mermaid: ${toErrorMessage(cause)}`);
+  },
 });
 
 export const exportWorkspace = (context: AppContext) => Effect.tryPromise({
@@ -98,24 +137,38 @@ export const exportWorkspace = (context: AppContext) => Effect.tryPromise({
   catch: (cause) => new Error(`Export: ${toErrorMessage(cause)}`, { cause }),
 });
 
-export const resetWorkspace = (context: AppContext) => ({
-  input: APP_INITIAL_CONTEXT.input,
-  translation: APP_INITIAL_CONTEXT.translation,
-  workspace: APP_INITIAL_CONTEXT.workspace,
-  versions: [],
-  canvasRevision: context.canvasRevision + 1,
-  needsRender: true,
-  resetLayout: false,
-  operationError: null,
-  loadRequest: null,
-});
+export const resetWorkspace = (context: AppContext) => {
+  const workspaceId = crypto.randomUUID();
+  const input = Object.assign({}, APP_INITIAL_CONTEXT.input, { workspaceId });
+  const workspace = Object.assign({}, APP_INITIAL_CONTEXT.workspace, { id: workspaceId });
+  const translation = Object.assign({}, APP_INITIAL_CONTEXT.translation, {
+    elements: { nodes: [], edges: [] },
+    error: null,
+    settings: createDefaultTranslationSettings(),
+    view: { canvas: createDefaultCanvasSettings() },
+  });
+  return {
+    input,
+    translation,
+    workspace,
+    versions: [],
+    canvasRevision: context.canvasRevision + 1,
+    needsRender: true,
+    resetLayout: false,
+    errorDialogDismissed: false,
+    operationError: null,
+    exportError: null,
+    loadRequest: null,
+  };
+};
 
 export const restoreWorkspace = (context: AppContext, records: GraphRecords) => {
   const translation = getTranslation(records.translation);
   const canvasRevision = context.canvasRevision + 1;
   return Object.assign({}, records, {
     translation, canvasRevision, needsRender: false, resetLayout: false,
-    loadRequest: null, operationError: null,
+    loadRequest: null, operationError: null, exportError: null,
+    errorDialogDismissed: false,
   });
 };
 
@@ -149,10 +202,11 @@ export const updateTranslation = (context: AppContext, update: Partial<GraphTran
   return { translation };
 };
 
-export const acceptRenderedElements = (context: AppContext, rendered: GraphElements) => {
-  const defaults = applySettings(rendered, context.translation.settings);
+export const acceptRenderedElements = (context: AppContext, rendered: GraphRenderResult) => {
+  const { diagramType, elements: renderedElements } = rendered;
+  const defaults = applySettings(renderedElements, context.translation.settings);
   const elements = applySavedAppearance(defaults, context.translation.elements, context.resetLayout);
-  const update = updateTranslation(context, { elements, error: null });
+  const update = updateTranslation(context, { diagramType, elements, error: null });
   return Object.assign({}, update, { needsRender: false, resetLayout: false });
 };
 

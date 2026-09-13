@@ -5,6 +5,13 @@ const source = `flowchart LR
   Alpha[Write Mermaid] --> Beta[Build graph]
   Beta --> Gamma[React Flow preview]
 `;
+const sequenceSource = `sequenceDiagram
+  participant A as Alice
+  participant B as Bob
+  A->>B: Hello
+  B-->>A: Hi
+  A->>A: Think
+`;
 const reactFlowTypeMapWarning = 'created a new nodeTypes or edgeTypes object';
 
 const clearIndexedDb = async (page: Page) => {
@@ -67,6 +74,13 @@ const selectDownload = async (page: Page, name: string) => {
 const selectMarker = async (page: Page, name: string) => {
   await page.getByRole('combobox', { name: 'Marker', exact: true }).click();
   await page.getByRole('option', { name, exact: true }).click();
+};
+
+const openToolkit = async (page: Page) => {
+  const background = page.getByRole('combobox', { name: 'Background', exact: true });
+  const isOpen = await background.isVisible();
+  if (!isOpen) await page.getByRole('button', { name: 'Toolkit: Global', exact: true }).click();
+  await expect(background).toBeVisible();
 };
 
 const readMarker = (edge: Locator) => {
@@ -193,13 +207,13 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await expect(graphButtons).toHaveCount(1);
   await expect(graphButtons).toHaveText(/^[a-f0-9-]{36}$/);
   const savedId = await graphButtons.innerText();
-  await expect(graphName).toHaveAttribute('placeholder', savedId.trim());
+  await expect(graphName).toHaveValue(savedId.trim());
 
   await page.getByRole('textbox', { name: 'Graph name' }).fill('Release plan');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(navigation.getByRole('button', { name: 'Release plan' })).toBeVisible();
   await page.getByRole('button', { name: 'New', exact: true }).click();
-  await expect(graphName).toHaveValue('');
+  await expect(graphName).toHaveValue(/^[a-f0-9-]{36}$/);
   await page.getByRole('textbox', { name: 'Graph name' }).fill('API dependencies');
   await updateEditor(page);
   await expect(page.locator('[data-id="Alpha"]')).toBeVisible();
@@ -321,9 +335,78 @@ test('loads legacy marker colors, oversized edges, and untitled names', async ({
   await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'rgb(168, 85, 247)', stroke: 'rgb(168, 85, 247)' });
   await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke-width', '8px');
   const graphName = page.getByRole('textbox', { name: 'Graph name' });
-  await expect(graphName).toHaveValue('');
-  await expect(graphName).toHaveAttribute('placeholder', /^[a-f0-9-]{36}$/);
+  await expect(graphName).toHaveValue(/^[a-f0-9-]{36}$/);
   await expect(page.getByRole('combobox', { name: 'Marker', exact: true })).toHaveText('Filled arrow');
+});
+
+test('renders sequence diagrams as React Flow elements', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await updateEditor(page, sequenceSource);
+
+  const alice = page.locator('.react-flow__node[data-id="A"]');
+  await expect(alice).toContainText('Alice');
+  await expect(page.locator('.react-flow__node')).toHaveCount(2);
+  await expect(page.locator('.react-flow__edge')).toHaveCount(3);
+  await expect(page.getByTestId('rf__wrapper').getByText('Hello', { exact: true })).toBeVisible();
+  await expect(alice.getByText('Alice', { exact: true })).toHaveCount(2);
+  await expect(alice).toHaveCSS('background-image', 'none');
+  await expect(alice.locator('.z-10 > div').first()).toHaveCSS('background-color', 'rgb(204, 204, 204)');
+
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.locator('.react-flow__node[data-id="A"]')).toContainText('Alice');
+  await expect(page.locator('.react-flow__edge')).toHaveCount(3);
+  await expect(page.locator('.cm-content')).toContainText('A->>B: Hello');
+});
+
+test('shows render errors in a dismissible dialog and keeps the editor usable', async ({ page }) => {
+  await page.goto('/');
+  await updateEditor(page, `pie title Pets
+  "Dogs" : 45
+  "Cats" : 55
+`);
+
+  const dialog = page.getByRole('dialog', { name: 'Unable to update the graph' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('alert')).toContainText('not supported in the React Flow view yet');
+  await expect(page.locator('.cm-content')).toContainText('pie title Pets');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Dismiss', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+});
+
+test('starts new diagrams with default styles and canvas settings', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await openToolkit(page);
+  await setColorInput(page.getByLabel('Fill'), '#ef4444');
+  await page.getByRole('combobox', { name: 'Background', exact: true }).click();
+  await page.getByRole('option', { name: 'Diagonal v3', exact: true }).click();
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await openToolkit(page);
+
+  await expect(page.getByLabel('Fill')).toHaveValue('#cccccc');
+  await expect(page.getByRole('combobox', { name: 'Surface', exact: true })).toHaveText('Solid');
+  await expect(page.getByRole('combobox', { name: 'Background', exact: true })).toHaveText('None');
+  await expect(page.getByRole('switch', { name: 'Show grid', exact: true })).toHaveAttribute('aria-checked', 'false');
+  await expect(page.locator('.react-flow__node').first()).toHaveCSS('background-color', 'rgb(204, 204, 204)');
+  await expect(page.locator('.react-flow__node').first()).toHaveCSS('background-image', 'none');
+});
+
+test('supports no canvas background', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await openToolkit(page);
+  await page.getByRole('combobox', { name: 'Background', exact: true }).click();
+  await page.getByRole('option', { name: 'None', exact: true }).click();
+
+  await expect(page.getByRole('combobox', { name: 'Background', exact: true })).toHaveText('None');
+  await expect(page.getByLabel('Density')).toHaveCount(0);
 });
 
 test('opens the saved graph drawer and closes it after selection on mobile', async ({ page }, testInfo) => {

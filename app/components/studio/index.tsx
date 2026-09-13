@@ -1,6 +1,15 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Button } from '@/app/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/app/components/ui/dialog';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/app/components/ui/resizable';
 import { SidebarInset, SidebarProvider } from '@/app/components/ui/sidebar';
 import { DESKTOP_MEDIA_QUERY } from '@/app/constants';
@@ -32,7 +41,7 @@ export function Studio() {
       <WorkspaceSidebar />
       <SidebarInset className="min-h-dvh min-w-0 text-foreground lg:h-dvh">
         <StudioHeader />
-        <OperationErrors />
+        <StudioErrors />
         <StudioPanels
           isDesktop={isDesktop}
           panelMinimumSize={panelMinimumSize}
@@ -59,10 +68,36 @@ function StudioPanels({ isDesktop, panelMinimumSize, panelOrientation }: StudioP
   );
 }
 
-function OperationErrors() {
+function StudioErrors() {
+  const { send } = StudioContext.useActorRef();
   const operationError = StudioContext.useSelector((state) => state.context.operationError);
   const exportError = StudioContext.useSelector((state) => state.context.exportError);
-  const error = operationError || exportError;
-  if (!error) return null;
-  return <p role="alert" className="px-4 py-2 text-sm text-destructive">{error}</p>;
+  const translationError = StudioContext.useSelector((state) => state.context.translation.error);
+  const errorDialogDismissed = StudioContext.useSelector((state) => state.context.errorDialogDismissed);
+  const error = operationError || exportError || translationError;
+  const shouldShowError = Boolean(error) && !errorDialogDismissed;
+  if (!shouldShowError) return null;
+  const dismiss = () => send({ type: 'error.dismiss' });
+  const handleOpenChange = (open: boolean) => {
+    if (!open) dismiss();
+  };
+
+  return (
+    <Dialog open onOpenChange={handleOpenChange}>
+      <DialogContent
+        aria-describedby="studio-error-description"
+        aria-labelledby="studio-error-title"
+        onEscapeKeyDown={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => event.preventDefault()}
+      >
+        <DialogHeader>
+          <DialogTitle id="studio-error-title">Unable to update the graph</DialogTitle>
+          <DialogDescription id="studio-error-description" role="alert">{error}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" onClick={dismiss}>Dismiss</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

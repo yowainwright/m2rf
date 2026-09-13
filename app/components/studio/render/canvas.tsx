@@ -5,7 +5,7 @@ import { CANVAS_GRID } from '@/app/components/toolkit/constants';
 import { EDGE_ANCHOR_STYLE } from '@/app/constants';
 import { handleReactFlowError } from '@/app/utils';
 import { InitialViewportSync, ReactFlowErrorGate } from './support';
-import { RENDER_EDGE_TYPES } from './constants';
+import { RENDER_EDGE_TYPES, RENDER_NODE_TYPES } from './constants';
 import type { GraphCanvasProps } from './types';
 
 export function GraphCanvas({
@@ -15,7 +15,6 @@ export function GraphCanvas({
   canvasDeleteKey,
   canvasRevision,
   edges,
-  error,
   nodes,
   onEdgesChange,
   onMoveEnd,
@@ -46,7 +45,6 @@ export function GraphCanvas({
       </div>
     </EdgeLabelRenderer>
   ) : null;
-  const errorContent = <div role="alert" className="p-4 text-sm text-destructive">{error}</div>;
   const flowContent = (
     <ReactFlowProvider key={canvasRevision}>
       <ReactFlowErrorGate onError={handleReactFlowError}>
@@ -60,6 +58,7 @@ export function GraphCanvas({
           elementsSelectable={canEditCanvas}
           fitView={shouldFitView}
           nodes={nodes}
+          nodeTypes={RENDER_NODE_TYPES}
           nodesConnectable={canEditCanvas}
           nodesDraggable={canEditCanvas}
           nodesFocusable={canEditCanvas}
@@ -82,5 +81,5 @@ export function GraphCanvas({
     </ReactFlowProvider>
   );
 
-  return error ? errorContent : flowContent;
+  return flowContent;
 }

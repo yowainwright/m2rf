@@ -70,6 +70,8 @@ const getPatternStyle = (
 };
 
 export const CanvasBackground = ({ gradient, pattern, preset, shader }: CanvasBackgroundProps) => {
+  if (preset === 'none') return null;
+
   if (preset === 'gradient') {
     return (
       <div
