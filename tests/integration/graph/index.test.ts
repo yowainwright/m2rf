@@ -313,28 +313,134 @@ describe('sequence diagrams', () => {
     <g data-et="participant" data-id="A"><rect class="actor actor-top" x="0" width="150" /><text class="actor actor-box">Alice</text></g>
     <g data-et="participant" data-id="B"><rect class="actor actor-top" x="200" width="150" /><text class="actor actor-box">Bob</text></g>
     <text class="messageText" y="80">Hello</text>
-    <line data-et="message" data-id="i0" class="messageLine0" x1="76" x2="271" y1="115" y2="115" />
+    <text class="sequenceNumber">1</text>
+    <line data-et="message" data-id="i0" class="messageLine0" x1="76" x2="271" y1="115" y2="115" marker-end="url(#arrowhead)" />
     <text class="messageText" y="130">Think</text>
-    <path data-et="message" data-id="i1" class="messageLine0" d="M 76,165 C 136,155 136,195 76,185" />
+    <text class="sequenceNumber">2</text>
+    <path data-et="message" data-id="i1" class="messageLine0" d="M 76,165 C 136,155 136,195 76,185" marker-end="url(#arrowhead)" />
   </svg>`;
 
-  it('translates participants, lifelines, messages, and self-messages into React Flow elements', () => {
+  it('translates participants and message actions with row-level lifeline handles', () => {
     const elements = parseMermaidSvg(sequenceSvg, settings, 'sequence');
-    const [firstNode, secondNode] = elements.nodes;
-    const [message, selfMessage] = elements.edges;
+    const [firstNode, secondNode, messageAction, selfAction] = elements.nodes;
 
-    expect(elements.nodes.map((node) => node.id)).toEqual(['A', 'B']);
+    expect(elements.nodes.map((node) => node.id)).toEqual(['A', 'B', 'action-message-i0', 'action-message-i1']);
+    expect(elements.edges).toHaveLength(4);
     expect(firstNode?.type).toBe('sequenceParticipant');
     expect(firstNode?.data.label).toBe('Alice');
     expect(firstNode?.style?.height).toBe(306);
     expect(secondNode?.position).toEqual({ x: 200, y: 0 });
-    expect(message).toMatchObject({
-      label: 'Hello',
-      source: 'A',
-      target: 'B',
-      type: 'sequenceMessage',
+    expect(firstNode?.data.handles).toEqual([
+      { id: 'message-i0', sourceY: 115, targetY: 115 },
+      { id: 'message-i1', sourceY: 165, targetY: 201 },
+    ]);
+    expect(messageAction).toMatchObject({ type: 'sequenceAction', data: { label: 'Hello', sequenceNumber: '1' } });
+    expect(selfAction).toMatchObject({ type: 'sequenceAction', data: { label: 'Think', sequenceNumber: '2' } });
+  });
+
+  it('connects the sender through its action to the receiver and puts the arrowhead at the receiver', () => {
+    const { edges } = parseMermaidSvg(sequenceSvg, settings, 'sequence');
+    const [senderSegment, receiverSegment] = edges;
+
+    expect(senderSegment).toMatchObject({
+      source: 'A', target: 'action-message-i0', type: 'sequenceMessage',
+      sourceHandle: 'message-i0-source-right', targetHandle: 'left-target',
+      data: { messageY: 115, segment: 'source', sequenceNumber: '1', selfMessage: false, markerEnd: false },
     });
-    expect(message?.data).toMatchObject({ messageY: 115 });
-    expect(selfMessage).toMatchObject({ label: 'Think', source: 'A', target: 'A' });
+    expect(receiverSegment).toMatchObject({
+      source: 'action-message-i0', target: 'B', type: 'sequenceMessage',
+      sourceHandle: 'right-source', targetHandle: 'message-i0-target-left',
+      data: { messageY: 115, segment: 'target', selfMessage: false, markerEnd: true },
+    });
+    expect(senderSegment?.markerEnd).toBeUndefined();
+    expect(receiverSegment?.markerEnd).toMatchObject({ type: 'arrowclosed', color: settings.edgeColor });
+    expect(receiverSegment?.data.sequenceNumber).toBeUndefined();
+  });
+
+  it('routes a self-message back to a separate handle on the same participant', () => {
+    const { edges } = parseMermaidSvg(sequenceSvg, settings, 'sequence');
+    const [, , senderSegment, receiverSegment] = edges;
+
+    expect(senderSegment).toMatchObject({
+      source: 'A', target: 'action-message-i1', type: 'sequenceMessage',
+      sourceHandle: 'message-i1-source-right', targetHandle: 'left-target',
+      data: { messageY: 165, segment: 'source', sequenceNumber: '2', selfMessage: true },
+    });
+    expect(receiverSegment).toMatchObject({
+      source: 'action-message-i1', target: 'A', type: 'sequenceMessage',
+      sourceHandle: 'left-source', targetHandle: 'message-i1-target-right',
+      data: { messageY: 165, segment: 'target', selfMessage: true },
+    });
+    expect(senderSegment?.markerEnd).toBeUndefined();
+    expect(receiverSegment?.markerEnd).toMatchObject({ type: 'arrowclosed', color: settings.edgeColor });
+  });
+
+  it('connects an unnumbered dashed reply from right to left', () => {
+    const svg = sequenceSvg.replace('</svg>', `
+      <text class="messageText">Reply</text>
+      <line data-et="message" data-id="reply" class="messageLine1" x1="275" x2="75" y1="240" y2="240" marker-end="url(#arrowhead)" />
+    </svg>`);
+    const { nodes, edges } = parseMermaidSvg(svg, settings, 'sequence');
+    const [sender, receiver] = edges.slice(-2);
+
+    expect(sender).toMatchObject({
+      source: 'B', target: 'action-message-reply',
+      sourceHandle: 'message-reply-source-left', targetHandle: 'right-target',
+      data: { dashed: true, segment: 'source', messageY: 240 },
+    });
+    expect(receiver).toMatchObject({
+      source: 'action-message-reply', target: 'A',
+      sourceHandle: 'left-source', targetHandle: 'message-reply-target-right',
+      data: { dashed: true, segment: 'target', messageY: 240 },
+    });
+    expect(sender?.data.sequenceNumber).toBeUndefined();
+    expect(sender?.markerEnd).toBeUndefined();
+    expect(receiver?.markerEnd).toMatchObject({ type: 'arrowclosed' });
+    expect(nodes.find((node) => node.id === 'A')?.data.handles).toContainEqual({
+      id: 'message-reply', sourceY: 240, targetY: 240,
+    });
+  });
+
+  it.each(['alt', 'opt', 'loop'])('retains %s frame bounds, conditions, and branch offsets', (frameType) => {
+    const svg = sequenceSvg.replace('</svg>', `
+      <g data-et="control-structure" data-id="control">
+        <line class="loopLine" x1="50" x2="300" y1="90" y2="90" />
+        <line class="loopLine" x1="50" x2="300" y1="250" y2="250" />
+        <text class="labelText">${frameType}</text>
+        <text class="loopText">[Approved]</text>
+        <text class="sectionTitle" y="170">[Rejected]</text>
+      </g>
+    </svg>`);
+    const { nodes, edges } = parseMermaidSvg(svg, settings, 'sequence');
+    const frame = nodes.find((node) => node.id === 'frame-control');
+
+    expect(frame).toMatchObject({
+      type: 'sequenceFrame', position: { x: 50, y: 90 },
+      style: { height: 160, width: 250 },
+      data: { frameType, label: '[Approved]', sections: [{ label: '[Rejected]', y: 80 }] },
+    });
+    expect(edges.some((edge) => edge.source === frame?.id || edge.target === frame?.id)).toBe(false);
+  });
+
+  it('keeps note geometry separate and attaches activation bars to their participant', () => {
+    const svg = sequenceSvg.replace('</svg>', `
+      <g data-et="note" data-id="n0">
+        <rect class="note" x="300" y="120" width="100" height="40" />
+        <text class="noteText">Check cache</text>
+      </g>
+      <rect class="activation0" x="270" y="115" width="10" height="90" />
+      <rect class="activation1" x="275" y="135" width="10" height="30" />
+    </svg>`);
+    const { nodes } = parseMermaidSvg(svg, settings, 'sequence');
+
+    expect(nodes.find((node) => node.id === 'note-n0')).toMatchObject({
+      type: 'sequenceNote', position: { x: 300, y: 120 },
+      style: { height: 40, width: 100 }, data: { label: 'Check cache' },
+    });
+    expect(nodes.find((node) => node.id === 'B')?.data.activations).toEqual([
+      { x: 70, y: 115, width: 10, height: 90 },
+      { x: 75, y: 135, width: 10, height: 30 },
+    ]);
+    expect(nodes.find((node) => node.id === 'A')?.data.activations).toEqual([]);
   });
 });

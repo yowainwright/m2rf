@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type {
   CanvasBackground, GradientDirection, GraphCanvasSettings, GraphInputFormat, GraphTranslationSettings, NodeBorder, NodeShape, NodeShadow, NodeSurface,
 } from './types';
@@ -8,7 +9,39 @@ export const GRAPH_VERSION_LIMIT = 5;
 export const GRAPH_INPUT_FORMAT: GraphInputFormat = 'mermaid';
 export const GRAPH_DIAGRAM_TYPES = ['flowchart', 'sequence'] as const;
 export const SEQUENCE_PARTICIPANT_NODE_TYPE = 'sequenceParticipant';
+export const SEQUENCE_ACTION_NODE_TYPE = 'sequenceAction';
+export const SEQUENCE_NOTE_NODE_TYPE = 'sequenceNote';
+export const SEQUENCE_FRAME_NODE_TYPE = 'sequenceFrame';
 export const SEQUENCE_MESSAGE_EDGE_TYPE = 'sequenceMessage';
+export const SEQUENCE_ACTOR_FIGURE_WIDTH = 50;
+export const SEQUENCE_ACTION_NODE_HEIGHT = 32;
+export const SEQUENCE_ACTION_NODE_MIN_WIDTH = 48;
+export const SEQUENCE_SELF_MESSAGE_HEIGHT = 36;
+export const SEQUENCE_SELF_MESSAGE_OFFSET = 56;
+export const SEQUENCE_HANDLE_STYLE: CSSProperties = {
+  border: 0,
+  height: 1,
+  left: '50%',
+  minHeight: 0,
+  minWidth: 0,
+  opacity: 0,
+  pointerEvents: 'none',
+  right: 'auto',
+  transform: 'translate(0, -50%)',
+  width: 1,
+};
+export const SEQUENCE_RIGHT_HANDLE_STYLE: CSSProperties = Object.assign({}, SEQUENCE_HANDLE_STYLE, {
+  left: 'calc(50% - 1px)',
+});
+
+// Color inputs need hex values corresponding to the Tailwind defaults.
+export const SEQUENCE_NODE_DEFAULTS: Record<string, { fill: string; border: NodeBorder; surface: NodeSurface }> = {
+  'sequence-participant': { fill: '#f3f4f6', border: 'solid', surface: 'solid' },
+  'sequence-action': { fill: '#ffffff', border: 'none', surface: 'solid' },
+  'sequence-note': { fill: '#f9fafb', border: 'solid', surface: 'solid' },
+  'sequence-frame': { fill: '#ffffff', border: 'dashed', surface: 'solid' },
+  'sequence-region': { fill: '#f9fafb', border: 'none', surface: 'pattern-diagonal' },
+};
 
 export const GRAPH_TABLES = {
   inputs: 'inputs',
