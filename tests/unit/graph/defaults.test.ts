@@ -8,7 +8,7 @@ import {
 import { createNodeStyle, getNodeGradientValue, getNodeShapeValue, getTranslation, getWorkspaceLabel, updateSelectedNodes } from '@/app/graph';
 import { getSelectionLabel, resetWorkspace } from '@/app/utils';
 
-describe('studio defaults', () => {
+describe('app defaults', () => {
   test.each([
     [0, 0, 'Global'],
     [1, 0, '1 node'],
@@ -81,7 +81,7 @@ describe('studio defaults', () => {
     );
   });
 
-  test('uses the workspace id for blank and legacy untitled labels', () => {
+  test('uses the workspace id for blank and legacy titles, with an optional draft placeholder', () => {
     const workspace = {
       activeInputId: null,
       activeTranslationId: null,
@@ -91,6 +91,7 @@ describe('studio defaults', () => {
     };
 
     expect(getWorkspaceLabel(workspace)).toBe('workspace-123');
+    expect(getWorkspaceLabel(workspace, 'Untitled graph')).toBe('Untitled graph');
     const legacyWorkspace = Object.assign({}, workspace, {
       name: 'Untitled Graph',
     });

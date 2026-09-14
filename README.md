@@ -1,6 +1,6 @@
-# m2rf Studio
+# m2rf
 
-m2rf is a local-first Mermaid diagram studio. Mermaid is the source of truth; React Flow is the interactive view.
+m2rf is a local-first Mermaid diagram editor. Mermaid is the source of truth; React Flow is the interactive view.
 
 ## V1 scope
 
@@ -25,7 +25,7 @@ The repository root is the Next.js application.
 
 ```text
 app/                  Next.js routes and application source
-app/components/       Studio UI, React Flow canvas, and shadcn UI
+app/components/       Workspace UI, React Flow canvas, and shadcn UI
 app/lib/              Shared utilities and observability
 app/graph/             Graph model, translation, layout, and persistence
 app/export/            Image and diagram export
@@ -40,6 +40,25 @@ pnpm run typecheck
 pnpm run test
 pnpm run build
 ```
+
+## Dependency maintenance
+
+```sh
+pnpm run deps:check
+pnpm run update:deps --dryRun
+pnpm run update
+pnpm run deps:security
+```
+
+Codependence reads its policy from `package.json`. The update script applies
+latest-version updates, including majors, then refreshes `pnpm-lock.yaml` through
+pnpm. Review the preview before updating and run the project checks afterward.
+See the [Codependence configuration guide](https://github.com/yowainwright/codependence#configuration).
+
+Pastoralist tracks overrides after installs. The security check is read-only,
+fails on provider errors, and also runs in CI. There are currently no overrides;
+Pastoralist creates its appendix when overrides are added.
+See the [Pastoralist setup guide](https://github.com/yowainwright/pastoralist#add-pastoralist-to-a-project).
 
 ## Deployment
 

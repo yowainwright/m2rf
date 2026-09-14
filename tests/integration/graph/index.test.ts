@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 
 import Dexie from 'dexie';
 import { createElement } from 'react';
-import { cleanup, renderHook, waitFor } from '@testing-library/react';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import type { Edge, Node } from 'reactflow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -14,7 +14,7 @@ import {
   parseMermaidSvg,
 } from '@/app/graph';
 import type { CreateGraphRecordsInput, NodeShape, NodeSurface } from '@/app/graph';
-import { StudioContext } from '@/app';
+import { AppContext } from '@/app';
 
 const settings = {
   edgeAnimation: 'none',
@@ -108,18 +108,99 @@ const createFiveVersions = async () => {
   return records;
 };
 
+const startTitleEditor = async () => {
+  const saved = await graphRepository.create(input);
+  const { result } = renderHook(() => AppContext.useActorRef(), {
+    wrapper: ({ children }) => createElement(AppContext.Provider, null, children),
+  });
+  const actor = result.current;
+  await waitFor(() => expect(actor.getSnapshot().context.workspace.id).toBe(saved.workspace.id));
+  act(() => actor.send({ type: 'title.edit' }));
+  return { actor, saved };
+};
+
 describe('graphRepository', () => {
   afterEach(async () => {
     cleanup();
+    vi.restoreAllMocks();
     vi.useRealTimers();
     await deleteWorkspaces();
   });
 
+  it('renames metadata without changing diagram records or versions', async () => {
+    const saved = await graphRepository.create(input);
+    await graphRepository.rename(saved.workspace.id, '  Release plan  ');
+    const reloaded = await graphRepository.read(saved.workspace.id);
+    expect(reloaded?.workspace.name).toBe('Release plan');
+    expect(reloaded?.input).toEqual(saved.input);
+    expect(reloaded?.translation).toEqual(saved.translation);
+    expect(reloaded?.versions).toEqual(saved.versions);
+    await expect(graphRepository.rename(saved.workspace.id, '  ')).rejects.toThrow('Enter a graph name.');
+    await expect(graphRepository.rename('missing', 'Title')).rejects.toThrow('no longer exists');
+  });
+
+  it('keeps raw title drafts separate and discards cancelled or blank names', async () => {
+    const { actor, saved } = await startTitleEditor();
+    act(() => actor.send({ type: 'workspace.rename', name: 'Release ' }));
+    expect(actor.getSnapshot().context.titleDraft).toBe('Release ');
+    expect(actor.getSnapshot().context.workspace).toEqual(saved.workspace);
+    act(() => actor.send({ type: 'workspace.rename', name: '' }));
+    act(() => actor.send({ type: 'title.confirm' }));
+    expect(actor.getSnapshot().context.titleError).toBe('Enter a graph name.');
+    expect(actor.getSnapshot().matches({ title: 'editing' })).toBe(true);
+    act(() => actor.send({ type: 'title.cancel' }));
+    act(() => actor.send({ type: 'title.confirm' }));
+    expect(actor.getSnapshot().matches({ title: 'idle' })).toBe(true);
+    expect((await graphRepository.read(saved.workspace.id))?.workspace).toEqual(saved.workspace);
+  });
+
+  it('commits the title once, updates the sidebar and skips unchanged names', async () => {
+    const { actor, saved } = await startTitleEditor();
+    const rename = vi.spyOn(graphRepository, 'rename');
+    act(() => actor.send({ type: 'workspace.rename', name: '  Release plan  ' }));
+    act(() => actor.send({ type: 'title.confirm' }));
+    act(() => actor.send({ type: 'title.confirm' }));
+    await waitFor(() => expect(actor.getSnapshot().matches({ title: 'idle' })).toBe(true));
+    expect(actor.getSnapshot().context.workspace.name).toBe('Release plan');
+    expect(actor.getSnapshot().context.workspaces[0].name).toBe('Release plan');
+    expect((await graphRepository.read(saved.workspace.id))?.versions).toEqual(saved.versions);
+    act(() => actor.send({ type: 'title.edit' }));
+    act(() => actor.send({ type: 'title.confirm' }));
+    expect(rename).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains the title draft after a storage failure and allows retry', async () => {
+    const { actor, saved } = await startTitleEditor();
+    vi.spyOn(graphRepository, 'rename').mockRejectedValueOnce(new Error('Storage unavailable'));
+    act(() => actor.send({ type: 'workspace.rename', name: 'Retry title' }));
+    act(() => actor.send({ type: 'title.confirm' }));
+    act(() => actor.send({ type: 'workspace.delete' }));
+    await waitFor(() => expect(actor.getSnapshot().context.titleError).toContain('Storage unavailable'));
+    expect(actor.getSnapshot().context.workspace).toEqual(saved.workspace);
+    expect(actor.getSnapshot().context.titleDraft).toBe('Retry title');
+    expect(actor.getSnapshot().context.afterRename).toBeNull();
+    act(() => actor.send({ type: 'title.confirm' }));
+    await waitFor(() => expect(actor.getSnapshot().matches({ title: 'idle' })).toBe(true));
+    expect((await graphRepository.read(saved.workspace.id))?.workspace.name).toBe('Retry title');
+  });
+
+  it('finishes a pending diagram save after the title is persisted', async () => {
+    const { actor, saved } = await startTitleEditor();
+    act(() => actor.send({ type: 'workspace.rename', name: 'Saved with title' }));
+    act(() => actor.send({ type: 'title.confirm' }));
+    act(() => actor.send({ type: 'workspace.save' }));
+    await waitFor(() => expect(actor.getSnapshot().context.versions).toHaveLength(2));
+    const reloaded = await graphRepository.read(saved.workspace.id);
+    expect(reloaded?.workspace.name).toBe('Saved with title');
+    expect(reloaded?.input.source).toBe(source);
+    expect(actor.getSnapshot().context.afterRename).toBeNull();
+  });
+
   it('restores a saved graph through React StrictMode startup without reporting cancellation as a failure', async () => {
     const saved = await graphRepository.create(input);
-    const { result } = renderHook(() => StudioContext.useSelector((state) => state.context), {
+    const { result } = renderHook(() => AppContext.useSelector((state) => state.context), {
       reactStrictMode: true,
-      wrapper: ({ children }) => createElement(StudioContext.Provider, null, children),
+      wrapper: ({ children }) => createElement(AppContext.Provider, null, children),
     });
 
     await waitFor(() => expect(result.current.workspace.id).toBe(saved.workspace.id));

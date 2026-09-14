@@ -1,6 +1,5 @@
 'use client';
 
-import type { ChangeEvent } from 'react';
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/app/components/ui/field';
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
@@ -19,7 +18,7 @@ import {
   NODE_SURFACE_OPTIONS,
   TOOLKIT_LABELS,
 } from './constants';
-import type { GraphGradientSettings, GraphPatternSettings, GraphShaderSettings } from '@/app/graph';
+import type { GraphGradientSettings, GraphPatternSettings } from '@/app/graph';
 import type {
   CanvasToolProps,
   EdgeToolProps,
@@ -27,9 +26,9 @@ import type {
   NodeToolProps,
   PatternToolsProps,
   ShaderColorFieldProps,
-  ShaderColorKey,
   ShaderToolsProps,
 } from './types';
+import { createShaderColorHandler, getPatternPreviewStyle } from './utils';
 
 const GradientTools = ({ gradient, idPrefix, onUpdate }: GradientToolsProps) => {
   const split = Math.min(100, Math.max(0, gradient.split));
@@ -89,12 +88,6 @@ const GradientTools = ({ gradient, idPrefix, onUpdate }: GradientToolsProps) => 
   );
 };
 
-const getPatternPreviewStyle = (value: string, preview: string) => {
-  if (value === 'pattern-diagonal') return { background: preview };
-  if (value.startsWith('pattern-')) return { background: preview, backgroundSize: '8px 8px' };
-  return { background: preview };
-};
-
 const PatternTools = ({ idPrefix, onUpdate, pattern }: PatternToolsProps) => {
   const colorId = `${idPrefix}-pattern-color`;
   const backgroundColorId = `${idPrefix}-pattern-background-color`;
@@ -142,30 +135,6 @@ const ShaderColorField = ({ id, label, onChange, value }: ShaderColorFieldProps)
     <Input className="h-8 cursor-pointer p-0.5" id={id} type="color" value={value} onChange={onChange} />
   </Field>
 );
-
-const updateShaderColor = (
-  shader: GraphShaderSettings,
-  isAurora: boolean,
-  key: ShaderColorKey,
-  value: string
-) => {
-  const isAuroraColorA = isAurora && key === 'colorA';
-  const isAuroraColorB = isAurora && key === 'colorB';
-  if (isAuroraColorA) return Object.assign({}, shader, { aurora: Object.assign({}, shader.aurora, { colorA: value }) });
-  if (isAuroraColorB) return Object.assign({}, shader, { aurora: Object.assign({}, shader.aurora, { colorB: value }) });
-  if (isAurora) return Object.assign({}, shader, { aurora: Object.assign({}, shader.aurora, { colorC: value }) });
-  if (key === 'colorA') return Object.assign({}, shader, { gradientMesh: Object.assign({}, shader.gradientMesh, { colorA: value }) });
-  return Object.assign({}, shader, { gradientMesh: Object.assign({}, shader.gradientMesh, { colorB: value }) });
-};
-
-const createShaderColorHandler = (
-  shader: GraphShaderSettings,
-  isAurora: boolean,
-  key: ShaderColorKey,
-  onUpdate: (shader: GraphShaderSettings) => void
-) => (event: ChangeEvent<HTMLInputElement>) => {
-  onUpdate(updateShaderColor(shader, isAurora, key, event.target.value));
-};
 
 const ShaderTools = ({ background, onUpdate, shader }: ShaderToolsProps) => {
   const isAurora = background === 'aurora';

@@ -1,8 +1,8 @@
 'use client';
 
-import { StudioContext } from './index';
-import { Studio } from '@/app/components/studio';
+import { AppContext } from './index';
+import { Workspace } from '@/app/components/workspace';
 
 export default function Home() {
-  return <StudioContext.Provider><Studio /></StudioContext.Provider>;
+  return <AppContext.Provider><Workspace /></AppContext.Provider>;
 }

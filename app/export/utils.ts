@@ -15,11 +15,9 @@ import {
 } from './constants';
 import type {
   GifExportInput,
-  GifExportResult,
+  GraphExportResult,
   PngExportInput,
-  PngExportResult,
   SvgExportInput,
-  SvgExportResult,
 } from './types';
 
 const invalidFileNamePattern = /[^a-z0-9-_]+/gi;
@@ -162,12 +160,9 @@ export const getSvgExportElement = () => {
   return document.querySelector<HTMLElement>(GRAPH_EXPORT_SELECTOR);
 };
 
-export const getPngExportElement = getSvgExportElement;
-export const getGifExportElement = getSvgExportElement;
-
 export const exportGif = async (
   input: GifExportInput
-): Promise<GifExportResult> => {
+): Promise<GraphExportResult> => {
   const fileName = createFileName(input.name, GIF_FILE_EXTENSION);
   const frames = await captureGifFrames(input.element);
   const blob = createGifBlob(frames, input.repeat);
@@ -179,7 +174,7 @@ export const exportGif = async (
 
 export const exportPng = async (
   input: PngExportInput
-): Promise<PngExportResult> => {
+): Promise<GraphExportResult> => {
   const fileName = createFileName(input.name, PNG_FILE_EXTENSION);
   const dataUrl = await toPngDataUrl(input.element);
 
@@ -190,7 +185,7 @@ export const exportPng = async (
 
 export const exportSvg = async (
   input: SvgExportInput
-): Promise<SvgExportResult> => {
+): Promise<GraphExportResult> => {
   const fileName = createFileName(input.name, SVG_FILE_EXTENSION);
   const dataUrl = await toSvgDataUrl(input.element);
 

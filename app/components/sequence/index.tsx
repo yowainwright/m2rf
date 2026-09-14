@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, type CSSProperties } from 'react';
+import { useEffect } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -10,25 +10,11 @@ import {
   type EdgeProps,
   type NodeProps,
 } from 'reactflow';
-import { NODE_PATTERN_SIZE, SEQUENCE_HANDLE_STYLE, SEQUENCE_RIGHT_HANDLE_STYLE } from '@/app/graph/constants';
-import { createDiagonalPatternImage } from '@/app/graph';
+import { SEQUENCE_HANDLE_STYLE, SEQUENCE_RIGHT_HANDLE_STYLE } from '@/app/graph/constants';
 import type {
   SequenceActionData, SequenceFrameData, SequenceMessageData, SequenceNoteData, SequenceParticipantData,
 } from '@/app/graph/types';
-
-const getHeaderStyle = (style: CSSProperties | undefined): CSSProperties => ({
-  backgroundColor: style?.backgroundColor,
-  backgroundImage: style?.backgroundImage,
-  backgroundSize: style?.backgroundSize,
-  borderColor: style?.borderColor,
-  borderRadius: style?.borderRadius,
-  borderStyle: style?.borderStyle,
-  borderWidth: style?.borderWidth,
-  boxShadow: style?.boxShadow,
-  clipPath: style?.clipPath,
-  color: style?.color,
-  fontFamily: style?.fontFamily,
-});
+import { getFrameStyle, getHeaderStyle, getMessagePath } from './utils';
 
 export function SequenceParticipantNode({ data, id }: NodeProps<SequenceParticipantData>) {
   const updateNodeInternals = useUpdateNodeInternals();
@@ -76,19 +62,6 @@ export function SequenceParticipantNode({ data, id }: NodeProps<SequenceParticip
     </div>
   );
 }
-
-const getMessagePath = (
-  sourceX: number,
-  sourceY: number,
-  targetX: number,
-  targetY: number,
-  selfMessage: boolean
-) => {
-  if (!selfMessage) return `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
-  const controlX = Math.max(sourceX, targetX) + 48;
-  const midpointY = sourceY + ((targetY - sourceY) / 2);
-  return `M ${sourceX},${sourceY} C ${controlX},${sourceY} ${controlX},${midpointY} ${targetX},${targetY}`;
-};
 
 export function SequenceMessageEdge({
   data,
@@ -140,15 +113,6 @@ export function SequenceNoteNode({ data }: NodeProps<SequenceNoteData>) {
   const style = data.style;
   return <div className="h-full w-full rounded-sm border border-gray-200 bg-gray-50 p-2 text-sm text-gray-900" style={style}>{data.label}</div>;
 }
-
-const getFrameStyle = (data: SequenceFrameData): CSSProperties => {
-  const pattern = createDiagonalPatternImage('var(--color-gray-200)', NODE_PATTERN_SIZE);
-  const patternStyle = { '--sequence-pattern': pattern } as CSSProperties;
-  const fillStyle = data.fill ? { backgroundColor: data.fill, backgroundImage: 'none' } : {};
-  const hasCustomFill = data.style.backgroundColor !== undefined;
-  const customBackground = hasCustomFill ? { backgroundImage: 'none' } : {};
-  return Object.assign({}, patternStyle, fillStyle, customBackground, data.style);
-};
 
 export function SequenceFrameNode({ data }: NodeProps<SequenceFrameData>) {
   const frameStyle = getFrameStyle(data);

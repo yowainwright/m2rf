@@ -14,17 +14,17 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/app/components/ui/sidebar';
-import { StudioContext } from '@/app';
+import { AppContext } from '@/app';
 import VersionTree, { type VersionTreeItem } from './versiontree';
 
 export function WorkspaceSidebar() {
-  const { send } = StudioContext.useActorRef();
-  const activeId = StudioContext.useSelector((state) => state.context.workspace.id);
-  const activeVersionId = StudioContext.useSelector((state) => state.context.input.id);
-  const versionHistoryOpen = StudioContext.useSelector((state) => state.context.versionHistoryOpen);
-  const versions = StudioContext.useSelector((state) => state.context.versions);
-  const workspaces = StudioContext.useSelector((state) => state.context.workspaces);
-  const canNavigate = StudioContext.useSelector((state) => state.can({ type: 'workspace.create' }));
+  const { send } = AppContext.useActorRef();
+  const activeId = AppContext.useSelector((state) => state.context.workspace.id);
+  const activeVersionId = AppContext.useSelector((state) => state.context.input.id);
+  const versionHistoryOpen = AppContext.useSelector((state) => state.context.versionHistoryOpen);
+  const versions = AppContext.useSelector((state) => state.context.versions);
+  const workspaces = AppContext.useSelector((state) => state.context.workspaces);
+  const canNavigate = AppContext.useSelector((state) => state.can({ type: 'workspace.create' }));
   const { setOpenMobile } = useSidebar();
   const versionItems: VersionTreeItem[] = versions.map((version) => {
     return { id: version.id, timestamp: version.updatedAt, version: version.version };

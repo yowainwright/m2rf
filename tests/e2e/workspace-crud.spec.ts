@@ -113,11 +113,74 @@ const editSnapshot = async (page: Page, version: number) => {
   await expect(page.locator('.react-flow__node').filter({ hasText: `Snapshot ${version}` })).toBeVisible();
 };
 
+const renameGraph = async (page: Page, name: string) => {
+  const title = page.getByRole('button', { name: 'Rename graph', exact: true });
+  await title.click();
+  const graphName = page.getByRole('textbox', { name: 'Graph name', exact: true });
+  await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill(name);
+  await graphName.press('Enter');
+  await expect(title).toHaveText(name);
+};
+
+test('edits titles with keyboard confirmation, cancellation and blank validation', async ({ page }) => {
+  await page.goto('/');
+  const title = page.getByRole('button', { name: 'Rename graph', exact: true });
+  const graphName = page.getByRole('textbox', { name: 'Graph name', exact: true });
+  await expect(title).toHaveText('Untitled graph');
+  await title.focus();
+  await title.press('Enter');
+  await expect(graphName).toBeFocused();
+  await expect(graphName).toHaveValue('');
+  await graphName.pressSequentially('Release plan ');
+  await expect(graphName).toHaveValue('Release plan ');
+  await graphName.press('Enter');
+  await expect(title).toHaveText('Release plan');
+  await expect(title).toBeFocused();
+  await expect(page.getByText('No saved graphs')).toBeVisible();
+  await title.click();
+  const selection = await graphName.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd]);
+  expect(selection).toEqual([0, 'Release plan'.length]);
+  await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill('Discard this');
+  await graphName.press('Escape');
+  await expect(title).toHaveText('Release plan');
+  await expect(title).toBeFocused();
+  await title.click();
+  await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill('   ');
+  await graphName.press('Enter');
+  await expect(graphName).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByRole('alert').filter({ hasText: 'Enter a graph name.' })).toBeVisible();
+  await graphName.press('Escape');
+  await expect(title).toHaveText('Release plan');
+});
+
+test('saves a title on blur and reloads it without adding a diagram version', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  await saveSnapshot(page, 1);
+  const title = page.getByRole('button', { name: 'Rename graph', exact: true });
+  const history = page.getByRole('region', { name: 'Version history' });
+  await title.click();
+  await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill('  Road map  ');
+  await page.getByRole('heading', { name: 'm2rf', exact: true }).click();
+  await expect(title).toHaveText('Road map');
+  const navigation = page.getByRole('navigation', { name: 'Saved graphs' });
+  await expect(navigation.getByRole('button', { name: 'Road map', exact: true })).toBeVisible();
+  await expect(history.getByRole('button')).toHaveCount(1);
+  await page.reload();
+  await expect(title).toHaveText('Road map');
+  await expect(history.getByRole('button')).toHaveCount(1);
+  await title.click();
+  await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill('Final road map');
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await expect(title).toHaveText('Untitled graph');
+  await expect(navigation.getByRole('button', { name: 'Final road map', exact: true })).toBeVisible();
+});
+
 test('restores version styling and saves the oldest as newest while keeping five', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await editSnapshot(page, 1);
-  await page.getByRole('textbox', { name: 'Graph name' }).fill('Versioned diagram');
+  await renameGraph(page, 'Versioned diagram');
   await page.getByRole('button', { name: 'Toolkit: Global' }).click();
   await setColorInput(page.getByLabel('Fill'), '#ef4444');
   await page.keyboard.press('Escape');
@@ -199,7 +262,7 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await page.keyboard.press('Escape');
   const navigation = page.getByRole('navigation', { name: 'Saved graphs' });
   const graphButtons = navigation.locator('[data-sidebar="menu-button"]');
-  const graphName = page.getByRole('textbox', { name: 'Graph name' });
+  const graphName = page.getByRole('button', { name: 'Rename graph', exact: true });
   await expect(navigation.getByText('No saved graphs')).toBeVisible();
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -207,21 +270,28 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await expect(graphButtons).toHaveCount(1);
   await expect(graphButtons).toHaveText(/^[a-f0-9-]{36}$/);
   const savedId = await graphButtons.innerText();
-  await expect(graphName).toHaveValue(savedId.trim());
+  await expect(graphName).toHaveText(savedId);
+  await page.reload();
+  await expect(graphName).toHaveText(savedId);
+  await graphName.click();
+  const titleInput = page.getByRole('textbox', { name: 'Graph name', exact: true });
+  await expect(titleInput).toHaveValue('');
+  await titleInput.press('Escape');
+  await expect(graphName).toHaveText(savedId);
 
-  await page.getByRole('textbox', { name: 'Graph name' }).fill('Release plan');
+  await renameGraph(page, 'Release plan');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(navigation.getByRole('button', { name: 'Release plan' })).toBeVisible();
   await page.getByRole('button', { name: 'New', exact: true }).click();
-  await expect(graphName).toHaveValue(/^[a-f0-9-]{36}$/);
-  await page.getByRole('textbox', { name: 'Graph name' }).fill('API dependencies');
+  await expect(graphName).toHaveText('Untitled graph');
+  await renameGraph(page, 'API dependencies');
   await updateEditor(page);
   await expect(page.locator('[data-id="Alpha"]')).toBeVisible();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(graphButtons).toHaveCount(2);
 
   await navigation.getByRole('button', { name: 'Release plan' }).click();
-  await expect(graphName).toHaveValue('Release plan');
+  await expect(graphName).toHaveText('Release plan');
   await expect(page.locator('.cm-content')).toContainText('Idea');
   await expect(navigation.getByRole('button', { name: 'Release plan' })).toHaveAttribute('data-active', 'true');
   await page.reload();
@@ -239,7 +309,7 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
   await expect(navigation).toBeInViewport();
   await navigation.getByRole('button', { name: 'Release plan' }).click();
-  await expect(graphName).toHaveValue('Release plan');
+  await expect(graphName).toHaveText('Release plan');
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(graphButtons).toHaveCount(1);
   await expect(navigation.getByRole('button', { name: 'API dependencies' })).toBeVisible();
@@ -334,8 +404,8 @@ test('loads legacy marker colors, oversized edges, and untitled names', async ({
   const firstEdge = page.locator('.react-flow__edge').first();
   await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'rgb(168, 85, 247)', stroke: 'rgb(168, 85, 247)' });
   await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke-width', '8px');
-  const graphName = page.getByRole('textbox', { name: 'Graph name' });
-  await expect(graphName).toHaveValue(/^[a-f0-9-]{36}$/);
+  const graphName = page.getByRole('button', { name: 'Rename graph', exact: true });
+  await expect(graphName).toHaveText(/^[a-f0-9-]{36}$/);
   await expect(page.getByRole('combobox', { name: 'Marker', exact: true })).toHaveText('Filled arrow');
 });
 
@@ -427,7 +497,7 @@ test('opens the saved graph drawer and closes it after selection on mobile', asy
   await page.goto('/');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await page.keyboard.press('Escape');
-  await page.getByRole('textbox', { name: 'Graph name' }).fill('Mobile graph');
+  await renameGraph(page, 'Mobile graph');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'New', exact: true }).click();
@@ -439,7 +509,7 @@ test('opens the saved graph drawer and closes it after selection on mobile', asy
   await page.screenshot({ path: testInfo.outputPath('mobile-sidebar.png') });
   await drawer.getByRole('button', { name: 'Mobile graph' }).click();
   await expect(drawer).toBeHidden();
-  await expect(page.getByRole('textbox', { name: 'Graph name' })).toHaveValue('Mobile graph');
+  await expect(page.getByRole('button', { name: 'Rename graph', exact: true })).toHaveText('Mobile graph');
   await expect(page.locator('.cm-content')).toContainText('Idea');
 });
 
@@ -481,7 +551,7 @@ test('resizes the editor and canvas with pointer and keyboard', async ({ page },
   await page.screenshot({ path: testInfo.outputPath('desktop-resizable.png') });
 
   await page.getByRole('button', { name: 'New', exact: true }).click();
-  await expect(page.locator('#studio-panels')).toHaveCSS('flex-direction', 'row');
+  await expect(page.locator('#workspace-panels')).toHaveCSS('flex-direction', 'row');
 });
 
 test('stacks the editor above the canvas on mobile', async ({ page }, testInfo) => {
@@ -489,7 +559,7 @@ test('stacks the editor above the canvas on mobile', async ({ page }, testInfo) 
   await page.goto('/');
   await page.keyboard.press('Escape');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
-  await expect(page.locator('#studio-panels')).toHaveCSS('flex-direction', 'column');
+  await expect(page.locator('#workspace-panels')).toHaveCSS('flex-direction', 'column');
   await expect(page.getByRole('separator', { includeHidden: true })).toBeHidden();
 
   const editor = await getBounds(page.locator('#mermaid-panel'));
@@ -506,7 +576,7 @@ test('stacks the editor above the canvas on mobile', async ({ page }, testInfo) 
   await page.screenshot({ path: testInfo.outputPath('mobile-stacked.png'), fullPage: true });
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator('#studio-panels')).toHaveCSS('flex-direction', 'row');
+  await expect(page.locator('#workspace-panels')).toHaveCSS('flex-direction', 'row');
   await expect(page.getByRole('separator', { name: 'Resize Mermaid and React Flow panels' })).toBeVisible();
 });
 

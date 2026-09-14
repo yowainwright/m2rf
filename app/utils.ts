@@ -97,6 +97,11 @@ export const deleteWorkspace = (id: string) => Effect.tryPromise({
   catch: storageError,
 });
 
+export const renameWorkspace = (context: AppContext) => Effect.tryPromise({
+  try: () => graphRepository.rename(context.workspace.id, context.titleDraft),
+  catch: storageError,
+});
+
 const createDefaultTranslationSettings = (): GraphTranslationSettings => Object.assign({}, DEFAULT_SETTINGS, {
   nodeGradient: Object.assign({}, DEFAULT_SETTINGS.nodeGradient),
 });

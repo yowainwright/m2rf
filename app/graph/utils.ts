@@ -12,6 +12,7 @@ import {
   SEQUENCE_PARTICIPANT_NODE_TYPE, SEQUENCE_SELF_MESSAGE_HEIGHT,
   SEQUENCE_SELF_MESSAGE_OFFSET,
   SEQUENCE_NODE_DEFAULTS,
+  EMPTY_GRAPH_NAME_ERROR, LEGACY_UNTITLED_GRAPH_NAME, MISSING_GRAPH_ERROR,
 } from './constants';
 import type {
   CreateGraphRecordsInput, EdgeAnimation, EdgeMarkerValue, EdgeType, FlowNodeRecord,
@@ -147,6 +148,18 @@ export const graphRepository: GraphRepository = {
   },
   read(workspaceId, versionId) {
     return database.transaction('r', tables, () => readRecords(workspaceId, versionId));
+  },
+  rename(workspaceId, name) {
+    return database.transaction('rw', database.workspaces, async () => {
+      const title = name.trim();
+      if (!title) throw new Error(EMPTY_GRAPH_NAME_ERROR);
+      const existing = await database.workspaces.get(workspaceId);
+      if (!existing) throw new Error(MISSING_GRAPH_ERROR);
+      const updatedAt = new Date().toISOString();
+      const workspace = Object.assign({}, existing, { name: title, updatedAt });
+      await database.workspaces.put(workspace);
+      return workspace;
+    });
   },
   update(records) {
     return database.transaction('rw', tables, () => updateRecords(records));
@@ -918,10 +931,10 @@ export const applySavedAppearance = (
   return { nodes, edges };
 };
 
-export const getWorkspaceLabel = (workspace: GraphWorkspace) => {
+export const getWorkspaceLabel = (workspace: GraphWorkspace, fallback = workspace.id) => {
   const name = workspace.name.trim();
-  const isUntitled = name.length === 0 || name === 'Untitled Graph';
-  return isUntitled ? workspace.id : name;
+  const isUntitled = name.length === 0 || name === LEGACY_UNTITLED_GRAPH_NAME;
+  return isUntitled ? fallback : name;
 };
 
 const getNodeId = (domId: string) => {

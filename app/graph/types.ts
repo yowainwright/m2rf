@@ -249,6 +249,7 @@ export type GraphRepository = {
   delete(workspaceId: string): Promise<void>;
   list(): Promise<GraphWorkspace[]>;
   read(workspaceId: string, versionId?: string): Promise<GraphRecords | null>;
+  rename(workspaceId: string, name: string): Promise<GraphWorkspace>;
   update(records: UpdateGraphRecordsInput): Promise<GraphRecords>;
 };
 

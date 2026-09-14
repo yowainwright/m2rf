@@ -2,7 +2,7 @@
   "name": "m2rf",
   "version": "0.0.0",
   "private": true,
-  "description": "The m2rf Mermaid diagram studio",
+  "description": "The m2rf Mermaid diagram editor",
   "author": "Jeff Wainwright <me@jeffry.in> (https://jeffry.in)",
   "license": "MIT",
   "repository": {
@@ -21,9 +21,9 @@
   "scripts": {
     "dev": "next dev --port ${M2RF_APP_PORT:-54783}",
     "build": "next build --webpack",
-    "deps:check": "codependence --files package.json",
+    "deps:check": "codependence",
     "deps:overrides": "pastoralist",
-    "deps:security": "pastoralist --checkSecurity --hasWorkspaceSecurityChecks",
+    "deps:security": "pastoralist --dry-run --checkSecurity --hasWorkspaceSecurityChecks --strict",
     "lint": "pnpm run lint:all",
     "lint:all": "pnpm run lint:oxlint && pnpm run lint:shell",
     "lint:ci": "pnpm run lint:oxlint:strict && pnpm run lint:shell:ci",
@@ -44,10 +44,22 @@
     "test:integration": "TMPDIR=.next/cache vitest run --config vitest.config.mts tests/integration",
     "test:mcp": "node --test tests/unit/scripts/mcp/*.test.ts",
     "test:unit": "pnpm run test:mcp && TMPDIR=.next/cache vitest run --config vitest.config.mts tests/unit",
-    "update:deps": "codependence --files package.json --update",
+    "update": "pnpm run update:deps && pnpm install",
+    "update:deps": "codependence --update",
     "validate": "pnpm run lint/session && pnpm run typecheck && pnpm run test && pnpm run build",
     "setup": "sh scripts/setup.sh",
-    "prepare": "sh scripts/setup.sh prepare"
+    "prepare": "sh scripts/setup.sh prepare",
+    "postinstall": "pastoralist"
+  },
+  "codependence": {
+    "config": {
+      "app": {
+        "path": "package.json",
+        "manager": "pnpm",
+        "mode": "precise",
+        "lockfile": true
+      }
+    }
   },
   "dependencies": {
     "@codemirror/view": "^6.43.9",

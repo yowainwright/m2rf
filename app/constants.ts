@@ -13,6 +13,9 @@ export const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';
 
 export const SAVE_FEEDBACK_MS = 1400;
 export const EDGE_ANCHOR_STYLE = { pointerEvents: 'all' } as const;
+export const GRAPH_NAME_LABEL = 'Graph name';
+export const RENAME_GRAPH_LABEL = 'Rename graph';
+export const GRAPH_NAME_ERROR_ID = 'graph-name-error';
 
 export const APP_INITIAL_CONTEXT: AppContext = {
   isDesktop: false,
@@ -24,6 +27,9 @@ export const APP_INITIAL_CONTEXT: AppContext = {
   resetLayout: false,
   errorDialogDismissed: false,
   operationError: null,
+  titleDraft: '',
+  titleError: null,
+  afterRename: null,
   exportError: null,
   loadRequest: null,
   exportRequest: { format: 'svg', repeat: 'forever' },

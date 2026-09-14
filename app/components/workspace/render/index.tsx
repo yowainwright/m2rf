@@ -31,23 +31,23 @@ import {
 } from '@/app/components/toolkit/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Separator } from '@/app/components/ui/separator';
-import { StudioContext } from '@/app';
+import { AppContext } from '@/app';
 import { getSelectionLabel } from '@/app/utils';
 import { createRenderActions } from './actions';
 import { GraphCanvas } from './canvas';
 import { RenderToolkit } from './toolkit';
 
 export function GraphPreview() {
-  const { send } = StudioContext.useActorRef();
-  const translation = StudioContext.useSelector((state) => state.context.translation);
-  const versions = StudioContext.useSelector((state) => state.context.versions);
-  const workspace = StudioContext.useSelector((state) => state.context.workspace);
-  const inputId = StudioContext.useSelector((state) => state.context.input.id);
-  const toolkitOpen = StudioContext.useSelector((state) => state.context.toolkitOpen);
-  const canvasRevision = StudioContext.useSelector((state) => state.context.canvasRevision);
-  const canEditDraft = StudioContext.useSelector((state) => state.matches({ document: 'active' }));
-  const isRendering = StudioContext.useSelector((state) => state.hasTag('rendering'));
-  const canReset = StudioContext.useSelector((state) => state.can({ type: 'layout.reset' }));
+  const { send } = AppContext.useActorRef();
+  const translation = AppContext.useSelector((state) => state.context.translation);
+  const versions = AppContext.useSelector((state) => state.context.versions);
+  const workspace = AppContext.useSelector((state) => state.context.workspace);
+  const inputId = AppContext.useSelector((state) => state.context.input.id);
+  const toolkitOpen = AppContext.useSelector((state) => state.context.toolkitOpen);
+  const canvasRevision = AppContext.useSelector((state) => state.context.canvasRevision);
+  const canEditDraft = AppContext.useSelector((state) => state.matches({ document: 'active' }));
+  const isRendering = AppContext.useSelector((state) => state.hasTag('rendering'));
+  const canReset = AppContext.useSelector((state) => state.can({ type: 'layout.reset' }));
   const settings = translation.settings;
   const canvas = Object.assign({}, DEFAULT_CANVAS_SETTINGS, translation.view.canvas);
   const canEditCanvas = canEditDraft && !isRendering && !canvas.locked;

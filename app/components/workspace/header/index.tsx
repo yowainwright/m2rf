@@ -1,29 +1,21 @@
 'use client';
 
 import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
 import { SidebarTrigger } from '@/app/components/ui/sidebar';
-import { StudioContext } from '@/app';
-import { getWorkspaceLabel } from '@/app/graph';
+import { AppContext } from '@/app';
 import { getSaveLabel, logAppEvent } from '@/app/utils';
 import { ExportMenu } from './export-menu';
+import { WorkspaceTitle } from './title';
 
-export function StudioHeader() {
-  const { send } = StudioContext.useActorRef();
-  const workspace = StudioContext.useSelector((state) => state.context.workspace);
-  const canEditDraft = StudioContext.useSelector((state) => state.matches({ document: 'active' }));
-  const canDelete = StudioContext.useSelector((state) => state.can({ type: 'workspace.delete' }));
-  const canSave = StudioContext.useSelector((state) => state.can({ type: 'workspace.save' }));
-  const canNavigate = StudioContext.useSelector((state) => state.can({ type: 'workspace.create' }));
-  const canExport = StudioContext.useSelector((state) => state.can({
+export function WorkspaceHeader() {
+  const { send } = AppContext.useActorRef();
+  const canDelete = AppContext.useSelector((state) => state.can({ type: 'workspace.delete' }));
+  const canSave = AppContext.useSelector((state) => state.can({ type: 'workspace.save' }));
+  const canNavigate = AppContext.useSelector((state) => state.can({ type: 'workspace.create' }));
+  const canExport = AppContext.useSelector((state) => state.can({
     type: 'export.start', request: { format: 'svg', repeat: 'forever' },
   }));
-  const saveLabel = StudioContext.useSelector(getSaveLabel);
-  const workspaceName = getWorkspaceLabel(workspace);
-  const handleNameUpdate = (event: React.ChangeEvent<HTMLInputElement>) => {
-    logAppEvent('workspace.update', { hasName: event.target.value.trim().length > 0 });
-    send({ type: 'workspace.rename', name: event.target.value });
-  };
+  const saveLabel = AppContext.useSelector(getSaveLabel);
   const handleSave = () => {
     logAppEvent('workspace.save');
     send({ type: 'workspace.save' });
@@ -47,17 +39,10 @@ export function StudioHeader() {
 
   return (
     <header className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-auto">
         <SidebarTrigger title="Toggle saved graphs" />
-        <h1 className="text-sm font-semibold">m2rf Studio</h1>
-        <Input
-          aria-label="Graph name"
-          disabled={!canEditDraft}
-          className="h-8 min-w-0 flex-1 border-transparent bg-transparent px-1 text-sm font-semibold shadow-none focus-visible:border-input focus-visible:bg-background"
-          placeholder="Graph name"
-          value={workspaceName}
-          onChange={handleNameUpdate}
-        />
+        <h1 className="text-sm font-semibold">m2rf</h1>
+        <WorkspaceTitle />
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button className="min-w-16" disabled={!canSave} size="sm" type="button" onClick={handleSave}>

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useStore, useStoreApi } from 'reactflow';
-import { StudioContext } from '@/app';
+import { AppContext } from '@/app';
 import type { ReactFlowErrorGateProps } from '@/app/types';
 
 export function ReactFlowErrorGate({ children, onError }: ReactFlowErrorGateProps) {
@@ -18,7 +18,7 @@ export function ReactFlowErrorGate({ children, onError }: ReactFlowErrorGateProp
 }
 
 export function InitialViewportSync() {
-  const { send } = StudioContext.useActorRef();
+  const { send } = AppContext.useActorRef();
   const store = useStoreApi();
   const isInitialized = useStore((state) => {
     const hasViewport = state.d3Zoom !== null;
