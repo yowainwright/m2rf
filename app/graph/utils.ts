@@ -1,11 +1,11 @@
 import Dexie from 'dexie';
-import { Number as EffectNumber } from 'effect';
+import { Array as EffectArray, Number as EffectNumber } from 'effect';
 import type { CSSProperties } from 'react';
 import { MarkerType, Position, type Edge, type EdgeMarker, type Node } from 'reactflow';
 import {
   DEFAULT_SETTINGS, EDGE_ID_PATTERN, EDGE_MARKER_OPTIONS, EDGE_SELECTOR,
   EDGE_TYPE_OPTIONS, EDGE_WIDTH_LIMITS, GRAPH_DATABASE_NAME, GRAPH_INPUT_FORMAT,
-  GRAPH_TABLES, GRAPH_VERSION_LIMIT, NODE_ID_PATTERN, NODE_PATTERN_SIZE,
+  GRAPH_TABLES, GRAPH_VERSION_LIMIT, GRADIENT_DIRECTION_OPTIONS, NODE_ID_PATTERN, NODE_PATTERN_SIZE, NODE_SHAPE_OPTIONS,
   SEQUENCE_ACTION_NODE_HEIGHT, SEQUENCE_ACTION_NODE_MIN_WIDTH,
   SEQUENCE_ACTOR_FIGURE_WIDTH, SEQUENCE_ACTION_NODE_TYPE, SEQUENCE_FRAME_NODE_TYPE,
   SEQUENCE_MESSAGE_EDGE_TYPE, SEQUENCE_NOTE_NODE_TYPE,
@@ -39,7 +39,6 @@ const NODE_SHAPE_STYLE_KEYS = [
   'aspectRatio', 'borderRadius', 'clipPath', 'display', 'alignItems', 'justifyContent',
   'minHeight', 'minWidth', 'padding', 'textAlign', 'width',
 ] as const;
-const NODE_SHAPE_VALUES = new Set(['circle', 'cylinder', 'diamond', 'square']);
 
 const database = new Dexie(GRAPH_DATABASE_NAME) as GraphDatabase;
 const tables = [GRAPH_TABLES.workspaces, GRAPH_TABLES.inputs, GRAPH_TABLES.translations];
@@ -277,9 +276,8 @@ const getNodeSurface = (style: CSSProperties | undefined, fallback: TranslationS
 };
 
 const getGradientDirectionValue = (value: unknown, fallback: GradientDirection) => {
-  const hasKnownDirection = value === 'horizontal' || value === 'radial';
-  if (hasKnownDirection) return value;
-  return fallback;
+  const option = GRADIENT_DIRECTION_OPTIONS.find((item) => item.value === value);
+  return option?.value || fallback;
 };
 
 const getNodeGradient = (style: CSSProperties | undefined, fallback: GraphGradientSettings) => {
@@ -302,9 +300,8 @@ const getNodeShadowValue = (style: CSSProperties | undefined, fallback: Translat
 
 const getNodeShape = (style: CSSProperties | undefined, fallback: TranslationSettings['nodeShape']) => {
   const value = getNodeStyleValue(style, NODE_SHAPE_VARIABLE);
-  const isKnownShape = typeof value === 'string' && NODE_SHAPE_VALUES.has(value);
-  if (isKnownShape) return value as TranslationSettings['nodeShape'];
-  return fallback;
+  const option = NODE_SHAPE_OPTIONS.find((item) => item.value === value);
+  return option?.value || fallback;
 };
 
 export const createNodeStyle = (settings: TranslationSettings) => {
@@ -469,6 +466,19 @@ const applyNodeStyle = (node: Node, style: CSSProperties | undefined) => {
   return Object.assign({}, node, { data, style: frameStyle });
 };
 
+const updateEdgeMarker = (
+  edge: Edge,
+  key: 'markerStart' | 'markerEnd',
+  value: EdgeMarkerValue | undefined,
+  color: string
+) => {
+  const isSequence = edge.data?.kind === SEQUENCE_MESSAGE_KIND;
+  const hasNoSequenceMarker = isSequence && !edge.data?.[key];
+  if (hasNoSequenceMarker) return undefined;
+  if (value === undefined) return colorEdgeMarker(edge[key], color);
+  return createEdgeMarker(value, color);
+};
+
 const createEdgeUpdate = (
   edge: Edge,
   settings: Partial<TranslationSettings>
@@ -478,7 +488,6 @@ const createEdgeUpdate = (
   const isSequenceSourceSegment = isSequenceMessage && edge.data?.segment === 'source';
   const keepsAnimation = settings.edgeAnimation === undefined;
   const keepsType = settings.edgeType === undefined;
-  const keepsMarker = settings.edgeMarker === undefined;
   const currentType = getEdgeTypeValue(edge, DEFAULT_SETTINGS);
   const animation = keepsAnimation ? getEdgeAnimationValue(edge, DEFAULT_SETTINGS) : edgeSettings.edgeAnimation;
   const isSurge = animation === 'surge';
@@ -509,11 +518,11 @@ const createEdgeUpdate = (
   }
 
   const color = getColorValue(style.stroke, edgeSettings.edgeColor);
-  const updatedMarkerEnd = keepsMarker
-    ? colorEdgeMarker(edge.markerEnd, color)
-    : createEdgeMarker(edgeSettings.edgeMarker, color);
+  const updatedMarkerEnd = updateEdgeMarker(edge, 'markerEnd', settings.edgeMarker, color);
   const markerEnd = isSequenceSourceSegment ? undefined : updatedMarkerEnd;
-  const markerStart = isSequenceSourceSegment ? colorEdgeMarker(edge.markerStart, color) : undefined;
+  const markerStart = isSequenceSourceSegment
+    ? updateEdgeMarker(edge, 'markerStart', settings.edgeMarker, color)
+    : undefined;
 
   return Object.assign({}, edge, {
     animated,
@@ -668,7 +677,8 @@ export const getEdgeMarkerValue = (
     return settings.edgeMarker;
   }
 
-  const marker = edge.markerEnd;
+  const isSequenceSourceSegment = edge.data?.kind === SEQUENCE_MESSAGE_KIND && edge.data?.segment === 'source';
+  const marker = isSequenceSourceSegment ? edge.markerStart : edge.markerEnd;
   if (typeof marker !== 'object') {
     return 'none';
   }
@@ -850,20 +860,38 @@ export const getTranslation = (translation: GraphTranslation): GraphTranslation 
   });
 };
 
+const restoreEdgeData = (edge: Edge, saved: Edge) => {
+  if (edge.data?.kind !== SEQUENCE_MESSAGE_KIND) return saved.data;
+  const edgeType = saved.data?.edgeType;
+  if (edgeType === undefined) return edge.data;
+  return Object.assign({}, edge.data, { edgeType });
+};
+
+const restoreEdgeMarker = (edge: Edge, saved: Edge, key: 'markerStart' | 'markerEnd') => {
+  const isSequence = edge.data?.kind === SEQUENCE_MESSAGE_KIND;
+  const hasChangedMarker = isSequence && edge.data?.[key] !== saved.data?.[key];
+  if (!hasChangedMarker) return saved[key];
+  const color = getColorValue(saved.style?.stroke, DEFAULT_SETTINGS.edgeColor);
+  return colorEdgeMarker(edge[key], color);
+};
+
 const restoreEdgeAppearance = (edge: Edge, savedEdges: Map<string, Edge>) => {
   const saved = savedEdges.get(edge.id);
   if (!saved) return edge;
   const sameEndpoints = saved.source === edge.source && saved.target === edge.target;
   if (!sameEndpoints) return edge;
+  const data = restoreEdgeData(edge, saved);
+  const markerEnd = restoreEdgeMarker(edge, saved, 'markerEnd');
+  const markerStart = restoreEdgeMarker(edge, saved, 'markerStart');
   return Object.assign({}, edge, {
     animated: saved.animated,
     className: saved.className,
-    markerEnd: saved.markerEnd,
-    markerStart: saved.markerStart,
+    markerEnd,
+    markerStart,
     selected: saved.selected,
     style: saved.style,
     type: saved.type,
-    data: saved.data,
+    data,
   });
 };
 
@@ -1272,17 +1300,30 @@ const getActionHandleSide = (participant: SequenceParticipantRecord, actionCente
   return 'right';
 };
 
-const createParticipantHandles = (
-  participant: SequenceParticipantRecord,
-  messages: SequenceMessageRecord[]
-) => {
-  return messages
-    .filter((message) => message.source.id === participant.id || message.target.id === participant.id)
-    .map((message) => {
-      const isSelfMessage = message.source.id === message.target.id;
-      const targetY = isSelfMessage ? message.point.y + SEQUENCE_SELF_MESSAGE_HEIGHT : message.point.y;
-      return { id: message.id, sourceY: message.point.y, targetY };
-    });
+const createMessageHandleEntries = (message: SequenceMessageRecord) => {
+  const isSelfMessage = message.source.id === message.target.id;
+  const sourceY = message.point.y;
+  const targetY = isSelfMessage ? sourceY + SEQUENCE_SELF_MESSAGE_HEIGHT : sourceY;
+  const handle: SequenceParticipantHandle = { id: message.id, sourceY, targetY };
+  const source = [message.source.id, handle] as const;
+  if (isSelfMessage) return [source];
+  const target = [message.target.id, handle] as const;
+  return [source, target];
+};
+
+const createParticipantHandles = (entries: ReadonlyArray<readonly [string, SequenceParticipantHandle]>) => {
+  return entries.map(([, handle]) => handle);
+};
+
+const createParticipantHandleMap = (messages: SequenceMessageRecord[]) => {
+  const entries = messages.flatMap(createMessageHandleEntries);
+  const groups = EffectArray.groupBy(entries, ([id]) => `participant:${id}`);
+  const handles = Object.values(groups).map((items) => {
+    const [[id]] = items;
+    const participantHandles = createParticipantHandles(items);
+    return [id, participantHandles] as const;
+  });
+  return new Map(handles);
 };
 
 const createSequenceActionNode = (
@@ -1353,14 +1394,15 @@ const createSequenceMessageRecord = (
   label: string,
   index: number,
   participants: SequenceParticipantRecord[],
+  participantsById: Map<string, SequenceParticipantRecord>,
   point: SequenceMessagePoint,
   sequenceNumber?: string
 ): SequenceMessageRecord => {
   const sourceId = element.getAttribute('data-from');
   const targetId = element.getAttribute('data-to');
-  const source = participants.find((participant) => participant.id === sourceId)
+  const source = participantsById.get(sourceId || '')
     || getNearestParticipant(participants, point.sourceX);
-  const target = participants.find((participant) => participant.id === targetId)
+  const target = participantsById.get(targetId || '')
     || getNearestParticipant(participants, point.targetX);
   if (!source) throw new Error('Mermaid sequence message has no source participant.');
   if (!target) throw new Error('Mermaid sequence message has no target participant.');
@@ -1433,13 +1475,15 @@ const readSequenceMessages = (
   svg: SVGSVGElement,
   participants: SequenceParticipantRecord[]
 ) => {
+  const participantEntries = participants.map((participant) => [participant.id, participant] as const);
+  const participantsById = new Map(participantEntries);
   const messageElements = Array.from(svg.querySelectorAll('[data-et="message"]'));
   const labels = Array.from(svg.querySelectorAll('.messageText')).map((message) => message.textContent?.trim() || '');
   const sequenceNumbers = Array.from(svg.querySelectorAll('.sequenceNumber')).map((number) => number.textContent?.trim() || '');
   return messageElements.flatMap((element, index) => {
     const point = readSequenceMessagePoint(element);
     if (!point) return [];
-    return [createSequenceMessageRecord(element, labels[index] || '', index, participants, point, sequenceNumbers[index])];
+    return [createSequenceMessageRecord(element, labels[index] || '', index, participants, participantsById, point, sequenceNumbers[index])];
   });
 };
 
@@ -1447,6 +1491,7 @@ const parseSequenceSvg = (svg: SVGSVGElement, settings: TranslationSettings): Gr
   const participants = readSequenceParticipants(svg);
   const height = getSequenceHeight(svg);
   const messages = readSequenceMessages(svg, participants);
+  const handleMap = createParticipantHandleMap(messages);
   const activationMap = readSequenceActivations(svg, participants);
   const frameNodes: Node[] = readSequenceFrames(svg).map((frame) => createSequenceFrameNode(frame, settings));
   const noteNodes: Node[] = readSequenceNotes(svg).map((note) => createSequenceNoteNode(note, settings));
@@ -1454,7 +1499,7 @@ const parseSequenceSvg = (svg: SVGSVGElement, settings: TranslationSettings): Gr
     participant,
     height,
     activationMap.get(participant.id) || [],
-    createParticipantHandles(participant, messages),
+    handleMap.get(participant.id) || [],
     settings
   ));
   const actionNodes = messages.map((message) => createSequenceActionNode(message, settings));

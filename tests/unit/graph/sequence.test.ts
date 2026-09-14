@@ -2,9 +2,9 @@ import { describe, expect, test } from 'vitest';
 
 import { APP_INITIAL_CONTEXT } from '@/app/constants';
 import {
-  applySavedAppearance, createNodeStyle, getNodeBorderValue, getNodeFillValue,
+  applySavedAppearance, applySettings, createNodeStyle, getEdgeMarkerValue, getNodeBorderValue, getNodeFillValue,
   getNodeSurfaceValue, getNodeTextValue, getTranslation, parseMermaidSvg,
-  updateSelectedNodes,
+  updateSelectedEdges, updateSelectedNodes,
 } from '@/app/graph';
 import type { GraphElements } from '@/app/graph';
 import { DEFAULT_SETTINGS } from '@/app/graph/constants';
@@ -37,6 +37,64 @@ const createRecords = (elements: GraphElements) => ({
 });
 
 describe('sequence appearance', () => {
+  test('keeps fresh message data while restoring edge color, width, and animation', () => {
+    const edited = applySettings(createElements(), { edgeColor: '#123456', edgeWidth: 5, edgeAnimation: 'surge', edgeType: 'straight' });
+    const changedSvg = sequenceSvg.replace('data-id="i0"', 'data-id="i0" class="messageLine1"')
+      .replace('y1="115"', 'y1="160"').replace('>Hello<', '>Reply<')
+      .replace('<line data-et="message"', '<text class="sequenceNumber">7</text><line data-et="message"');
+    const fresh = parseMermaidSvg(changedSvg, DEFAULT_SETTINGS, 'sequence');
+    const context = Object.assign({}, APP_INITIAL_CONTEXT, { translation: createTranslation(edited) });
+    const result = acceptRenderedElements(context, { diagramType: 'sequence', elements: fresh });
+    const [source, target] = result.translation.elements.edges;
+
+    expect(source.data).toMatchObject({ dashed: true, messageY: 160, sequenceNumber: '7', edgeType: 'straight' });
+    expect(target.data).toMatchObject({ dashed: true, messageY: 160, segment: 'target' });
+    expect(source.style).toMatchObject({ stroke: '#123456', strokeWidth: 5 });
+    expect(source.type).toBe('surge');
+    expect(result.translation.elements.nodes.find((node) => node.data.kind === 'sequence-action')?.data.label).toBe('Reply');
+  });
+
+  test.each(['none', 'arrow', 'arrowclosed'] as const)('updates the selected start marker to %s and reports it in the toolkit', (edgeMarker) => {
+    const svg = sequenceSvg.replace('marker-end=', 'marker-start="url(#arrowhead)" marker-end=');
+    const original = parseMermaidSvg(svg, DEFAULT_SETTINGS, 'sequence');
+    const edited = updateSelectedEdges(original, ['message-i0-source'], { edgeMarker });
+    const recolored = updateSelectedEdges(edited, ['message-i0-source'], { edgeColor: '#123456' });
+    const [source, target] = recolored.edges;
+
+    expect(getEdgeMarkerValue(source, DEFAULT_SETTINGS)).toBe(edgeMarker);
+    expect(source.markerEnd).toBeUndefined();
+    expect(target).toEqual(original.edges[1]);
+    if (edgeMarker === 'none') {
+      expect(source.markerStart).toBeUndefined();
+      return;
+    }
+    expect(source.markerStart).toEqual({ type: edgeMarker, color: '#123456' });
+  });
+
+  test('removes and restores both bidirectional markers globally without adding an arrow to the action', () => {
+    const svg = sequenceSvg.replace('marker-end=', 'marker-start="url(#arrowhead)" marker-end=');
+    const original = parseMermaidSvg(svg, DEFAULT_SETTINGS, 'sequence');
+    const removed = applySettings(original, { edgeMarker: 'none' });
+    expect(removed.edges.every((edge) => !edge.markerStart && !edge.markerEnd)).toBe(true);
+    const [source, target] = applySettings(removed, { edgeMarker: 'arrow' }).edges;
+    expect(source.markerStart).toEqual({ type: 'arrow', color: DEFAULT_SETTINGS.edgeColor });
+    expect(source.markerEnd).toBeUndefined();
+    expect(target.markerStart).toBeUndefined();
+    expect(target.markerEnd).toEqual({ type: 'arrow', color: DEFAULT_SETTINGS.edgeColor });
+  });
+
+  test('refreshes arrow direction from Mermaid while retaining saved edge color', () => {
+    const original = applySettings(createElements(), { edgeColor: '#123456' });
+    const svg = sequenceSvg.replace('marker-end=', 'marker-start=');
+    const fresh = parseMermaidSvg(svg, DEFAULT_SETTINGS, 'sequence');
+    const [source, target] = applySavedAppearance(fresh, original).edges;
+
+    expect(source.markerStart).toEqual({ type: 'arrowclosed', color: '#123456' });
+    expect(source.data.markerStart).toBe(true);
+    expect(target.markerEnd).toBeUndefined();
+    expect(target.data.markerEnd).toBe(false);
+  });
+
   test.each([
     ['A', '#f3f4f6', 'solid', 'solid'],
     ['action-message-i0', '#ffffff', 'none', 'solid'],

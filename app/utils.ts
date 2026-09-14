@@ -282,9 +282,11 @@ export const getSelectionLabel = (nodeCount: number, edgeCount: number) => {
   const hasNodes = nodeCount > 0;
   const hasEdges = edgeCount > 0;
   const hasBoth = hasNodes && hasEdges;
-  if (hasBoth) return `${nodeCount} node, ${edgeCount} edge`;
-  if (hasNodes) return `${nodeCount} node`;
-  if (hasEdges) return `${edgeCount} edge`;
+  const nodeLabel = nodeCount === 1 ? '1 node' : `${nodeCount} nodes`;
+  const edgeLabel = edgeCount === 1 ? '1 edge' : `${edgeCount} edges`;
+  if (hasBoth) return `${nodeLabel}, ${edgeLabel}`;
+  if (hasNodes) return nodeLabel;
+  if (hasEdges) return edgeLabel;
   return 'Global';
 };
 

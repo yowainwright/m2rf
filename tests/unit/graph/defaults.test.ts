@@ -5,10 +5,37 @@ import {
   DEFAULT_CANVAS_SETTINGS,
   DEFAULT_SETTINGS,
 } from '@/app/graph/constants';
-import { createNodeStyle, getWorkspaceLabel } from '@/app/graph';
-import { resetWorkspace } from '@/app/utils';
+import { createNodeStyle, getNodeGradientValue, getNodeShapeValue, getTranslation, getWorkspaceLabel, updateSelectedNodes } from '@/app/graph';
+import { getSelectionLabel, resetWorkspace } from '@/app/utils';
 
 describe('studio defaults', () => {
+  test.each([
+    [0, 0, 'Global'],
+    [1, 0, '1 node'],
+    [0, 1, '1 edge'],
+    [2, 0, '2 nodes'],
+    [0, 3, '3 edges'],
+    [1, 1, '1 node, 1 edge'],
+    [2, 3, '2 nodes, 3 edges'],
+  ] as const)('labels %i nodes and %i edges as %s', (nodes, edges, label) => {
+    expect(getSelectionLabel(nodes, edges)).toBe(label);
+  });
+
+  test('keeps vertical and rectangle node overrides after hydration with different global defaults', () => {
+    const nodeGradient = Object.assign({}, DEFAULT_SETTINGS.nodeGradient, { direction: 'horizontal' as const });
+    const settings = Object.assign({}, DEFAULT_SETTINGS, { nodeGradient, nodeShape: 'circle' as const });
+    const node = { id: 'A', data: { label: 'A' }, position: { x: 0, y: 0 }, style: createNodeStyle(settings) };
+    const elements = updateSelectedNodes({ nodes: [node], edges: [] }, ['A'], {
+      nodeGradient: DEFAULT_SETTINGS.nodeGradient, nodeShape: 'rectangle',
+    });
+    const translation = Object.assign({}, APP_INITIAL_CONTEXT.translation, { elements, settings });
+    const hydrated = getTranslation(translation);
+    const [selected] = hydrated.elements.nodes;
+
+    expect(getNodeGradientValue(selected, hydrated.settings).direction).toBe('vertical');
+    expect(getNodeShapeValue(selected, hydrated.settings)).toBe('rectangle');
+  });
+
   test('uses neutral solid nodes and no canvas background', () => {
     expect(DEFAULT_SETTINGS).toMatchObject({
       inverseColor: '#171717',

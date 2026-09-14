@@ -346,19 +346,32 @@ test('renders sequence diagrams as React Flow elements', async ({ page }) => {
 
   const alice = page.locator('.react-flow__node[data-id="A"]');
   await expect(alice).toContainText('Alice');
-  await expect(page.locator('.react-flow__node')).toHaveCount(2);
-  await expect(page.locator('.react-flow__edge')).toHaveCount(3);
+  await expect(page.locator('.react-flow__node')).toHaveCount(5);
+  await expect(page.locator('.react-flow__edge')).toHaveCount(6);
   await expect(page.getByTestId('rf__wrapper').getByText('Hello', { exact: true })).toBeVisible();
   await expect(alice.getByText('Alice', { exact: true })).toHaveCount(2);
   await expect(alice).toHaveCSS('background-image', 'none');
-  await expect(alice.locator('.z-10 > div').first()).toHaveCSS('background-color', 'rgb(204, 204, 204)');
+  const participantFill = await page.evaluate(() => {
+    const swatch = document.createElement('div');
+    swatch.style.backgroundColor = 'var(--color-gray-100)';
+    document.body.append(swatch);
+    const color = getComputedStyle(swatch).backgroundColor;
+    swatch.remove();
+    return color;
+  });
+  await expect(alice.locator('.z-10 > div').first()).toHaveCSS('background-color', participantFill);
+
+  await updateEditor(page, sequenceSource.replace('A->>B: Hello', 'A-->>B: Hello'));
+  const firstMessage = page.getByRole('button', { name: 'Edge from A to action-message-i0', exact: true }).locator('.react-flow__edge-path');
+  await expect(firstMessage).toHaveCSS('stroke-dasharray', '6px, 4px');
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.locator('.react-flow__node[data-id="A"]')).toContainText('Alice');
-  await expect(page.locator('.react-flow__edge')).toHaveCount(3);
-  await expect(page.locator('.cm-content')).toContainText('A->>B: Hello');
+  await expect(page.locator('.react-flow__edge')).toHaveCount(6);
+  await expect(page.locator('.cm-content')).toContainText('A-->>B: Hello');
+  await expect(firstMessage).toHaveCSS('stroke-dasharray', '6px, 4px');
 });
 
 test('shows render errors in a dismissible dialog and keeps the editor usable', async ({ page }) => {
