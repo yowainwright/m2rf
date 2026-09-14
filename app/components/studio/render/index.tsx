@@ -23,7 +23,7 @@ import {
 } from '@/app/graph';
 import { Background } from 'reactflow';
 import { Button } from '@/app/components/ui/button';
-import { CanvasBackground } from '@/app/components/canvas/background';
+import { CanvasBackground } from '@/app/components/canvas';
 import { CanvasTools, EdgeTools, NodeTools } from '@/app/components/toolkit';
 import {
   CANVAS_GRID,
