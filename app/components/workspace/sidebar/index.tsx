@@ -4,6 +4,7 @@ import { cn } from '@/app/lib/utils';
 import { ChevronRight, Workflow, X } from 'lucide-react';
 import { getWorkspaceLabel } from '@/app/graph';
 import { Button } from '@/app/components/ui/button';
+import { Separator } from '@/app/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip';
 import {
   Sidebar,
@@ -20,7 +21,17 @@ import {
 } from '@/app/components/ui/sidebar';
 import { AppContext } from '@/app';
 import VersionTree, { type VersionTreeItem } from './versiontree';
-import { APP_VERSION, OSS_CREDITS, REPOSITORY_URL, SUPPORTED_DIAGRAMS } from './constants';
+import {
+  APP_LICENSE,
+  APP_VERSION,
+  AUTHOR_URL,
+  CURRENT_YEAR,
+  FOOTER_CREDITS_INTRO,
+  FOOTER_PROJECT_NAME,
+  FOOTER_SUPPORTED_DIAGRAMS,
+  OSS_CREDITS,
+  REPOSITORY_URL,
+} from './constants';
 
 export function WorkspaceSidebar() {
   const { send } = AppContext.useActorRef();
@@ -88,11 +99,7 @@ export function WorkspaceSidebar() {
     );
   });
   const hasWorkspaces = workspaces.length > 0;
-  const content = hasWorkspaces ? (
-    <SidebarMenu>{items}</SidebarMenu>
-  ) : (
-    <p className="px-2 py-4 text-sm text-muted-foreground">No saved graphs</p>
-  );
+  if (!hasWorkspaces) return null;
 
   return (
     <Sidebar>
@@ -118,17 +125,19 @@ export function WorkspaceSidebar() {
           </Tooltip>
         </div>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
+      <SidebarContent className="overflow-hidden">
+        <SidebarGroup className="min-h-0 flex-1">
           <SidebarGroupLabel asChild>
             <h2>Saved graphs</h2>
           </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <nav aria-label="Saved graphs">{content}</nav>
+          <SidebarGroupContent className="min-h-0 flex-1 overflow-y-auto">
+            <nav aria-label="Saved graphs">
+              <SidebarMenu>{items}</SidebarMenu>
+            </nav>
           </SidebarGroupContent>
         </SidebarGroup>
-        <WorkspaceCredits />
       </SidebarContent>
+      <WorkspaceCredits />
     </Sidebar>
   );
 }
@@ -148,20 +157,51 @@ function WorkspaceCredits() {
   ));
 
   return (
-    <SidebarFooter className="mt-auto border-t px-4 py-4 text-xs text-muted-foreground">
-      <p>{APP_VERSION}</p>
-      <p>{SUPPORTED_DIAGRAMS}</p>
-      <a
-        href={REPOSITORY_URL}
-        target="_blank"
-        rel="noreferrer"
-        className="w-fit hover:underline focus-visible:underline"
+    <SidebarFooter className="shrink-0 items-center gap-3 border-t border-sidebar-border px-2 pt-4 pb-6 text-center text-xs text-muted-foreground">
+      <p className="w-full px-2 text-left text-sm leading-5">
+        <a
+          href={REPOSITORY_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="hover:underline focus-visible:underline"
+        >
+          m2rf
+        </a>{' '}
+        {FOOTER_SUPPORTED_DIAGRAMS}
+      </p>
+      <Separator className="bg-sidebar-border" />
+      <p className="w-full px-2 text-left">
+        FOSS{' '}
+        <a
+          href={REPOSITORY_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="hover:underline focus-visible:underline"
+        >
+          {FOOTER_PROJECT_NAME}
+        </a>{' '}
+        by{' '}
+        <a
+          href={AUTHOR_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="hover:underline focus-visible:underline"
+        >
+          jeff
+        </a>{' '}
+        {FOOTER_CREDITS_INTRO}
+      </p>
+      <Separator className="bg-sidebar-border" />
+      <ul
+        aria-label="Open-source credits"
+        className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-2 text-foreground"
       >
-        GitHub
-      </a>
-      <ul aria-label="Open-source credits" className="flex flex-wrap gap-x-3 gap-y-1">
         {credits}
       </ul>
+      <Separator className="bg-sidebar-border" />
+      <p className="px-2">
+        {APP_VERSION} · {APP_LICENSE} · {CURRENT_YEAR}
+      </p>
     </SidebarFooter>
   );
 }

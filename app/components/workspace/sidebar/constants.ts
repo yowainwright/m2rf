@@ -1,17 +1,14 @@
-import { repository, version } from '@/package.json';
-import { GRAPH_DIAGRAM_TYPES } from '@/app/graph/constants';
+import { license, repository, version } from '@/package.json';
 
 export const APP_VERSION = `v${version}`;
+export const APP_LICENSE = license;
 export const REPOSITORY_URL = repository.url;
-
-const DIAGRAM_LABELS = {
-  flowchart: 'Flowcharts',
-  sequence: 'Sequence diagrams',
-};
-
-export const SUPPORTED_DIAGRAMS = GRAPH_DIAGRAM_TYPES.map((type) => DIAGRAM_LABELS[type]).join(
-  ' · ',
-);
+export const CURRENT_YEAR = new Date().getFullYear();
+export const AUTHOR_URL = 'https://jeffry.in';
+export const FOOTER_PROJECT_NAME = 'mermaid to react flow';
+export const FOOTER_CREDITS_INTRO = 'only because of these awesome tools';
+export const FOOTER_SUPPORTED_DIAGRAMS =
+  'currently supports flow diagrams and sequence diagrams; more soon!';
 
 export const OSS_CREDITS = [
   { name: 'Mermaid', href: 'https://mermaid.js.org/' },
@@ -20,4 +17,5 @@ export const OSS_CREDITS = [
   { name: 'Dexie', href: 'https://dexie.org/' },
   { name: 'Effect', href: 'https://effect.website/' },
   { name: 'shadcn/ui', href: 'https://ui.shadcn.com/' },
+  { name: 'Codex', href: 'https://github.com/openai/codex' },
 ];

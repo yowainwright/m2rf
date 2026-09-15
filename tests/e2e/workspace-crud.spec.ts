@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import packageMetadata from '../../package.json' with { type: 'json' };
 
-const { repository, version } = packageMetadata;
+const { license, repository, version } = packageMetadata;
 
 const source = `flowchart LR
   Alpha[Write Mermaid] --> Beta[Build graph]
@@ -131,7 +131,7 @@ test('shows minimal navigation with tooltips and OSS credits', async ({ page }, 
   const names = await header.getByRole('button').evaluateAll((buttons) => {
     return buttons.map((button) => button.getAttribute('aria-label') || button.textContent?.trim());
   });
-  expect(names).toEqual(['Toggle Sidebar', 'New', 'Rename graph', 'Save', 'Download', 'Delete']);
+  expect(names).toEqual(['New', 'Rename graph', 'Save', 'Download', 'Delete']);
   const actions = header.locator('button[aria-label]').filter({ has: page.locator('svg') });
   await expect(actions).toHaveCount(3);
   expect(await actions.allTextContents()).toEqual(['', '', '']);
@@ -157,15 +157,37 @@ test('shows minimal navigation with tooltips and OSS credits', async ({ page }, 
   await page.keyboard.press('Escape');
 
   const sidebar = page.locator('[data-sidebar="sidebar"]');
-  await expect(sidebar.getByText('m2rf', { exact: true })).toBeVisible();
+  await expect(
+    sidebar.locator('[data-sidebar="header"]').getByText('m2rf', { exact: true }),
+  ).toBeVisible();
   await expect(sidebar.getByRole('heading', { name: 'Saved graphs', exact: true })).toBeVisible();
   const footer = sidebar.locator('[data-sidebar="footer"]');
-  await expect(footer.getByText(`v${version}`, { exact: true })).toBeVisible();
-  await expect(footer.getByText('Flowcharts · Sequence diagrams', { exact: true })).toBeVisible();
-  await expect(footer.getByRole('link', { name: 'GitHub', exact: true })).toHaveAttribute(
+  await expect(footer.getByRole('link', { name: 'm2rf', exact: true })).toHaveAttribute(
     'href',
     repository.url,
   );
+  await expect(
+    footer.getByText('m2rf currently supports flow diagrams and sequence diagrams; more soon!', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const footerMetadata = `v${version} · ${license} · ${new Date().getFullYear()}`;
+  await expect(footer.getByText(footerMetadata, { exact: true })).toBeVisible();
+  await expect(
+    footer.getByText('FOSS mermaid to react flow by jeff only because of these awesome tools', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    footer.getByRole('link', { name: 'mermaid to react flow', exact: true }),
+  ).toHaveAttribute('href', repository.url);
+  await expect(footer.getByRole('link', { name: 'jeff', exact: true })).toHaveAttribute(
+    'href',
+    'https://jeffry.in',
+  );
+  await expect(
+    header.getByRole('link', { name: 'GitHub repository', exact: true }),
+  ).toHaveAttribute('href', repository.url);
   await expect(footer.getByRole('heading')).toHaveCount(0);
   const credits = footer.getByRole('list', { name: 'Open-source credits' });
   expect(
@@ -179,6 +201,7 @@ test('shows minimal navigation with tooltips and OSS credits', async ({ page }, 
     ['Dexie', 'https://dexie.org/'],
     ['Effect', 'https://effect.website/'],
     ['shadcn/ui', 'https://ui.shadcn.com/'],
+    ['Codex', 'https://github.com/openai/codex'],
   ]);
   await page.mouse.move(0, 0);
   await page.screenshot({ path: testInfo.outputPath('desktop-navigation.png') });
@@ -215,6 +238,8 @@ test('keeps navigation and sidebar reachable with a long title on mobile', async
   await header.getByRole('button', { name: 'Download', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: 'SVG', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
+  await header.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(header.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
   await header.getByRole('button', { name: 'Toggle Sidebar' }).click();
   const drawer = page.getByRole('dialog', { name: 'Sidebar', exact: true });
   await expect(drawer.getByRole('button', { name: 'Close sidebar', exact: true })).toHaveCount(1);
@@ -245,7 +270,7 @@ test('edits titles with keyboard confirmation, cancellation and blank validation
   await graphName.press('Enter');
   await expect(title).toHaveText('Release plan');
   await expect(title).toBeFocused();
-  await expect(page.getByText('No saved graphs')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Toggle Sidebar' })).toHaveCount(0);
   await title.click();
   const selection = await graphName.evaluate((element: HTMLInputElement) => [
     element.selectionStart,
@@ -400,7 +425,7 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   const navigation = page.getByRole('navigation', { name: 'Saved graphs' });
   const graphButtons = navigation.locator('[data-sidebar="menu-button"]');
   const graphName = page.getByRole('button', { name: 'Rename graph', exact: true });
-  await expect(navigation.getByText('No saved graphs')).toBeVisible();
+  await expect(navigation).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();

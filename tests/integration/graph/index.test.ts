@@ -17,6 +17,7 @@ import type { CreateGraphRecordsInput, NodeShape, NodeSurface } from '@/app/grap
 import { AppContext } from '@/app';
 import { SidebarProvider } from '@/app/components/ui/sidebar';
 import { WorkspaceHeader } from '@/app/components/workspace/header';
+import { WorkspaceSidebar } from '@/app/components/workspace/sidebar';
 
 const settings = {
   edgeAnimation: 'none',
@@ -127,6 +128,35 @@ describe('graphRepository', () => {
     vi.restoreAllMocks();
     vi.useRealTimers();
     await deleteWorkspaces();
+  });
+
+  it('shows the sidebar only when saved graphs exist, including after reload and deletion', async () => {
+    const workspace = createElement(
+      SidebarProvider,
+      null,
+      createElement(WorkspaceHeader),
+      createElement(WorkspaceSidebar),
+    );
+    const app = createElement(AppContext.Provider, null, workspace);
+    const ui = render(app);
+    await waitFor(() =>
+      expect(ui.getByRole('button', { name: 'Save' }).hasAttribute('disabled')).toBe(false),
+    );
+    expect(ui.queryByRole('button', { name: 'Toggle Sidebar' })).toBeNull();
+    expect(ui.queryByRole('navigation', { name: 'Saved graphs' })).toBeNull();
+    fireEvent.click(ui.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(ui.getByRole('navigation', { name: 'Saved graphs' })).toBeDefined());
+    expect(ui.getByRole('button', { name: 'Toggle Sidebar' })).toBeDefined();
+    ui.unmount();
+    const reloaded = render(app);
+    await waitFor(() =>
+      expect(reloaded.getByRole('navigation', { name: 'Saved graphs' })).toBeDefined(),
+    );
+    fireEvent.click(reloaded.getByRole('button', { name: 'Delete' }));
+    await waitFor(() =>
+      expect(reloaded.queryByRole('navigation', { name: 'Saved graphs' })).toBeNull(),
+    );
+    expect(reloaded.queryByRole('button', { name: 'Toggle Sidebar' })).toBeNull();
   });
 
   it('commits with embedded Save and discards a draft when focus leaves the title group', async () => {
