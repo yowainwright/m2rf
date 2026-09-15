@@ -123,6 +123,140 @@ const renameGraph = async (page: Page, name: string) => {
   await expect(title).toHaveText(name);
 };
 
+const saveNamedGraph = async (page: Page, name: string) => {
+  await renameGraph(page, name);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
+};
+
+const openSavedGraphs = async (page: Page) => {
+  const navigation = page.getByRole('navigation', { name: 'Saved graphs' });
+  const isVisible = await navigation.isVisible();
+  const collapsed = await page.locator('[data-state="collapsed"][data-side="left"]').count();
+  const shouldOpen = !isVisible || collapsed > 0;
+  if (shouldOpen) await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
+  await expect(navigation).toBeInViewport();
+  return navigation;
+};
+
+const expectThreeCreditLines = async (footer: Locator) => {
+  const rows = footer
+    .getByRole('list', { name: 'Open-source credits' })
+    .locator(':scope > li > ul');
+  await expect(rows).toHaveCount(3);
+  const lineCounts = await rows.evaluateAll((elements) =>
+    elements.map((element) => {
+      const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight);
+      return element.getBoundingClientRect().height / lineHeight;
+    }),
+  );
+  expect(lineCounts).toEqual([1, 1, 1]);
+  await expect(rows.nth(0).getByRole('link')).toHaveText(['Mermaid', 'React Flow', 'XState']);
+  await expect(rows.nth(1).getByRole('link')).toHaveText(['Effect', 'shadcn/ui', 'Codex']);
+  await expect(rows.nth(2).getByRole('link')).toHaveText(['Tailwind CSS', 'Next.js', 'Dexie']);
+};
+
+const createScrollableGraphList = async (page: Page) => {
+  const names = Array.from({ length: 12 }, (_, index) => `Saved graph ${index + 1}`);
+  await names.reduce(async (previous, name, index) => {
+    await previous;
+    const needsNewGraph = index > 0;
+    if (needsNewGraph) await page.getByRole('button', { name: 'New', exact: true }).click();
+    await saveNamedGraph(page, name);
+  }, Promise.resolve());
+};
+
+[
+  { name: 'desktop', viewport: { width: 1440, height: 640 } },
+  { name: 'mobile', viewport: { width: 320, height: 640 } },
+].forEach(({ name, viewport }) => {
+  test.describe(`sidebar ${name}`, () => {
+    test.use({ viewport });
+
+    test('appears after saving, survives reload, and hides after deleting the last graph', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await expect(page.locator('.react-flow__node')).toHaveCount(3);
+      const toggle = page.getByRole('button', { name: 'Toggle Sidebar' });
+      const sidebar = page.locator('[data-sidebar="sidebar"]');
+      await expect(toggle).toHaveCount(0);
+      await expect(sidebar).toHaveCount(0);
+      await renameGraph(page, 'Unsaved draft');
+      await expect(toggle).toHaveCount(0);
+      await saveNamedGraph(page, 'Saved sidebar graph');
+      await expect(toggle).toBeVisible();
+      const navigation = await openSavedGraphs(page);
+      await expect(
+        navigation.getByRole('button', { name: 'Saved sidebar graph', exact: true }),
+      ).toBeVisible();
+      await page.reload();
+      await expect(toggle).toBeVisible();
+      await openSavedGraphs(page);
+      await expect(
+        navigation.getByRole('button', { name: 'Saved sidebar graph', exact: true }),
+      ).toBeVisible();
+      await sidebar.getByRole('button', { name: 'Close sidebar' }).click();
+      await expect(navigation).not.toBeInViewport();
+      await page.getByRole('button', { name: 'New', exact: true }).click();
+      await expect(toggle).toBeVisible();
+      await openSavedGraphs(page);
+      await navigation.getByRole('button', { name: 'Saved sidebar graph', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Rename graph' })).toHaveText(
+        'Saved sidebar graph',
+      );
+      await page.getByRole('button', { name: 'Delete', exact: true }).click();
+      await expect(toggle).toHaveCount(0);
+      await expect(sidebar).toHaveCount(0);
+      await page.reload();
+      await expect(page.locator('.react-flow__node')).toHaveCount(3);
+      await expect(toggle).toHaveCount(0);
+    });
+
+    test('scrolls saved graphs independently and keeps the final graph clickable above the footer', async ({
+      page,
+    }) => {
+      test.setTimeout(60_000);
+      await page.goto('/');
+      await expect(page.locator('.react-flow__node')).toHaveCount(3);
+      await createScrollableGraphList(page);
+      const navigation = await openSavedGraphs(page);
+      const sidebar = page.locator('[data-sidebar="sidebar"]');
+      const footer = sidebar.locator('[data-sidebar="footer"]');
+      const scrollport = sidebar.locator('[data-sidebar="group-content"]');
+      const graphButtons = navigation.locator('[data-sidebar="menu-button"]');
+      await expect(graphButtons).toHaveCount(12);
+      await expectThreeCreditLines(footer);
+      await footer.getByRole('link', { name: 'm2rf', exact: true }).click({ trial: true });
+      const footerBefore = await getBounds(footer);
+      const sidebarBounds = await getBounds(sidebar);
+      const sidebarInnerWidth = await sidebar.evaluate((element) => element.clientWidth);
+      expect(footerBefore.x).toBe(sidebarBounds.x);
+      expect(footerBefore.width).toBe(sidebarInnerWidth);
+      await expect(footer).toHaveCSS('border-top-width', '1px');
+      expect(
+        await scrollport.evaluate((element) => element.scrollHeight > element.clientHeight),
+      ).toBe(true);
+      await scrollport.evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+      expect(await scrollport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+      const lastGraph = graphButtons.last();
+      const lastBounds = await getBounds(lastGraph);
+      const listBounds = await getBounds(scrollport);
+      expect(lastBounds.y).toBeGreaterThanOrEqual(listBounds.y);
+      expect(lastBounds.y + lastBounds.height).toBeLessThanOrEqual(
+        listBounds.y + listBounds.height,
+      );
+      expect(listBounds.y + listBounds.height).toBeLessThanOrEqual(footerBefore.y);
+      expect(footerBefore.y - listBounds.y - listBounds.height).toBeLessThanOrEqual(8);
+      expect(await getBounds(footer)).toEqual(footerBefore);
+      await lastGraph.click();
+      await expect(page.getByRole('button', { name: 'Rename graph' })).toHaveText('Saved graph 1');
+    });
+  });
+});
+
 test('shows minimal navigation with tooltips and OSS credits', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
@@ -179,15 +313,7 @@ test('shows minimal navigation with tooltips and OSS credits', async ({ page }, 
   ).toHaveAttribute('href', repository.url);
   await expect(footer.getByRole('heading')).toHaveCount(0);
   const credits = footer.getByRole('list', { name: 'Open-source credits' });
-  const creditRows = credits.locator(':scope > li > ul');
-  await expect(creditRows).toHaveCount(3);
-  await expect(creditRows.nth(0).getByRole('link')).toHaveText(['Mermaid', 'React Flow', 'XState']);
-  await expect(creditRows.nth(1).getByRole('link')).toHaveText(['Effect', 'shadcn/ui', 'Codex']);
-  await expect(creditRows.nth(2).getByRole('link')).toHaveText([
-    'Tailwind CSS',
-    'Next.js',
-    'Dexie',
-  ]);
+  await expectThreeCreditLines(footer);
   expect(
     await credits
       .getByRole('link')

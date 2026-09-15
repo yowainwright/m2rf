@@ -129,6 +129,24 @@ const startTitleEditor = async () => {
   return { actor, saved };
 };
 
+const createWorkspaceControls = () => {
+  const rendered: GraphRenderResult = {
+    diagramType: 'flowchart',
+    elements: input.translation.elements,
+  };
+  const renderGraph = fromPromise<GraphRenderResult, AppMachineContext>(() =>
+    Promise.resolve(rendered),
+  );
+  const logic = appMachine.provide({ actors: { render: renderGraph } });
+  const children = createElement(
+    SidebarProvider,
+    null,
+    createElement(WorkspaceHeader),
+    createElement(WorkspaceSidebar),
+  );
+  return createElement(AppContext.Provider, { logic, children });
+};
+
 describe('graphRepository', () => {
   afterEach(async () => {
     cleanup();
@@ -138,21 +156,7 @@ describe('graphRepository', () => {
   });
 
   it('shows the sidebar only when saved graphs exist, including after reload and deletion', async () => {
-    const rendered: GraphRenderResult = {
-      diagramType: 'flowchart',
-      elements: input.translation.elements,
-    };
-    const renderGraph = fromPromise<GraphRenderResult, AppMachineContext>(() =>
-      Promise.resolve(rendered),
-    );
-    const logic = appMachine.provide({ actors: { render: renderGraph } });
-    const workspace = createElement(
-      SidebarProvider,
-      null,
-      createElement(WorkspaceHeader),
-      createElement(WorkspaceSidebar),
-    );
-    const app = createElement(AppContext.Provider, { logic, children: workspace });
+    const app = createWorkspaceControls();
     const ui = render(app);
     await waitFor(() =>
       expect(ui.getByRole('button', { name: 'Save' }).hasAttribute('disabled')).toBe(false),
@@ -172,6 +176,24 @@ describe('graphRepository', () => {
       expect(reloaded.queryByRole('navigation', { name: 'Saved graphs' })).toBeNull(),
     );
     expect(reloaded.queryByRole('button', { name: 'Toggle Sidebar' })).toBeNull();
+  });
+
+  it('keeps the sidebar hidden after a failed save and shows it after a successful retry', async () => {
+    const create = vi
+      .spyOn(graphRepository, 'create')
+      .mockRejectedValueOnce(new Error('Disk full'));
+    const ui = render(createWorkspaceControls());
+    const save = ui.getByRole('button', { name: 'Save' });
+    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
+    fireEvent.click(save);
+    await waitFor(() => expect(create).toHaveBeenCalledOnce());
+    await waitFor(() => expect(ui.getByRole('button', { name: 'Save' })).toBeDefined());
+    expect(await graphRepository.list()).toHaveLength(0);
+    expect(ui.queryByRole('navigation', { name: 'Saved graphs' })).toBeNull();
+    expect(ui.queryByRole('button', { name: 'Toggle Sidebar' })).toBeNull();
+    fireEvent.click(ui.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(ui.getByRole('navigation', { name: 'Saved graphs' })).toBeDefined());
+    expect(await graphRepository.list()).toHaveLength(1);
   });
 
   it('commits with embedded Save and discards a draft when focus leaves the title group', async () => {
