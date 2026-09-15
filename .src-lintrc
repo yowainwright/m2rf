@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "strict": true,
+  "boundaries": {
+    "app": { "root": "app" },
+    "tests": { "root": "tests", "allow": ["app/**", "scripts/**"] },
+    "scripts": { "root": "scripts" }
+  }
+}
