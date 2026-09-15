@@ -42,7 +42,7 @@ const getPatternBackgroundSize = (preset: CanvasBackground, size: number) => {
 
 export const getPatternStyle = (
   preset: CanvasBackground,
-  pattern: GraphPatternSettings
+  pattern: GraphPatternSettings,
 ): CSSProperties => {
   const size = getPatternSize(pattern.density);
   const backgroundImage = getPatternImage(preset, pattern.color, size);

@@ -1,6 +1,14 @@
 import type { CSSProperties } from 'react';
 import type {
-  CanvasBackground, GradientDirection, GraphCanvasSettings, GraphInputFormat, GraphTranslationSettings, NodeBorder, NodeShape, NodeShadow, NodeSurface,
+  CanvasBackground,
+  GradientDirection,
+  GraphCanvasSettings,
+  GraphInputFormat,
+  GraphTranslationSettings,
+  NodeBorder,
+  NodeShape,
+  NodeShadow,
+  NodeSurface,
 } from './types';
 
 // Keep the legacy storage name so existing browser-local graphs remain accessible.
@@ -40,7 +48,10 @@ export const SEQUENCE_RIGHT_HANDLE_STYLE: CSSProperties = Object.assign({}, SEQU
 });
 
 // Color inputs need hex values corresponding to the Tailwind defaults.
-export const SEQUENCE_NODE_DEFAULTS: Record<string, { fill: string; border: NodeBorder; surface: NodeSurface }> = {
+export const SEQUENCE_NODE_DEFAULTS: Record<
+  string,
+  { fill: string; border: NodeBorder; surface: NodeSurface }
+> = {
   'sequence-participant': { fill: '#f3f4f6', border: 'solid', surface: 'solid' },
   'sequence-action': { fill: '#ffffff', border: 'none', surface: 'solid' },
   'sequence-note': { fill: '#f9fafb', border: 'solid', surface: 'solid' },
@@ -111,23 +122,70 @@ export const DEFAULT_CANVAS_SETTINGS: GraphCanvasSettings = {
   snapToGrid: false,
 };
 
-export const EDGE_ANIMATION_OPTIONS: Array<{ label: string; value: GraphTranslationSettings['edgeAnimation'] }> = [
+export const EDGE_ANIMATION_OPTIONS: Array<{
+  label: string;
+  value: GraphTranslationSettings['edgeAnimation'];
+}> = [
   { label: 'None', value: 'none' },
   { label: 'Pulse', value: 'pulse' },
   { label: 'Flow', value: 'flow' },
   { label: 'Surge', value: 'surge' },
 ];
-export const CANVAS_BACKGROUND_OPTIONS: Array<{ label: string; preview: string; value: CanvasBackground }> = [
+export const CANVAS_BACKGROUND_OPTIONS: Array<{
+  label: string;
+  preview: string;
+  value: CanvasBackground;
+}> = [
   { label: 'None', preview: 'none', value: 'none' },
-  { label: 'Grid', preview: 'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)', value: 'grid' },
-  { label: 'Two-color gradient', preview: 'linear-gradient(180deg, currentColor, transparent)', value: 'gradient' },
-  { label: 'Aurora shader', preview: 'linear-gradient(135deg, currentColor, transparent 70%)', value: 'aurora' },
-  { label: 'Gradient mesh shader', preview: 'radial-gradient(circle at 25% 25%, currentColor, transparent 60%), linear-gradient(135deg, currentColor, transparent)', value: 'gradient-mesh' },
-  { label: 'Dot pattern', preview: 'radial-gradient(currentColor 1px, transparent 1px)', value: 'dot-pattern' },
-  { label: 'Diagonal v3', preview: 'repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 8px)', value: 'pattern-diagonal' },
-  { label: 'Polka Pin', preview: 'radial-gradient(circle, currentColor 1px, transparent 1px)', value: 'pattern-polka-pin' },
-  { label: 'Checkerboard', preview: 'conic-gradient(currentColor 25%, transparent 0 50%, currentColor 0 75%, transparent 0)', value: 'pattern-checkerboard' },
-  { label: 'Diamond grid', preview: 'linear-gradient(45deg, transparent 42%, currentColor 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, currentColor 42% 58%, transparent 58%)', value: 'pattern-diamond' },
+  {
+    label: 'Grid',
+    preview:
+      'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)',
+    value: 'grid',
+  },
+  {
+    label: 'Two-color gradient',
+    preview: 'linear-gradient(180deg, currentColor, transparent)',
+    value: 'gradient',
+  },
+  {
+    label: 'Aurora shader',
+    preview: 'linear-gradient(135deg, currentColor, transparent 70%)',
+    value: 'aurora',
+  },
+  {
+    label: 'Gradient mesh shader',
+    preview:
+      'radial-gradient(circle at 25% 25%, currentColor, transparent 60%), linear-gradient(135deg, currentColor, transparent)',
+    value: 'gradient-mesh',
+  },
+  {
+    label: 'Dot pattern',
+    preview: 'radial-gradient(currentColor 1px, transparent 1px)',
+    value: 'dot-pattern',
+  },
+  {
+    label: 'Diagonal v3',
+    preview: 'repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 8px)',
+    value: 'pattern-diagonal',
+  },
+  {
+    label: 'Polka Pin',
+    preview: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
+    value: 'pattern-polka-pin',
+  },
+  {
+    label: 'Checkerboard',
+    preview:
+      'conic-gradient(currentColor 25%, transparent 0 50%, currentColor 0 75%, transparent 0)',
+    value: 'pattern-checkerboard',
+  },
+  {
+    label: 'Diamond grid',
+    preview:
+      'linear-gradient(45deg, transparent 42%, currentColor 42% 58%, transparent 58%), linear-gradient(-45deg, transparent 42%, currentColor 42% 58%, transparent 58%)',
+    value: 'pattern-diamond',
+  },
 ];
 export const NODE_BORDER_OPTIONS: Array<{ label: string; value: NodeBorder }> = [
   { label: 'Solid', value: 'solid' },
@@ -153,20 +211,51 @@ export const GRADIENT_DIRECTION_OPTIONS: Array<{ label: string; value: GradientD
   { label: 'Radial', value: 'radial' },
 ];
 export const NODE_SURFACE_OPTIONS: Array<{ label: string; preview: string; value: NodeSurface }> = [
-  { label: 'Two-color gradient', preview: 'linear-gradient(180deg, currentColor, transparent)', value: 'gradient' },
-  { label: 'Solid', preview: 'linear-gradient(135deg, currentColor, currentColor)', value: 'solid' },
-  { label: 'Grid pattern', preview: 'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)', value: 'pattern-grid' },
-  { label: 'Dot pattern', preview: 'radial-gradient(currentColor 1px, transparent 1px)', value: 'pattern-dots' },
-  { label: 'Diagonal v3', preview: 'repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 8px)', value: 'pattern-diagonal' },
-  { label: 'Polka Pin', preview: 'radial-gradient(circle, currentColor 1px, transparent 1px)', value: 'pattern-polka-pin' },
+  {
+    label: 'Two-color gradient',
+    preview: 'linear-gradient(180deg, currentColor, transparent)',
+    value: 'gradient',
+  },
+  {
+    label: 'Solid',
+    preview: 'linear-gradient(135deg, currentColor, currentColor)',
+    value: 'solid',
+  },
+  {
+    label: 'Grid pattern',
+    preview:
+      'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)',
+    value: 'pattern-grid',
+  },
+  {
+    label: 'Dot pattern',
+    preview: 'radial-gradient(currentColor 1px, transparent 1px)',
+    value: 'pattern-dots',
+  },
+  {
+    label: 'Diagonal v3',
+    preview: 'repeating-linear-gradient(45deg, currentColor 0 1px, transparent 1px 8px)',
+    value: 'pattern-diagonal',
+  },
+  {
+    label: 'Polka Pin',
+    preview: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
+    value: 'pattern-polka-pin',
+  },
 ];
-export const EDGE_TYPE_OPTIONS: Array<{ label: string; value: GraphTranslationSettings['edgeType'] }> = [
+export const EDGE_TYPE_OPTIONS: Array<{
+  label: string;
+  value: GraphTranslationSettings['edgeType'];
+}> = [
   { label: 'Default', value: 'default' },
   { label: 'Straight', value: 'straight' },
   { label: 'Step', value: 'step' },
   { label: 'Smooth step', value: 'smoothstep' },
 ];
-export const EDGE_MARKER_OPTIONS: Array<{ label: string; value: GraphTranslationSettings['edgeMarker'] }> = [
+export const EDGE_MARKER_OPTIONS: Array<{
+  label: string;
+  value: GraphTranslationSettings['edgeMarker'];
+}> = [
   { label: 'None', value: 'none' },
   { label: 'Open arrow', value: 'arrow' },
   { label: 'Filled arrow', value: 'arrowclosed' },

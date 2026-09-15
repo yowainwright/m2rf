@@ -1,5 +1,5 @@
-name: "CodeQL config"
+name: 'CodeQL config'
 
 paths-ignore:
-  - "tests/**"
-  - "tmp/**"
+  - 'tests/**'
+  - 'tmp/**'

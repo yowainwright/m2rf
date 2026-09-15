@@ -135,7 +135,9 @@ describe('graphRepository', () => {
     expect(reloaded?.input).toEqual(saved.input);
     expect(reloaded?.translation).toEqual(saved.translation);
     expect(reloaded?.versions).toEqual(saved.versions);
-    await expect(graphRepository.rename(saved.workspace.id, '  ')).rejects.toThrow('Enter a graph name.');
+    await expect(graphRepository.rename(saved.workspace.id, '  ')).rejects.toThrow(
+      'Enter a graph name.',
+    );
     await expect(graphRepository.rename('missing', 'Title')).rejects.toThrow('no longer exists');
   });
 
@@ -175,7 +177,9 @@ describe('graphRepository', () => {
     act(() => actor.send({ type: 'workspace.rename', name: 'Retry title' }));
     act(() => actor.send({ type: 'title.confirm' }));
     act(() => actor.send({ type: 'workspace.delete' }));
-    await waitFor(() => expect(actor.getSnapshot().context.titleError).toContain('Storage unavailable'));
+    await waitFor(() =>
+      expect(actor.getSnapshot().context.titleError).toContain('Storage unavailable'),
+    );
     expect(actor.getSnapshot().context.workspace).toEqual(saved.workspace);
     expect(actor.getSnapshot().context.titleDraft).toBe('Retry title');
     expect(actor.getSnapshot().context.afterRename).toBeNull();
@@ -250,11 +254,13 @@ describe('graphRepository', () => {
       elements: { nodes: [invalidNode], edges: [] },
     });
 
-    await expect(graphRepository.update({
-      input: { source: 'failed save' },
-      translation,
-      workspace: { id: workspaceId, name: 'Should roll back' },
-    })).rejects.toThrow();
+    await expect(
+      graphRepository.update({
+        input: { source: 'failed save' },
+        translation,
+        workspace: { id: workspaceId, name: 'Should roll back' },
+      }),
+    ).rejects.toThrow();
 
     expect(await graphRepository.read(workspaceId)).toEqual(before);
     expect(await graphRepository.read(workspaceId, first.input.id)).not.toBeNull();
@@ -334,12 +340,8 @@ describe('graphRepository', () => {
       x: 120,
       y: 160,
     });
-    expect(
-      reloaded?.translation.elements.nodes[0]?.style?.backgroundColor
-    ).toBe('#ef4444');
-    expect(reloaded?.translation.elements.edges[0]?.style?.stroke).toBe(
-      '#22c55e'
-    );
+    expect(reloaded?.translation.elements.nodes[0]?.style?.backgroundColor).toBe('#ef4444');
+    expect(reloaded?.translation.elements.edges[0]?.style?.stroke).toBe('#22c55e');
     expect(reloaded?.translation.elements.edges[0]?.style?.strokeWidth).toBe(4);
     expect(reloaded?.translation.view.selection?.nodeIds).toEqual(['Idea']);
     expect(reloaded?.translation.view.viewport?.zoom).toBe(1.4);
@@ -365,7 +367,9 @@ describe('node shapes', () => {
   });
 
   it('removes the previous shape geometry when changing back to a rectangle', () => {
-    const shaped = Object.assign({}, node, { style: createNodeStyle(createShapeSettings('circle')) });
+    const shaped = Object.assign({}, node, {
+      style: createNodeStyle(createShapeSettings('circle')),
+    });
     const updated = applySettings({ nodes: [shaped], edges: [edge] }, { nodeShape: 'rectangle' });
     const style = updated.nodes[0]?.style;
 
@@ -376,7 +380,8 @@ describe('node shapes', () => {
 });
 
 describe('node surfaces', () => {
-  const createSurfaceSettings = (nodeSurface: NodeSurface) => Object.assign({}, settings, { nodeSurface });
+  const createSurfaceSettings = (nodeSurface: NodeSurface) =>
+    Object.assign({}, settings, { nodeSurface });
 
   it('uses shared diagonal and polka pin pattern geometry', () => {
     const diagonal = createNodeStyle(createSurfaceSettings('pattern-diagonal'));
@@ -405,7 +410,12 @@ describe('sequence diagrams', () => {
     const elements = parseMermaidSvg(sequenceSvg, settings, 'sequence');
     const [firstNode, secondNode, messageAction, selfAction] = elements.nodes;
 
-    expect(elements.nodes.map((node) => node.id)).toEqual(['A', 'B', 'action-message-i0', 'action-message-i1']);
+    expect(elements.nodes.map((node) => node.id)).toEqual([
+      'A',
+      'B',
+      'action-message-i0',
+      'action-message-i1',
+    ]);
     expect(elements.edges).toHaveLength(4);
     expect(firstNode?.type).toBe('sequenceParticipant');
     expect(firstNode?.data.label).toBe('Alice');
@@ -415,8 +425,14 @@ describe('sequence diagrams', () => {
       { id: 'message-i0', sourceY: 115, targetY: 115 },
       { id: 'message-i1', sourceY: 165, targetY: 201 },
     ]);
-    expect(messageAction).toMatchObject({ type: 'sequenceAction', data: { label: 'Hello', sequenceNumber: '1' } });
-    expect(selfAction).toMatchObject({ type: 'sequenceAction', data: { label: 'Think', sequenceNumber: '2' } });
+    expect(messageAction).toMatchObject({
+      type: 'sequenceAction',
+      data: { label: 'Hello', sequenceNumber: '1' },
+    });
+    expect(selfAction).toMatchObject({
+      type: 'sequenceAction',
+      data: { label: 'Think', sequenceNumber: '2' },
+    });
   });
 
   it('connects the sender through its action to the receiver and puts the arrowhead at the receiver', () => {
@@ -424,17 +440,32 @@ describe('sequence diagrams', () => {
     const [senderSegment, receiverSegment] = edges;
 
     expect(senderSegment).toMatchObject({
-      source: 'A', target: 'action-message-i0', type: 'sequenceMessage',
-      sourceHandle: 'message-i0-source-right', targetHandle: 'left-target',
-      data: { messageY: 115, segment: 'source', sequenceNumber: '1', selfMessage: false, markerEnd: false },
+      source: 'A',
+      target: 'action-message-i0',
+      type: 'sequenceMessage',
+      sourceHandle: 'message-i0-source-right',
+      targetHandle: 'left-target',
+      data: {
+        messageY: 115,
+        segment: 'source',
+        sequenceNumber: '1',
+        selfMessage: false,
+        markerEnd: false,
+      },
     });
     expect(receiverSegment).toMatchObject({
-      source: 'action-message-i0', target: 'B', type: 'sequenceMessage',
-      sourceHandle: 'right-source', targetHandle: 'message-i0-target-left',
+      source: 'action-message-i0',
+      target: 'B',
+      type: 'sequenceMessage',
+      sourceHandle: 'right-source',
+      targetHandle: 'message-i0-target-left',
       data: { messageY: 115, segment: 'target', selfMessage: false, markerEnd: true },
     });
     expect(senderSegment?.markerEnd).toBeUndefined();
-    expect(receiverSegment?.markerEnd).toMatchObject({ type: 'arrowclosed', color: settings.edgeColor });
+    expect(receiverSegment?.markerEnd).toMatchObject({
+      type: 'arrowclosed',
+      color: settings.edgeColor,
+    });
     expect(receiverSegment?.data.sequenceNumber).toBeUndefined();
   });
 
@@ -443,47 +474,69 @@ describe('sequence diagrams', () => {
     const [, , senderSegment, receiverSegment] = edges;
 
     expect(senderSegment).toMatchObject({
-      source: 'A', target: 'action-message-i1', type: 'sequenceMessage',
-      sourceHandle: 'message-i1-source-right', targetHandle: 'left-target',
+      source: 'A',
+      target: 'action-message-i1',
+      type: 'sequenceMessage',
+      sourceHandle: 'message-i1-source-right',
+      targetHandle: 'left-target',
       data: { messageY: 165, segment: 'source', sequenceNumber: '2', selfMessage: true },
     });
     expect(receiverSegment).toMatchObject({
-      source: 'action-message-i1', target: 'A', type: 'sequenceMessage',
-      sourceHandle: 'left-source', targetHandle: 'message-i1-target-right',
+      source: 'action-message-i1',
+      target: 'A',
+      type: 'sequenceMessage',
+      sourceHandle: 'left-source',
+      targetHandle: 'message-i1-target-right',
       data: { messageY: 165, segment: 'target', selfMessage: true },
     });
     expect(senderSegment?.markerEnd).toBeUndefined();
-    expect(receiverSegment?.markerEnd).toMatchObject({ type: 'arrowclosed', color: settings.edgeColor });
+    expect(receiverSegment?.markerEnd).toMatchObject({
+      type: 'arrowclosed',
+      color: settings.edgeColor,
+    });
   });
 
   it('connects an unnumbered dashed reply from right to left', () => {
-    const svg = sequenceSvg.replace('</svg>', `
+    const svg = sequenceSvg.replace(
+      '</svg>',
+      `
       <text class="messageText">Reply</text>
       <line data-et="message" data-id="reply" class="messageLine1" x1="275" x2="75" y1="240" y2="240" marker-end="url(#arrowhead)" />
-    </svg>`);
+    </svg>`,
+    );
     const { nodes, edges } = parseMermaidSvg(svg, settings, 'sequence');
     const [sender, receiver] = edges.slice(-2);
 
     expect(sender).toMatchObject({
-      source: 'B', target: 'action-message-reply',
-      sourceHandle: 'message-reply-source-left', targetHandle: 'right-target',
+      source: 'B',
+      target: 'action-message-reply',
+      sourceHandle: 'message-reply-source-left',
+      targetHandle: 'right-target',
       data: { dashed: true, segment: 'source', messageY: 240 },
     });
     expect(receiver).toMatchObject({
-      source: 'action-message-reply', target: 'A',
-      sourceHandle: 'left-source', targetHandle: 'message-reply-target-right',
+      source: 'action-message-reply',
+      target: 'A',
+      sourceHandle: 'left-source',
+      targetHandle: 'message-reply-target-right',
       data: { dashed: true, segment: 'target', messageY: 240 },
     });
     expect(sender?.data.sequenceNumber).toBeUndefined();
     expect(sender?.markerEnd).toBeUndefined();
     expect(receiver?.markerEnd).toMatchObject({ type: 'arrowclosed' });
     expect(nodes.find((node) => node.id === 'A')?.data.handles).toContainEqual({
-      id: 'message-reply', sourceY: 240, targetY: 240,
+      id: 'message-reply',
+      sourceY: 240,
+      targetY: 240,
     });
   });
 
-  it.each(['alt', 'opt', 'loop'])('retains %s frame bounds, conditions, and branch offsets', (frameType) => {
-    const svg = sequenceSvg.replace('</svg>', `
+  it.each(['alt', 'opt', 'loop'])(
+    'retains %s frame bounds, conditions, and branch offsets',
+    (frameType) => {
+      const svg = sequenceSvg.replace(
+        '</svg>',
+        `
       <g data-et="control-structure" data-id="control">
         <line class="loopLine" x1="50" x2="300" y1="90" y2="90" />
         <line class="loopLine" x1="50" x2="300" y1="250" y2="250" />
@@ -491,32 +544,42 @@ describe('sequence diagrams', () => {
         <text class="loopText">[Approved]</text>
         <text class="sectionTitle" y="170">[Rejected]</text>
       </g>
-    </svg>`);
-    const { nodes, edges } = parseMermaidSvg(svg, settings, 'sequence');
-    const frame = nodes.find((node) => node.id === 'frame-control');
+    </svg>`,
+      );
+      const { nodes, edges } = parseMermaidSvg(svg, settings, 'sequence');
+      const frame = nodes.find((node) => node.id === 'frame-control');
 
-    expect(frame).toMatchObject({
-      type: 'sequenceFrame', position: { x: 50, y: 90 },
-      style: { height: 160, width: 250 },
-      data: { frameType, label: '[Approved]', sections: [{ label: '[Rejected]', y: 80 }] },
-    });
-    expect(edges.some((edge) => edge.source === frame?.id || edge.target === frame?.id)).toBe(false);
-  });
+      expect(frame).toMatchObject({
+        type: 'sequenceFrame',
+        position: { x: 50, y: 90 },
+        style: { height: 160, width: 250 },
+        data: { frameType, label: '[Approved]', sections: [{ label: '[Rejected]', y: 80 }] },
+      });
+      expect(edges.some((edge) => edge.source === frame?.id || edge.target === frame?.id)).toBe(
+        false,
+      );
+    },
+  );
 
   it('keeps note geometry separate and attaches activation bars to their participant', () => {
-    const svg = sequenceSvg.replace('</svg>', `
+    const svg = sequenceSvg.replace(
+      '</svg>',
+      `
       <g data-et="note" data-id="n0">
         <rect class="note" x="300" y="120" width="100" height="40" />
         <text class="noteText">Check cache</text>
       </g>
       <rect class="activation0" x="270" y="115" width="10" height="90" />
       <rect class="activation1" x="275" y="135" width="10" height="30" />
-    </svg>`);
+    </svg>`,
+    );
     const { nodes } = parseMermaidSvg(svg, settings, 'sequence');
 
     expect(nodes.find((node) => node.id === 'note-n0')).toMatchObject({
-      type: 'sequenceNote', position: { x: 300, y: 120 },
-      style: { height: 40, width: 100 }, data: { label: 'Check cache' },
+      type: 'sequenceNote',
+      position: { x: 300, y: 120 },
+      style: { height: 40, width: 100 },
+      data: { label: 'Check cache' },
     });
     expect(nodes.find((node) => node.id === 'B')?.data.activations).toEqual([
       { x: 70, y: 115, width: 10, height: 90 },

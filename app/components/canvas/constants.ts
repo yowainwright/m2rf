@@ -1,4 +1,5 @@
-export const CANVAS_BACKGROUND_CLASS_NAME = 'pointer-events-none absolute inset-0 z-0 overflow-hidden';
+export const CANVAS_BACKGROUND_CLASS_NAME =
+  'pointer-events-none absolute inset-0 z-0 overflow-hidden';
 export const SHADER_LAYER_CLASS_NAME = 'absolute inset-0 h-full w-full';
 export const SHADER_BACKGROUND_CLASS_NAME = 'absolute inset-0 opacity-70';
 export const SHADER_CONTAINER_CLASS_NAME = 'relative h-full w-full';

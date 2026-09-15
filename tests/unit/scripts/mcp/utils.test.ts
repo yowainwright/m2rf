@@ -8,7 +8,11 @@ import {
   MCP_CONFIG_PATH,
   SHADCN_IMAGE,
 } from '../../../../scripts/mcp/constants.ts';
-import { createMcpConfiguration, createMcpFiles, generateMcpSkill } from '../../../../scripts/mcp/utils.ts';
+import {
+  createMcpConfiguration,
+  createMcpFiles,
+  generateMcpSkill,
+} from '../../../../scripts/mcp/utils.ts';
 
 const root = resolve(import.meta.dirname, '../../../..');
 
@@ -32,7 +36,10 @@ test('launches the pinned shadcn image without credentials and with a targeted c
     `type=bind,source=${resolve(root, 'components.json')},target=${COMPONENTS_TARGET},readonly`,
   );
   const forbidden = ['--privileged', '--volume', '-v', '--env', '-e', '--env-file'];
-  assert.equal(server.args.some((argument) => forbidden.includes(argument)), false);
+  assert.equal(
+    server.args.some((argument) => forbidden.includes(argument)),
+    false,
+  );
 });
 
 test('regenerates the skill and config without changing unrelated agent files', async (context) => {

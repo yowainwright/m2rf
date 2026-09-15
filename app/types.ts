@@ -2,8 +2,13 @@ import type { ReactNode } from 'react';
 import type { EdgeChange, NodeChange, Viewport } from 'reactflow';
 import type { GifExportRepeat } from '@/app/export';
 import type {
-  GraphCanvasSettings, GraphInput, GraphRecords, GraphTranslation,
-  GraphVersion, GraphWorkspace, TranslationSettings,
+  GraphCanvasSettings,
+  GraphInput,
+  GraphRecords,
+  GraphTranslation,
+  GraphVersion,
+  GraphWorkspace,
+  TranslationSettings,
 } from '@/app/graph';
 
 export type WorkspaceRequest = { workspaceId: string; versionId?: string };

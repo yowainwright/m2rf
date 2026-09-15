@@ -13,12 +13,7 @@ import {
   SVG_FILE_EXTENSION,
   SVG_FILE_FALLBACK_NAME,
 } from './constants';
-import type {
-  GifExportInput,
-  GraphExportResult,
-  PngExportInput,
-  SvgExportInput,
-} from './types';
+import type { GifExportInput, GraphExportResult, PngExportInput, SvgExportInput } from './types';
 
 const invalidFileNamePattern = /[^a-z0-9-_]+/gi;
 const duplicateDashPattern = /-+/g;
@@ -106,15 +101,18 @@ const captureGifFrame = async (element: HTMLElement) => {
 const captureGifFrames = (element: HTMLElement) => {
   const frameIndexes = Array.from({ length: GIF_FRAME_COUNT });
 
-  return frameIndexes.reduce<Promise<ImageData[]>>(async (previousFrames) => {
-    const frames = await previousFrames;
+  return frameIndexes.reduce<Promise<ImageData[]>>(
+    async (previousFrames) => {
+      const frames = await previousFrames;
 
-    await waitForFrame();
+      await waitForFrame();
 
-    const frame = await captureGifFrame(element);
+      const frame = await captureGifFrame(element);
 
-    return frames.concat(frame);
-  }, Promise.resolve([] as ImageData[]));
+      return frames.concat(frame);
+    },
+    Promise.resolve([] as ImageData[]),
+  );
 };
 
 const getGifRepeat = (repeat: GifExportInput['repeat']) => {
@@ -160,9 +158,7 @@ export const getSvgExportElement = () => {
   return document.querySelector<HTMLElement>(GRAPH_EXPORT_SELECTOR);
 };
 
-export const exportGif = async (
-  input: GifExportInput
-): Promise<GraphExportResult> => {
+export const exportGif = async (input: GifExportInput): Promise<GraphExportResult> => {
   const fileName = createFileName(input.name, GIF_FILE_EXTENSION);
   const frames = await captureGifFrames(input.element);
   const blob = createGifBlob(frames, input.repeat);
@@ -172,9 +168,7 @@ export const exportGif = async (
   return { fileName };
 };
 
-export const exportPng = async (
-  input: PngExportInput
-): Promise<GraphExportResult> => {
+export const exportPng = async (input: PngExportInput): Promise<GraphExportResult> => {
   const fileName = createFileName(input.name, PNG_FILE_EXTENSION);
   const dataUrl = await toPngDataUrl(input.element);
 
@@ -183,9 +177,7 @@ export const exportPng = async (
   return { fileName };
 };
 
-export const exportSvg = async (
-  input: SvgExportInput
-): Promise<GraphExportResult> => {
+export const exportSvg = async (input: SvgExportInput): Promise<GraphExportResult> => {
   const fileName = createFileName(input.name, SVG_FILE_EXTENSION);
   const dataUrl = await toSvgDataUrl(input.element);
 

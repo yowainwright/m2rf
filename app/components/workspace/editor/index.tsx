@@ -11,7 +11,8 @@ export function MermaidEditor() {
   const { send } = AppContext.useActorRef();
   const source = AppContext.useSelector((state) => state.context.input.source);
   const canEditDraft = AppContext.useSelector((state) => state.matches({ document: 'active' }));
-  const handleSourceUpdate = (nextSource: string) => send({ type: 'input.update', source: nextSource });
+  const handleSourceUpdate = (nextSource: string) =>
+    send({ type: 'input.update', source: nextSource });
 
   return (
     <Card className="flex h-full min-h-0 flex-col overflow-hidden">

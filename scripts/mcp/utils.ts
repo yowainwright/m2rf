@@ -11,10 +11,13 @@ import {
 } from './constants.ts';
 import type { GeneratedFile, McpConfiguration } from './types.ts';
 
-export const createMcpConfiguration = (root = resolve(import.meta.dirname, '../..')): McpConfiguration => {
+export const createMcpConfiguration = (
+  root = resolve(import.meta.dirname, '../..'),
+): McpConfiguration => {
   const componentsFile = resolve(root, 'components.json');
   const dockerArguments = DOCKER_ARGUMENTS.concat(
-    '--mount', `type=bind,source=${componentsFile},target=${COMPONENTS_TARGET},readonly`,
+    '--mount',
+    `type=bind,source=${componentsFile},target=${COMPONENTS_TARGET},readonly`,
     SHADCN_IMAGE,
   );
   return { mcpServers: { shadcn: { command: 'docker', args: dockerArguments } } };

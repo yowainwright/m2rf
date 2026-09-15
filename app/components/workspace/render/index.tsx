@@ -25,10 +25,7 @@ import { Background } from 'reactflow';
 import { Button } from '@/app/components/ui/button';
 import { CanvasBackground } from '@/app/components/canvas';
 import { CanvasTools, EdgeTools, NodeTools } from '@/app/components/toolkit';
-import {
-  CANVAS_GRID,
-  DEFAULT_CANVAS_SETTINGS,
-} from '@/app/components/toolkit/constants';
+import { CANVAS_GRID, DEFAULT_CANVAS_SETTINGS } from '@/app/components/toolkit/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Separator } from '@/app/components/ui/separator';
 import { AppContext } from '@/app';
@@ -52,7 +49,14 @@ export function GraphPreview() {
   const canvas = Object.assign({}, DEFAULT_CANVAS_SETTINGS, translation.view.canvas);
   const canEditCanvas = canEditDraft && !isRendering && !canvas.locked;
   const canvasDeleteKey = canEditCanvas ? 'Backspace' : null;
-  const canvasBackground = <CanvasBackground gradient={canvas.gradient} pattern={canvas.pattern} preset={canvas.background} shader={canvas.shader} />;
+  const canvasBackground = (
+    <CanvasBackground
+      gradient={canvas.gradient}
+      pattern={canvas.pattern}
+      preset={canvas.background}
+      shader={canvas.shader}
+    />
+  );
   const shouldShowFlowGrid = canvas.gridVisible && canvas.background !== 'grid';
   const backgroundGrid = shouldShowFlowGrid ? <Background gap={CANVAS_GRID[0]} /> : null;
   const savedViewport = translation.view.viewport;
@@ -60,7 +64,9 @@ export function GraphPreview() {
   const selectedNodeIds = getElementIds(getSelectedNodes(translation.elements.nodes));
   const selectedEdge = getSelectedEdge(translation.elements.edges, selectedEdgeIds);
   const selectedNode = getSelectedNode(translation.elements.nodes, selectedNodeIds);
-  const selectedEdgeAnchor = selectedEdge ? getEdgeAnchor(selectedEdge, translation.elements.nodes) : null;
+  const selectedEdgeAnchor = selectedEdge
+    ? getEdgeAnchor(selectedEdge, translation.elements.nodes)
+    : null;
   const hasSelectedEdge = selectedEdge !== undefined;
   const hasSelectedNode = selectedNode !== undefined;
   const showNodeTools = hasSelectedNode || !hasSelectedEdge;
@@ -72,8 +78,12 @@ export function GraphPreview() {
   const activeVersion = versions.find((version) => version.id === inputId);
   const workspaceLabel = getWorkspaceLabel(workspace);
   const toolkitMetadataProps = {
-    elements: translation.elements, scope: toolkitScope, selectedEdgeIds,
-    selectedNodeIds, version: activeVersion, workspaceName: workspaceLabel,
+    elements: translation.elements,
+    scope: toolkitScope,
+    selectedEdgeIds,
+    selectedNodeIds,
+    version: activeVersion,
+    workspaceName: workspaceLabel,
   };
   const nodeToolProps = {
     borderValue: getNodeBorderValue(selectedNode, settings),
@@ -146,7 +156,13 @@ export function GraphPreview() {
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
         <CardTitle className="text-sm">React Flow output</CardTitle>
         <div className="flex items-center gap-2">
-          <Button size="sm" type="button" variant="outline" onClick={actions.handleLayout} disabled={!canReset}>
+          <Button
+            size="sm"
+            type="button"
+            variant="outline"
+            onClick={actions.handleLayout}
+            disabled={!canReset}
+          >
             Reset layout
           </Button>
           <RenderToolkit

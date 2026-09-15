@@ -9,10 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
-    include: [
-      'tests/{integration,unit}/**/*.test.ts',
-      'tests/{integration,unit}/**/start.ts',
-    ],
+    include: ['tests/{integration,unit}/**/*.test.ts', 'tests/{integration,unit}/**/start.ts'],
     exclude: ['tests/unit/scripts/**'],
   },
 });

@@ -37,12 +37,9 @@ describe('observability redaction', () => {
   });
 
   test('redacts secrets and URLs inside strings', () => {
-    const value =
-      'Bearer abcdefghijklmnop and https://internal.example.local/a and me@example.com';
+    const value = 'Bearer abcdefghijklmnop and https://internal.example.local/a and me@example.com';
 
-    expect(redactString(value)).toBe(
-      'Bearer [REDACTED] and [REDACTED] and [REDACTED]'
-    );
+    expect(redactString(value)).toBe('Bearer [REDACTED] and [REDACTED] and [REDACTED]');
   });
 
   test('redacts browser logs before writing', () => {
@@ -67,7 +64,7 @@ describe('observability redaction', () => {
         input: { source: 'flowchart LR Secret[Customer system]' },
         url: 'https://internal.example.local/a',
       },
-      'saved graph'
+      'saved graph',
     );
 
     expect(writtenLine).toContain('[REDACTED]');

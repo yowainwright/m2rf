@@ -32,6 +32,8 @@ it('preserves an existing version-1 database and appends its next save', async (
     workspace,
   });
   expect(updated.versions.map((version) => version.version)).toEqual([2, 1]);
-  expect((await graphRepository.read(workspace.id, String(input.id)))?.input.source).toBe(input.source);
+  expect((await graphRepository.read(workspace.id, String(input.id)))?.input.source).toBe(
+    input.source,
+  );
   await graphRepository.delete(workspace.id);
 });

@@ -6,16 +6,27 @@ export const SKILL_PATH = '.agents/skills/shadcn-mcp/SKILL.md';
 export const COMPONENTS_TARGET = '/workspace/components.json';
 
 export const DOCKER_ARGUMENTS: readonly string[] = [
-  'run', '--rm', '-i', '--init',
+  'run',
+  '--rm',
+  '-i',
+  '--init',
   '--read-only',
-  '--user', '1000:1000',
-  '--cap-drop', 'ALL',
-  '--security-opt', 'no-new-privileges',
-  '--cpus', '1',
-  '--memory', '1g',
-  '--pids-limit', '128',
-  '--tmpfs', '/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777',
-  '--pull', 'never',
+  '--user',
+  '1000:1000',
+  '--cap-drop',
+  'ALL',
+  '--security-opt',
+  'no-new-privileges',
+  '--cpus',
+  '1',
+  '--memory',
+  '1g',
+  '--pids-limit',
+  '128',
+  '--tmpfs',
+  '/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777',
+  '--pull',
+  'never',
 ];
 
 export const SKILL_CONTENT = `---

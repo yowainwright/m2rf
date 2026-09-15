@@ -12,9 +12,12 @@ export function WorkspaceHeader() {
   const canDelete = AppContext.useSelector((state) => state.can({ type: 'workspace.delete' }));
   const canSave = AppContext.useSelector((state) => state.can({ type: 'workspace.save' }));
   const canNavigate = AppContext.useSelector((state) => state.can({ type: 'workspace.create' }));
-  const canExport = AppContext.useSelector((state) => state.can({
-    type: 'export.start', request: { format: 'svg', repeat: 'forever' },
-  }));
+  const canExport = AppContext.useSelector((state) =>
+    state.can({
+      type: 'export.start',
+      request: { format: 'svg', repeat: 'forever' },
+    }),
+  );
   const saveLabel = AppContext.useSelector(getSaveLabel);
   const handleSave = () => {
     logAppEvent('workspace.save');
@@ -45,14 +48,32 @@ export function WorkspaceHeader() {
         <WorkspaceTitle />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Button className="min-w-16" disabled={!canSave} size="sm" type="button" onClick={handleSave}>
+        <Button
+          className="min-w-16"
+          disabled={!canSave}
+          size="sm"
+          type="button"
+          onClick={handleSave}
+        >
           {saveLabel}
         </Button>
         <ExportMenu canExport={canExport} onExport={handleExport} />
-        <Button size="sm" type="button" variant="outline" onClick={handleCreate} disabled={!canNavigate}>
+        <Button
+          size="sm"
+          type="button"
+          variant="outline"
+          onClick={handleCreate}
+          disabled={!canNavigate}
+        >
           New
         </Button>
-        <Button disabled={!canDelete} size="sm" type="button" variant="outline" onClick={handleDelete}>
+        <Button
+          disabled={!canDelete}
+          size="sm"
+          type="button"
+          variant="outline"
+          onClick={handleDelete}
+        >
           Delete
         </Button>
       </div>

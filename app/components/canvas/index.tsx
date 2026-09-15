@@ -19,7 +19,11 @@ import type {
   GradientMeshLayerProps,
   GradientMeshShadersProps,
 } from './types';
-import { getAuroraFallbackBackground, getGradientMeshFallbackBackground, getPatternStyle } from './utils';
+import {
+  getAuroraFallbackBackground,
+  getGradientMeshFallbackBackground,
+  getPatternStyle,
+} from './utils';
 
 const AuroraLayer = ({ colorA, colorB, colorC }: AuroraLayerProps) => (
   <Shader className={SHADER_LAYER_CLASS_NAME}>
@@ -73,12 +77,7 @@ export const CanvasBackground = ({ gradient, pattern, preset, shader }: CanvasBa
 
   if (preset === 'gradient') {
     const style = { backgroundImage: createGradientImage(gradient) };
-    return (
-      <div
-        className={CANVAS_BACKGROUND_CLASS_NAME}
-        style={style}
-      />
-    );
+    return <div className={CANVAS_BACKGROUND_CLASS_NAME} style={style} />;
   }
 
   if (preset === 'aurora') {

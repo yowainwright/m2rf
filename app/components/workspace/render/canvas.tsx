@@ -1,6 +1,13 @@
 'use client';
 
-import { EdgeLabelRenderer, NodeToolbar, Position, ReactFlow, ReactFlowProvider, Controls } from 'reactflow';
+import {
+  EdgeLabelRenderer,
+  NodeToolbar,
+  Position,
+  ReactFlow,
+  ReactFlowProvider,
+  Controls,
+} from 'reactflow';
 import { CANVAS_GRID } from '@/app/components/toolkit/constants';
 import { EDGE_ANCHOR_STYLE } from '@/app/constants';
 import { handleReactFlowError } from '@/app/utils';
@@ -26,8 +33,17 @@ export function GraphCanvas({
   snapToGrid,
 }: GraphCanvasProps) {
   const selectedNodeIndicator = selectedNodeId ? (
-    <NodeToolbar className="nodrag nopan" isVisible nodeId={selectedNodeId} offset={12} position={Position.Top}>
-      <div className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm" data-m2rf-export-ignore="true">
+    <NodeToolbar
+      className="nodrag nopan"
+      isVisible
+      nodeId={selectedNodeId}
+      offset={12}
+      position={Position.Top}
+    >
+      <div
+        className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm"
+        data-m2rf-export-ignore="true"
+      >
         Node selected
       </div>
     </NodeToolbar>
@@ -35,11 +51,16 @@ export function GraphCanvas({
   const selectedEdgeTransform = selectedEdgeAnchor
     ? `translate(-50%, -50%) translate(${selectedEdgeAnchor.x}px, ${selectedEdgeAnchor.y}px)`
     : '';
-  const selectedEdgeStyle = Object.assign({}, EDGE_ANCHOR_STYLE, { transform: selectedEdgeTransform });
+  const selectedEdgeStyle = Object.assign({}, EDGE_ANCHOR_STYLE, {
+    transform: selectedEdgeTransform,
+  });
   const selectedEdgeIndicator = selectedEdgeAnchor ? (
     <EdgeLabelRenderer>
       <div className="nodrag nopan absolute" style={selectedEdgeStyle}>
-        <div className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm" data-m2rf-export-ignore="true">
+        <div
+          className="rounded-md border bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm"
+          data-m2rf-export-ignore="true"
+        >
           Edge selected
         </div>
       </div>

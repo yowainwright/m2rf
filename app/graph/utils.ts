@@ -3,31 +3,74 @@ import { Array as EffectArray, Number as EffectNumber } from 'effect';
 import type { CSSProperties } from 'react';
 import { MarkerType, Position, type Edge, type EdgeMarker, type Node } from 'reactflow';
 import {
-  DEFAULT_SETTINGS, EDGE_ID_PATTERN, EDGE_MARKER_OPTIONS, EDGE_SELECTOR,
-  EDGE_TYPE_OPTIONS, EDGE_WIDTH_LIMITS, GRAPH_DATABASE_NAME, GRAPH_INPUT_FORMAT,
-  GRAPH_TABLES, GRAPH_VERSION_LIMIT, GRADIENT_DIRECTION_OPTIONS, NODE_ID_PATTERN, NODE_PATTERN_SIZE, NODE_SHAPE_OPTIONS,
-  SEQUENCE_ACTION_NODE_HEIGHT, SEQUENCE_ACTION_NODE_MIN_WIDTH,
-  SEQUENCE_ACTOR_FIGURE_WIDTH, SEQUENCE_ACTION_NODE_TYPE, SEQUENCE_FRAME_NODE_TYPE,
-  SEQUENCE_MESSAGE_EDGE_TYPE, SEQUENCE_NOTE_NODE_TYPE,
-  SEQUENCE_PARTICIPANT_NODE_TYPE, SEQUENCE_SELF_MESSAGE_HEIGHT,
+  DEFAULT_SETTINGS,
+  EDGE_ID_PATTERN,
+  EDGE_MARKER_OPTIONS,
+  EDGE_SELECTOR,
+  EDGE_TYPE_OPTIONS,
+  EDGE_WIDTH_LIMITS,
+  GRAPH_DATABASE_NAME,
+  GRAPH_INPUT_FORMAT,
+  GRAPH_TABLES,
+  GRAPH_VERSION_LIMIT,
+  GRADIENT_DIRECTION_OPTIONS,
+  NODE_ID_PATTERN,
+  NODE_PATTERN_SIZE,
+  NODE_SHAPE_OPTIONS,
+  SEQUENCE_ACTION_NODE_HEIGHT,
+  SEQUENCE_ACTION_NODE_MIN_WIDTH,
+  SEQUENCE_ACTOR_FIGURE_WIDTH,
+  SEQUENCE_ACTION_NODE_TYPE,
+  SEQUENCE_FRAME_NODE_TYPE,
+  SEQUENCE_MESSAGE_EDGE_TYPE,
+  SEQUENCE_NOTE_NODE_TYPE,
+  SEQUENCE_PARTICIPANT_NODE_TYPE,
+  SEQUENCE_SELF_MESSAGE_HEIGHT,
   SEQUENCE_SELF_MESSAGE_OFFSET,
   SEQUENCE_NODE_DEFAULTS,
-  EMPTY_GRAPH_NAME_ERROR, LEGACY_UNTITLED_GRAPH_NAME, MISSING_GRAPH_ERROR,
+  EMPTY_GRAPH_NAME_ERROR,
+  LEGACY_UNTITLED_GRAPH_NAME,
+  MISSING_GRAPH_ERROR,
 } from './constants';
 import type {
-  CreateGraphRecordsInput, EdgeAnimation, EdgeMarkerValue, EdgeType, FlowNodeRecord,
-  GraphDatabase, GraphElements, GraphInput, GraphRecords, GraphRepository,
-  GraphDiagramType, GraphGradientSettings, GraphTranslation, GraphWorkspace, GradientDirection,
-  SequenceActionData, SequenceActivation, SequenceFrameData, SequenceFrameSection,
-  SequenceMessageData, SequenceMessageRecord, SequenceMessagePoint, SequenceNoteData,
-  SequenceParticipantData, SequenceParticipantHandle, SequenceParticipantRecord,
+  CreateGraphRecordsInput,
+  EdgeAnimation,
+  EdgeMarkerValue,
+  EdgeType,
+  FlowNodeRecord,
+  GraphDatabase,
+  GraphElements,
+  GraphInput,
+  GraphRecords,
+  GraphRepository,
+  GraphDiagramType,
+  GraphGradientSettings,
+  GraphTranslation,
+  GraphWorkspace,
+  GradientDirection,
+  SequenceActionData,
+  SequenceActivation,
+  SequenceFrameData,
+  SequenceFrameSection,
+  SequenceMessageData,
+  SequenceMessageRecord,
+  SequenceMessagePoint,
+  SequenceNoteData,
+  SequenceParticipantData,
+  SequenceParticipantHandle,
+  SequenceParticipantRecord,
   TranslationSettings,
   UpdateGraphRecordsInput,
 } from './types';
 
 const SURGE_EDGE_TYPE = 'surge';
 const SEQUENCE_MESSAGE_KIND = 'sequence-message';
-const SEQUENCE_NODE_KINDS = new Set(['sequence-action', 'sequence-frame', 'sequence-note', 'sequence-participant']);
+const SEQUENCE_NODE_KINDS = new Set([
+  'sequence-action',
+  'sequence-frame',
+  'sequence-note',
+  'sequence-participant',
+]);
 const SEQUENCE_FRAME_TYPES = new Set(['alt', 'opt', 'rect']);
 const NODE_COLOR_VARIABLE = '--m2rf-node-primary';
 const NODE_SURFACE_VARIABLE = '--m2rf-node-surface';
@@ -37,8 +80,17 @@ const NODE_GRADIENT_DIRECTION_VARIABLE = '--m2rf-node-gradient-direction';
 const NODE_GRADIENT_SPLIT_VARIABLE = '--m2rf-node-gradient-split';
 const NODE_SHAPE_VARIABLE = '--m2rf-node-shape';
 const NODE_SHAPE_STYLE_KEYS = [
-  'aspectRatio', 'borderRadius', 'clipPath', 'display', 'alignItems', 'justifyContent',
-  'minHeight', 'minWidth', 'padding', 'textAlign', 'width',
+  'aspectRatio',
+  'borderRadius',
+  'clipPath',
+  'display',
+  'alignItems',
+  'justifyContent',
+  'minHeight',
+  'minWidth',
+  'padding',
+  'textAlign',
+  'width',
 ] as const;
 
 const database = new Dexie(GRAPH_DATABASE_NAME) as GraphDatabase;
@@ -50,11 +102,14 @@ database.version(1).stores({
   [GRAPH_TABLES.workspaces]: 'id, updatedAt',
 });
 
-database.version(2).stores({
-  [GRAPH_TABLES.inputs]: 'id, workspaceId, updatedAt, [workspaceId+version]',
-}).upgrade((transaction) => {
-  return transaction.table(GRAPH_TABLES.inputs).toCollection().modify({ version: 1 });
-});
+database
+  .version(2)
+  .stores({
+    [GRAPH_TABLES.inputs]: 'id, workspaceId, updatedAt, [workspaceId+version]',
+  })
+  .upgrade((transaction) => {
+    return transaction.table(GRAPH_TABLES.inputs).toCollection().modify({ version: 1 });
+  });
 
 const readInputs = (workspaceId: string) => {
   const lower = [workspaceId, Dexie.minKey];
@@ -69,13 +124,17 @@ const toVersion = ({ id, updatedAt, version }: GraphInput) => {
 const createRecords = (
   records: CreateGraphRecordsInput,
   workspaceId: string = records.workspace.id || crypto.randomUUID(),
-  version = 1
+  version = 1,
 ): GraphRecords => {
   const id = crypto.randomUUID();
   const translationId = crypto.randomUUID();
   const updatedAt = new Date().toISOString();
   const input = Object.assign({}, records.input, { id, updatedAt, version, workspaceId });
-  const translation = Object.assign({}, records.translation, { id: translationId, inputId: id, updatedAt });
+  const translation = Object.assign({}, records.translation, {
+    id: translationId,
+    inputId: id,
+    updatedAt,
+  });
   const workspace = Object.assign({}, records.workspace, {
     activeInputId: id,
     activeTranslationId: translationId,
@@ -105,7 +164,7 @@ const putRecords = async (records: GraphRecords) => {
 
 const readRecords = async (
   workspaceId: string,
-  versionId?: string
+  versionId?: string,
 ): Promise<GraphRecords | null> => {
   const workspace = await database.workspaces.get(workspaceId);
   if (!workspace) return null;
@@ -195,7 +254,7 @@ export const createPolkaPinPatternImage = (color: string) => {
 
 const getNodeSurfaceImage = (
   surface: TranslationSettings['nodeSurface'],
-  gradient: GraphGradientSettings
+  gradient: GraphGradientSettings,
 ) => {
   if (surface === 'gradient') return createGradientImage(gradient);
   if (surface === 'pattern-grid') {
@@ -257,7 +316,8 @@ const getNodeShapeStyles = (shape: TranslationSettings['nodeShape']): CSSPropert
     });
   }
   const roundShapeStyles = { aspectRatio: '1 / 1' };
-  if (shape === 'circle') return Object.assign({}, contentStyles, roundShapeStyles, { borderRadius: '50%' });
+  if (shape === 'circle')
+    return Object.assign({}, contentStyles, roundShapeStyles, { borderRadius: '50%' });
   return Object.assign({}, contentStyles, roundShapeStyles);
 };
 
@@ -270,7 +330,10 @@ const getNodeStyleValue = (style: CSSProperties | undefined, key: string) => {
   return (style as CSSProperties & Record<string, unknown>)[key];
 };
 
-const getNodeBorder = (style: CSSProperties | undefined, fallback: TranslationSettings['nodeBorder']) => {
+const getNodeBorder = (
+  style: CSSProperties | undefined,
+  fallback: TranslationSettings['nodeBorder'],
+) => {
   const value = getNodeStyleValue(style, 'borderStyle');
   if (typeof value === 'string') return value as TranslationSettings['nodeBorder'];
   const border = getNodeStyleValue(style, 'border');
@@ -281,7 +344,10 @@ const getNodeBorder = (style: CSSProperties | undefined, fallback: TranslationSe
   return fallback;
 };
 
-const getNodeSurface = (style: CSSProperties | undefined, fallback: TranslationSettings['nodeSurface']) => {
+const getNodeSurface = (
+  style: CSSProperties | undefined,
+  fallback: TranslationSettings['nodeSurface'],
+) => {
   const value = getNodeStyleValue(style, NODE_SURFACE_VARIABLE);
   const hasSurface = typeof value === 'string';
   if (hasSurface) return value as TranslationSettings['nodeSurface'];
@@ -303,7 +369,10 @@ const getNodeGradient = (style: CSSProperties | undefined, fallback: GraphGradie
   return { colorA, colorB, direction, split };
 };
 
-const getNodeShadowValue = (style: CSSProperties | undefined, fallback: TranslationSettings['nodeShadow']) => {
+const getNodeShadowValue = (
+  style: CSSProperties | undefined,
+  fallback: TranslationSettings['nodeShadow'],
+) => {
   const value = getNodeStyleValue(style, 'boxShadow');
   if (value === getNodeShadow('soft')) return 'soft';
   if (value === getNodeShadow('strong')) return 'strong';
@@ -311,7 +380,10 @@ const getNodeShadowValue = (style: CSSProperties | undefined, fallback: Translat
   return fallback;
 };
 
-const getNodeShape = (style: CSSProperties | undefined, fallback: TranslationSettings['nodeShape']) => {
+const getNodeShape = (
+  style: CSSProperties | undefined,
+  fallback: TranslationSettings['nodeShape'],
+) => {
   const value = getNodeStyleValue(style, NODE_SHAPE_VARIABLE);
   const option = NODE_SHAPE_OPTIONS.find((item) => item.value === value);
   return option?.value || fallback;
@@ -329,17 +401,25 @@ export const createNodeStyle = (settings: TranslationSettings) => {
     [NODE_GRADIENT_DIRECTION_VARIABLE]: settings.nodeGradient.direction,
     [NODE_GRADIENT_SPLIT_VARIABLE]: settings.nodeGradient.split,
   };
-  return Object.assign({}, {
-    backgroundColor: settings.primaryColor,
-    borderColor: settings.primaryColor,
-    borderStyle: settings.nodeBorder,
-    borderWidth,
-    boxShadow: getNodeShadow(settings.nodeShadow),
-    color: settings.inverseColor,
-    fontFamily: settings.fontFamily,
-    backgroundImage: getNodeSurfaceImage(settings.nodeSurface, settings.nodeGradient),
-    backgroundSize,
-  }, colorVariable, surfaceVariable, shapeVariable, gradientVariables, getNodeShapeStyles(settings.nodeShape)) as CSSProperties;
+  return Object.assign(
+    {},
+    {
+      backgroundColor: settings.primaryColor,
+      borderColor: settings.primaryColor,
+      borderStyle: settings.nodeBorder,
+      borderWidth,
+      boxShadow: getNodeShadow(settings.nodeShadow),
+      color: settings.inverseColor,
+      fontFamily: settings.fontFamily,
+      backgroundImage: getNodeSurfaceImage(settings.nodeSurface, settings.nodeGradient),
+      backgroundSize,
+    },
+    colorVariable,
+    surfaceVariable,
+    shapeVariable,
+    gradientVariables,
+    getNodeShapeStyles(settings.nodeShape),
+  ) as CSSProperties;
 };
 
 export const createEdgeStyle = (settings: TranslationSettings) => {
@@ -401,7 +481,8 @@ const getSequenceStyleOverrides = (style: CSSProperties): CSSProperties => {
   return Object.fromEntries(entries);
 };
 
-const createSequenceStyle = (settings: TranslationSettings) => getSequenceStyleOverrides(createNodeStyle(settings));
+const createSequenceStyle = (settings: TranslationSettings) =>
+  getSequenceStyleOverrides(createNodeStyle(settings));
 
 const getNodeAppearanceStyle = (node: Node | undefined) => {
   if (!node) return undefined;
@@ -409,21 +490,19 @@ const getNodeAppearanceStyle = (node: Node | undefined) => {
   const savedStyle = node.data.style || {};
   if (node.data.styleVersion === 1) return savedStyle;
   const style = getSequenceStyleOverrides(savedStyle);
-  const isSourceFill = node.data.kind === 'sequence-frame' && style.backgroundColor === node.data.fill;
+  const isSourceFill =
+    node.data.kind === 'sequence-frame' && style.backgroundColor === node.data.fill;
   if (!isSourceFill) return style;
   const { backgroundColor: _backgroundColor, ...overrides } = style;
   return overrides;
 };
 
-const createNodeStyleUpdate = (
-  node: Node,
-  settings: Partial<TranslationSettings>
-) => {
+const createNodeStyleUpdate = (node: Node, settings: Partial<TranslationSettings>) => {
   const nodeAppearanceStyle = getNodeAppearanceStyle(node);
   const style = Object.assign({}, nodeAppearanceStyle) as CSSProperties & Record<string, unknown>;
   const currentColor = getColorValue(
     style[NODE_COLOR_VARIABLE],
-    getColorValue(style.backgroundColor, DEFAULT_SETTINGS.primaryColor)
+    getColorValue(style.backgroundColor, DEFAULT_SETTINGS.primaryColor),
   );
   const currentSurface = getNodeSurface(nodeAppearanceStyle, DEFAULT_SETTINGS.nodeSurface);
   const currentGradient = getNodeGradient(nodeAppearanceStyle, DEFAULT_SETTINGS.nodeGradient);
@@ -483,7 +562,7 @@ const updateEdgeMarker = (
   edge: Edge,
   key: 'markerStart' | 'markerEnd',
   value: EdgeMarkerValue | undefined,
-  color: string
+  color: string,
 ) => {
   const isSequence = edge.data?.kind === SEQUENCE_MESSAGE_KIND;
   const hasNoSequenceMarker = isSequence && !edge.data?.[key];
@@ -492,22 +571,19 @@ const updateEdgeMarker = (
   return createEdgeMarker(value, color);
 };
 
-const createEdgeUpdate = (
-  edge: Edge,
-  settings: Partial<TranslationSettings>
-) => {
+const createEdgeUpdate = (edge: Edge, settings: Partial<TranslationSettings>) => {
   const edgeSettings = getSettings(settings);
   const isSequenceMessage = edge.data?.kind === SEQUENCE_MESSAGE_KIND;
   const isSequenceSourceSegment = isSequenceMessage && edge.data?.segment === 'source';
   const keepsAnimation = settings.edgeAnimation === undefined;
   const keepsType = settings.edgeType === undefined;
   const currentType = getEdgeTypeValue(edge, DEFAULT_SETTINGS);
-  const animation = keepsAnimation ? getEdgeAnimationValue(edge, DEFAULT_SETTINGS) : edgeSettings.edgeAnimation;
+  const animation = keepsAnimation
+    ? getEdgeAnimationValue(edge, DEFAULT_SETTINGS)
+    : edgeSettings.edgeAnimation;
   const isSurge = animation === 'surge';
   const animated = keepsAnimation ? edge.animated : getEdgeAnimated(edgeSettings);
-  const className = keepsAnimation
-    ? edge.className
-    : getEdgeAnimationClassName(edgeSettings);
+  const className = keepsAnimation ? edge.className : getEdgeAnimationClassName(edgeSettings);
   const edgeType = keepsType ? currentType : edgeSettings.edgeType;
   let type: string = edgeType;
   if (isSequenceMessage) type = SEQUENCE_MESSAGE_EDGE_TYPE;
@@ -551,7 +627,7 @@ const createEdgeUpdate = (
 export const updateSelectedNodes = (
   elements: GraphElements,
   nodeIds: string[],
-  settings: Partial<TranslationSettings>
+  settings: Partial<TranslationSettings>,
 ): GraphElements => {
   const selectedIds = new Set(nodeIds);
   const nodes = elements.nodes.map((node) => {
@@ -568,7 +644,7 @@ export const updateSelectedNodes = (
 export const updateSelectedEdges = (
   elements: GraphElements,
   edgeIds: string[],
-  settings: Partial<TranslationSettings>
+  settings: Partial<TranslationSettings>,
 ): GraphElements => {
   const selectedIds = new Set(edgeIds);
   const edges = elements.edges.map((edge) => {
@@ -614,47 +690,31 @@ const getSequenceNodeDefaults = (node: Node | undefined) => {
   return SEQUENCE_NODE_DEFAULTS[kind];
 };
 
-export const getNodeFillValue = (
-  node: Node | undefined,
-  settings: TranslationSettings
-) => {
+export const getNodeFillValue = (node: Node | undefined, settings: TranslationSettings) => {
   const style = getNodeAppearanceStyle(node);
   const defaultFill = getSequenceNodeDefaults(node)?.fill || settings.primaryColor;
   const sourceFill = node?.data?.fill || defaultFill;
   return getColorValue(style?.backgroundColor, sourceFill);
 };
 
-export const getNodeTextValue = (
-  node: Node | undefined,
-  settings: TranslationSettings
-) => {
+export const getNodeTextValue = (node: Node | undefined, settings: TranslationSettings) => {
   const style = getNodeAppearanceStyle(node);
   const defaultText = getSequenceNodeDefaults(node) ? '#111827' : settings.inverseColor;
   return getColorValue(style?.color, defaultText);
 };
 
-export const getNodeBorderValue = (
-  node: Node | undefined,
-  settings: TranslationSettings
-) => {
+export const getNodeBorderValue = (node: Node | undefined, settings: TranslationSettings) => {
   const defaultBorder = getSequenceNodeDefaults(node)?.border || settings.nodeBorder;
   return getNodeBorder(getNodeAppearanceStyle(node), defaultBorder);
 };
 
-export const getNodeGradientValue = (
-  node: Node | undefined,
-  settings: TranslationSettings
-) => getNodeGradient(getNodeAppearanceStyle(node), settings.nodeGradient);
+export const getNodeGradientValue = (node: Node | undefined, settings: TranslationSettings) =>
+  getNodeGradient(getNodeAppearanceStyle(node), settings.nodeGradient);
 
-export const getNodeShadowValueForNode = (
-  node: Node | undefined,
-  settings: TranslationSettings
-) => getNodeShadowValue(getNodeAppearanceStyle(node), settings.nodeShadow);
+export const getNodeShadowValueForNode = (node: Node | undefined, settings: TranslationSettings) =>
+  getNodeShadowValue(getNodeAppearanceStyle(node), settings.nodeShadow);
 
-export const getNodeSurfaceValue = (
-  node: Node | undefined,
-  settings: TranslationSettings
-) => {
+export const getNodeSurfaceValue = (node: Node | undefined, settings: TranslationSettings) => {
   const style = getNodeAppearanceStyle(node);
   const customFill = node?.data?.fill || style?.backgroundColor;
   const defaultSurface = getSequenceNodeDefaults(node)?.surface || settings.nodeSurface;
@@ -662,35 +722,28 @@ export const getNodeSurfaceValue = (
   return getNodeSurface(style, surface);
 };
 
-export const getNodeShapeValue = (
-  node: Node | undefined,
-  settings: TranslationSettings
-) => getNodeShape(getNodeAppearanceStyle(node), settings.nodeShape);
+export const getNodeShapeValue = (node: Node | undefined, settings: TranslationSettings) =>
+  getNodeShape(getNodeAppearanceStyle(node), settings.nodeShape);
 
-export const getEdgeColorValue = (
-  edge: Edge | undefined,
-  settings: TranslationSettings
-) => {
+export const getEdgeColorValue = (edge: Edge | undefined, settings: TranslationSettings) => {
   return getColorValue(edge?.style?.stroke, settings.edgeColor);
 };
 
-export const getEdgeWidthValue = (
-  edge: Edge | undefined,
-  settings: TranslationSettings
-) => {
+export const getEdgeWidthValue = (edge: Edge | undefined, settings: TranslationSettings) => {
   const width = getNumberValue(edge?.style?.strokeWidth, settings.edgeWidth);
   return clampEdgeWidth(width);
 };
 
 export const getEdgeMarkerValue = (
   edge: Edge | undefined,
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ): EdgeMarkerValue => {
   if (!edge) {
     return settings.edgeMarker;
   }
 
-  const isSequenceSourceSegment = edge.data?.kind === SEQUENCE_MESSAGE_KIND && edge.data?.segment === 'source';
+  const isSequenceSourceSegment =
+    edge.data?.kind === SEQUENCE_MESSAGE_KIND && edge.data?.segment === 'source';
   const marker = isSequenceSourceSegment ? edge.markerStart : edge.markerEnd;
   if (typeof marker !== 'object') {
     return 'none';
@@ -702,7 +755,7 @@ export const getEdgeMarkerValue = (
 
 export const getEdgeTypeValue = (
   edge: Edge | undefined,
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ): EdgeType => {
   if (edge?.type === undefined) {
     return settings.edgeType;
@@ -727,7 +780,7 @@ export const getEdgeTypeValue = (
 
 export const getEdgeAnimationValue = (
   edge: Edge | undefined,
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ): EdgeAnimation => {
   if (!edge) return settings.edgeAnimation;
   if (edge.type === SURGE_EDGE_TYPE) {
@@ -785,7 +838,7 @@ export const getEdgeAnchor = (edge: Edge, nodes: Node[]) => {
 
 export const applySettings = (
   elements: GraphElements,
-  settings: Partial<TranslationSettings>
+  settings: Partial<TranslationSettings>,
 ): GraphElements => {
   const nodes = elements.nodes.map((node) => {
     return applyNodeStyle(node, createNodeStyleUpdate(node, settings));
@@ -797,7 +850,7 @@ export const applySettings = (
 
 const hydrateElementSettings = (
   elements: GraphElements,
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ): GraphElements => {
   const nodes = elements.nodes.map((node) => {
     const isSequence = SEQUENCE_NODE_KINDS.has(node.data?.kind);
@@ -817,9 +870,7 @@ const hydrateElementSettings = (
     const defaultClassName = hasAnimation ? '' : getEdgeAnimationClassName(settings);
     const isSurge = edge.type === SURGE_EDGE_TYPE;
     const edgeType = getEdgeTypeValue(edge, settings);
-    const data = isSurge
-      ? Object.assign({}, edge.data, { edgeType })
-      : edge.data;
+    const data = isSurge ? Object.assign({}, edge.data, { edgeType }) : edge.data;
 
     return Object.assign({}, edge, {
       animated: edge.animated ?? getEdgeAnimated(settings),
@@ -835,9 +886,7 @@ const hydrateElementSettings = (
   return { nodes, edges };
 };
 
-const getSettings = (
-  settings: Partial<TranslationSettings>
-): TranslationSettings => {
+const getSettings = (settings: Partial<TranslationSettings>): TranslationSettings => {
   const edgeWidth = clampEdgeWidth(settings.edgeWidth ?? DEFAULT_SETTINGS.edgeWidth);
   return Object.assign({}, DEFAULT_SETTINGS, settings, { edgeWidth });
 };
@@ -846,7 +895,8 @@ const normalizeNodeStyle = (style: CSSProperties, settings: TranslationSettings)
   const legacyBorder = getNodeStyleValue(style, 'border');
   if (legacyBorder === undefined) return style;
   const normalized = Object.assign({}, style) as CSSProperties & Record<string, unknown>;
-  normalized.borderColor = normalized.borderColor || getColorValue(style.backgroundColor, settings.primaryColor);
+  normalized.borderColor =
+    normalized.borderColor || getColorValue(style.backgroundColor, settings.primaryColor);
   delete normalized.border;
   return normalized;
 };
@@ -911,7 +961,7 @@ const restoreEdgeAppearance = (edge: Edge, savedEdges: Map<string, Edge>) => {
 export const applySavedAppearance = (
   elements: GraphElements,
   savedElements: GraphElements,
-  resetLayout = false
+  resetLayout = false,
 ): GraphElements => {
   const entries = savedElements.nodes.map((node) => [node.id, node] as const);
   const savedNodes = new Map(entries);
@@ -922,7 +972,8 @@ export const applySavedAppearance = (
     if (!saved) return node;
     const { selected } = saved;
     const style = getNodeAppearanceStyle(saved);
-    const isLegacySequence = SEQUENCE_NODE_KINDS.has(saved.data?.kind) && saved.data.styleVersion !== 1;
+    const isLegacySequence =
+      SEQUENCE_NODE_KINDS.has(saved.data?.kind) && saved.data.styleVersion !== 1;
     const useFreshLayout = resetLayout || isLegacySequence;
     const position = useFreshLayout ? node.position : saved.position;
     return applyNodeStyle(Object.assign({}, node, { position, selected }), style);
@@ -992,7 +1043,7 @@ const createEndpointMap = (nodes: FlowNodeRecord[]) => {
 const getEndpoint = (
   rawValue: string | undefined,
   endpointMap: Map<string, string>,
-  fallback: string
+  fallback: string,
 ) => {
   if (!rawValue) {
     return fallback;
@@ -1013,7 +1064,7 @@ const getEndpoint = (
 const createFlowNode = (
   node: FlowNodeRecord,
   index: number,
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ): Node => {
   const x = index * 280;
   const isEven = index % 2 === 0;
@@ -1032,7 +1083,7 @@ const createFlowEdge = (
   index: number,
   nodes: FlowNodeRecord[],
   settings: TranslationSettings,
-  endpointMap: Map<string, string>
+  endpointMap: Map<string, string>,
 ): Edge => {
   const edgeIdEndpoints = getEdgeIdEndpoints(edge);
   const source = getClassValue(edge, 'LS-') || edgeIdEndpoints.source;
@@ -1062,7 +1113,7 @@ const createFlowEdge = (
 const createFlowEdges = (
   svg: SVGSVGElement,
   nodes: FlowNodeRecord[],
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ) => {
   const endpointMap = createEndpointMap(nodes);
   return Array.from(svg.querySelectorAll(EDGE_SELECTOR)).map((edge, index) => {
@@ -1155,14 +1206,21 @@ const readSequenceSections = (group: Element, bounds: SequenceBounds) => {
 };
 
 const readSequenceControlFrames = (svg: SVGSVGElement): SequenceFrameRecord[] => {
-  const frames = Array.from(svg.querySelectorAll('g[data-et="control-structure"]')).map((group, index) => {
-    const bounds = readSequenceBounds(Array.from(group.querySelectorAll('.loopLine')));
-    if (!bounds) return null;
-    const sections = readSequenceSections(group, bounds);
-    const frameType = getSequenceFrameType(getText(group, '.labelText'));
-    const id = group.getAttribute('data-id') || `control-${index}`;
-    return Object.assign({}, bounds, { frameType, id: `frame-${id}`, label: getText(group, '.loopText'), sections });
-  });
+  const frames = Array.from(svg.querySelectorAll('g[data-et="control-structure"]')).map(
+    (group, index) => {
+      const bounds = readSequenceBounds(Array.from(group.querySelectorAll('.loopLine')));
+      if (!bounds) return null;
+      const sections = readSequenceSections(group, bounds);
+      const frameType = getSequenceFrameType(getText(group, '.labelText'));
+      const id = group.getAttribute('data-id') || `control-${index}`;
+      return Object.assign({}, bounds, {
+        frameType,
+        id: `frame-${id}`,
+        label: getText(group, '.loopText'),
+        sections,
+      });
+    },
+  );
   return frames.filter((frame): frame is SequenceFrameRecord => frame !== null);
 };
 
@@ -1187,7 +1245,8 @@ const readSequenceRectFrames = (svg: SVGSVGElement): SequenceFrameRecord[] => {
 };
 
 const readSequenceFrames = (svg: SVGSVGElement) => {
-  return readSequenceRectFrames(svg).concat(readSequenceControlFrames(svg))
+  return readSequenceRectFrames(svg)
+    .concat(readSequenceControlFrames(svg))
     .sort((first, second) => first.y - second.y);
 };
 
@@ -1206,10 +1265,7 @@ const readSequenceNotes = (svg: SVGSVGElement) => {
   });
 };
 
-const readSequenceActivations = (
-  svg: SVGSVGElement,
-  participants: SequenceParticipantRecord[]
-) => {
+const readSequenceActivations = (svg: SVGSVGElement, participants: SequenceParticipantRecord[]) => {
   const activations = new Map<string, SequenceActivation[]>();
   Array.from(svg.querySelectorAll('rect[class^="activation"]')).forEach((rect) => {
     const x = getNumericAttribute(rect, 'x', 0);
@@ -1264,7 +1320,7 @@ const createSequenceNode = (
   height: number,
   activations: SequenceActivation[],
   handles: SequenceParticipantHandle[],
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ): Node<SequenceParticipantData> => {
   const appearanceStyle = createSequenceStyle(settings);
   const frameStyle = {
@@ -1272,7 +1328,14 @@ const createSequenceNode = (
     width: participant.width,
   };
   return {
-    data: { activations, handles, kind: 'sequence-participant', label: participant.label, style: appearanceStyle, styleVersion: 1 },
+    data: {
+      activations,
+      handles,
+      kind: 'sequence-participant',
+      label: participant.label,
+      style: appearanceStyle,
+      styleVersion: 1,
+    },
     id: participant.id,
     position: { x: participant.x, y: 0 },
     sourcePosition: Position.Bottom,
@@ -1297,7 +1360,7 @@ const getActionCenter = (message: SequenceMessageRecord) => {
 
 const getActionWidth = (label: string, sequenceNumber?: string) => {
   const content = [sequenceNumber, label].filter(Boolean).join(' ');
-  const estimatedWidth = (content.length * 8) + 16;
+  const estimatedWidth = content.length * 8 + 16;
   return Math.max(SEQUENCE_ACTION_NODE_MIN_WIDTH, estimatedWidth);
 };
 
@@ -1324,7 +1387,9 @@ const createMessageHandleEntries = (message: SequenceMessageRecord) => {
   return [source, target];
 };
 
-const createParticipantHandles = (entries: ReadonlyArray<readonly [string, SequenceParticipantHandle]>) => {
+const createParticipantHandles = (
+  entries: ReadonlyArray<readonly [string, SequenceParticipantHandle]>,
+) => {
   return entries.map(([, handle]) => handle);
 };
 
@@ -1341,12 +1406,12 @@ const createParticipantHandleMap = (messages: SequenceMessageRecord[]) => {
 
 const createSequenceActionNode = (
   message: SequenceMessageRecord,
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ): Node<SequenceActionData> => {
   const width = getActionWidth(message.label);
   const actionCenter = getActionCenter(message);
-  const x = actionCenter - (width / 2);
-  const y = message.point.y - (SEQUENCE_ACTION_NODE_HEIGHT / 2);
+  const x = actionCenter - width / 2;
+  const y = message.point.y - SEQUENCE_ACTION_NODE_HEIGHT / 2;
   const style = createSequenceStyle(settings);
   return {
     data: {
@@ -1365,7 +1430,7 @@ const createSequenceActionNode = (
 
 const createSequenceNoteNode = (
   note: SequenceBounds & { id: string; label: string },
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ): Node<SequenceNoteData> => {
   const style = createSequenceStyle(settings);
   const { height, id, label, width, x, y } = note;
@@ -1380,7 +1445,7 @@ const createSequenceNoteNode = (
 
 const createSequenceFrameNode = (
   frame: SequenceFrameRecord,
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ): Node<SequenceFrameData> => {
   const style = createSequenceStyle(settings);
   const data: SequenceFrameData = {
@@ -1409,14 +1474,14 @@ const createSequenceMessageRecord = (
   participants: SequenceParticipantRecord[],
   participantsById: Map<string, SequenceParticipantRecord>,
   point: SequenceMessagePoint,
-  sequenceNumber?: string
+  sequenceNumber?: string,
 ): SequenceMessageRecord => {
   const sourceId = element.getAttribute('data-from');
   const targetId = element.getAttribute('data-to');
-  const source = participantsById.get(sourceId || '')
-    || getNearestParticipant(participants, point.sourceX);
-  const target = participantsById.get(targetId || '')
-    || getNearestParticipant(participants, point.targetX);
+  const source =
+    participantsById.get(sourceId || '') || getNearestParticipant(participants, point.sourceX);
+  const target =
+    participantsById.get(targetId || '') || getNearestParticipant(participants, point.targetX);
   if (!source) throw new Error('Mermaid sequence message has no source participant.');
   if (!target) throw new Error('Mermaid sequence message has no target participant.');
   const id = `message-${element.getAttribute('data-id') || index}`;
@@ -1445,7 +1510,7 @@ const getActionHandleId = (type: 'source' | 'target', side: string) => {
 const createSequenceMessageEdge = (
   message: SequenceMessageRecord,
   segment: SequenceMessageData['segment'],
-  settings: TranslationSettings
+  settings: TranslationSettings,
 ): Edge<SequenceMessageData> => {
   const isSourceSegment = segment === 'source';
   const participant = isSourceSegment ? message.source : message.target;
@@ -1470,7 +1535,9 @@ const createSequenceMessageEdge = (
     data,
     id: `${message.id}-${segment}`,
     markerEnd: markerEnd ? createEdgeMarker(settings.edgeMarker, settings.edgeColor) : undefined,
-    markerStart: markerStart ? createEdgeMarker(settings.edgeMarker, settings.edgeColor) : undefined,
+    markerStart: markerStart
+      ? createEdgeMarker(settings.edgeMarker, settings.edgeColor)
+      : undefined,
     source: isSourceSegment ? message.source.id : message.actionId,
     sourceHandle: isSourceSegment
       ? getParticipantHandleId(message.id, 'source', participantSide)
@@ -1484,19 +1551,32 @@ const createSequenceMessageEdge = (
   };
 };
 
-const readSequenceMessages = (
-  svg: SVGSVGElement,
-  participants: SequenceParticipantRecord[]
-) => {
-  const participantEntries = participants.map((participant) => [participant.id, participant] as const);
+const readSequenceMessages = (svg: SVGSVGElement, participants: SequenceParticipantRecord[]) => {
+  const participantEntries = participants.map(
+    (participant) => [participant.id, participant] as const,
+  );
   const participantsById = new Map(participantEntries);
   const messageElements = Array.from(svg.querySelectorAll('[data-et="message"]'));
-  const labels = Array.from(svg.querySelectorAll('.messageText')).map((message) => message.textContent?.trim() || '');
-  const sequenceNumbers = Array.from(svg.querySelectorAll('.sequenceNumber')).map((number) => number.textContent?.trim() || '');
+  const labels = Array.from(svg.querySelectorAll('.messageText')).map(
+    (message) => message.textContent?.trim() || '',
+  );
+  const sequenceNumbers = Array.from(svg.querySelectorAll('.sequenceNumber')).map(
+    (number) => number.textContent?.trim() || '',
+  );
   return messageElements.flatMap((element, index) => {
     const point = readSequenceMessagePoint(element);
     if (!point) return [];
-    return [createSequenceMessageRecord(element, labels[index] || '', index, participants, participantsById, point, sequenceNumbers[index])];
+    return [
+      createSequenceMessageRecord(
+        element,
+        labels[index] || '',
+        index,
+        participants,
+        participantsById,
+        point,
+        sequenceNumbers[index],
+      ),
+    ];
   });
 };
 
@@ -1506,15 +1586,21 @@ const parseSequenceSvg = (svg: SVGSVGElement, settings: TranslationSettings): Gr
   const messages = readSequenceMessages(svg, participants);
   const handleMap = createParticipantHandleMap(messages);
   const activationMap = readSequenceActivations(svg, participants);
-  const frameNodes: Node[] = readSequenceFrames(svg).map((frame) => createSequenceFrameNode(frame, settings));
-  const noteNodes: Node[] = readSequenceNotes(svg).map((note) => createSequenceNoteNode(note, settings));
-  const participantNodes: Node[] = participants.map((participant) => createSequenceNode(
-    participant,
-    height,
-    activationMap.get(participant.id) || [],
-    handleMap.get(participant.id) || [],
-    settings
-  ));
+  const frameNodes: Node[] = readSequenceFrames(svg).map((frame) =>
+    createSequenceFrameNode(frame, settings),
+  );
+  const noteNodes: Node[] = readSequenceNotes(svg).map((note) =>
+    createSequenceNoteNode(note, settings),
+  );
+  const participantNodes: Node[] = participants.map((participant) =>
+    createSequenceNode(
+      participant,
+      height,
+      activationMap.get(participant.id) || [],
+      handleMap.get(participant.id) || [],
+      settings,
+    ),
+  );
   const actionNodes = messages.map((message) => createSequenceActionNode(message, settings));
   const edges = messages.flatMap((message) => [
     createSequenceMessageEdge(message, 'source', settings),
@@ -1526,7 +1612,7 @@ const parseSequenceSvg = (svg: SVGSVGElement, settings: TranslationSettings): Gr
 export const parseMermaidSvg = (
   source: string,
   settings: TranslationSettings,
-  diagramType: GraphDiagramType = 'flowchart'
+  diagramType: GraphDiagramType = 'flowchart',
 ): GraphElements => {
   const svg = readSvg(source);
   if (!svg) throw new Error('Mermaid did not return an SVG.');

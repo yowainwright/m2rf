@@ -57,7 +57,13 @@ export type GraphShaderSettings = {
 export type NodeBorder = 'dashed' | 'dotted' | 'none' | 'solid';
 export type NodeShape = 'circle' | 'cylinder' | 'diamond' | 'rectangle' | 'square';
 export type NodeShadow = 'none' | 'soft' | 'strong';
-export type NodeSurface = 'gradient' | 'pattern-diagonal' | 'pattern-dots' | 'pattern-grid' | 'pattern-polka-pin' | 'solid';
+export type NodeSurface =
+  | 'gradient'
+  | 'pattern-diagonal'
+  | 'pattern-dots'
+  | 'pattern-grid'
+  | 'pattern-polka-pin'
+  | 'solid';
 
 export type FlowNodeRecord = { domId: string; id: string; label: string };
 

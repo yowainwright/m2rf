@@ -34,6 +34,10 @@ tests/                Unit, integration, and end-to-end tests
 
 ## Checks
 
+Oxlint handles JavaScript/TypeScript linting, including the native legibility
+plugin. Oxfmt handles formatting; shell scripts retain their shell-specific checks.
+Formatting is checked by `lint/session` and CI. Run `pnpm run format` to apply it.
+
 ```sh
 pnpm run lint/session
 pnpm run typecheck

@@ -10,7 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/app/components/ui/dialog';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/app/components/ui/resizable';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '@/app/components/ui/resizable';
 import { SidebarInset, SidebarProvider } from '@/app/components/ui/sidebar';
 import { DESKTOP_MEDIA_QUERY } from '@/app/constants';
 import { AppContext } from '@/app';
@@ -55,11 +59,20 @@ export function Workspace() {
 function WorkspacePanels({ isDesktop, panelMinimumSize, panelOrientation }: WorkspacePanelsProps) {
   return (
     <section className="h-[70rem] shrink-0 p-4 lg:h-auto lg:min-h-0 lg:flex-1">
-      <ResizablePanelGroup className="gap-4" disabled={!isDesktop} id="workspace-panels" orientation={panelOrientation}>
+      <ResizablePanelGroup
+        className="gap-4"
+        disabled={!isDesktop}
+        id="workspace-panels"
+        orientation={panelOrientation}
+      >
         <ResizablePanel defaultSize="45%" id="mermaid-panel" minSize={panelMinimumSize}>
           <MermaidEditor />
         </ResizablePanel>
-        <ResizableHandle aria-label="Resize Mermaid and React Flow panels" className="hidden lg:flex" withHandle />
+        <ResizableHandle
+          aria-label="Resize Mermaid and React Flow panels"
+          className="hidden lg:flex"
+          withHandle
+        />
         <ResizablePanel defaultSize="55%" id="flow-panel" minSize={panelMinimumSize}>
           <GraphPreview />
         </ResizablePanel>
@@ -73,7 +86,9 @@ function WorkspaceErrors() {
   const operationError = AppContext.useSelector((state) => state.context.operationError);
   const exportError = AppContext.useSelector((state) => state.context.exportError);
   const translationError = AppContext.useSelector((state) => state.context.translation.error);
-  const errorDialogDismissed = AppContext.useSelector((state) => state.context.errorDialogDismissed);
+  const errorDialogDismissed = AppContext.useSelector(
+    (state) => state.context.errorDialogDismissed,
+  );
   const error = operationError || exportError || translationError;
   const shouldShowError = Boolean(error) && !errorDialogDismissed;
   if (!shouldShowError) return null;
@@ -92,10 +107,14 @@ function WorkspaceErrors() {
       >
         <DialogHeader>
           <DialogTitle id="workspace-error-title">Unable to update the graph</DialogTitle>
-          <DialogDescription id="workspace-error-description" role="alert">{error}</DialogDescription>
+          <DialogDescription id="workspace-error-description" role="alert">
+            {error}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button type="button" onClick={dismiss}>Dismiss</Button>
+          <Button type="button" onClick={dismiss}>
+            Dismiss
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -57,12 +57,20 @@ export function WorkspaceSidebar() {
           title={label}
           type="button"
         >
-          <ChevronRight aria-hidden="true" className={cn('transition-transform', isActive && versionHistoryOpen && 'rotate-90')} />
+          <ChevronRight
+            aria-hidden="true"
+            className={cn('transition-transform', isActive && versionHistoryOpen && 'rotate-90')}
+          />
           <Workflow aria-hidden="true" />
           <span>{label}</span>
         </SidebarMenuButton>
         {isActive && versionHistoryOpen ? (
-          <VersionTree activeId={activeVersionId} disabled={disabled} onSelect={handleVersionSelect} versions={versionItems} />
+          <VersionTree
+            activeId={activeVersionId}
+            disabled={disabled}
+            onSelect={handleVersionSelect}
+            versions={versionItems}
+          />
         ) : null}
       </SidebarMenuItem>
     );

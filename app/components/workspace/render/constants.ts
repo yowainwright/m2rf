@@ -1,6 +1,18 @@
 import { SURGE_EDGE_TYPES } from '@/app/components/edges';
-import { SequenceActionNode, SequenceFrameNode, SequenceMessageEdge, SequenceNoteNode, SequenceParticipantNode } from '@/app/components/sequence';
-import { SEQUENCE_ACTION_NODE_TYPE, SEQUENCE_FRAME_NODE_TYPE, SEQUENCE_MESSAGE_EDGE_TYPE, SEQUENCE_NOTE_NODE_TYPE, SEQUENCE_PARTICIPANT_NODE_TYPE } from '@/app/graph/constants';
+import {
+  SequenceActionNode,
+  SequenceFrameNode,
+  SequenceMessageEdge,
+  SequenceNoteNode,
+  SequenceParticipantNode,
+} from '@/app/components/sequence';
+import {
+  SEQUENCE_ACTION_NODE_TYPE,
+  SEQUENCE_FRAME_NODE_TYPE,
+  SEQUENCE_MESSAGE_EDGE_TYPE,
+  SEQUENCE_NOTE_NODE_TYPE,
+  SEQUENCE_PARTICIPANT_NODE_TYPE,
+} from '@/app/graph/constants';
 
 export const RENDER_EDGE_TYPES = Object.assign({}, SURGE_EDGE_TYPES, {
   [SEQUENCE_MESSAGE_EDGE_TYPE]: SequenceMessageEdge,

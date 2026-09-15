@@ -13,19 +13,16 @@ declare module 'gifenc' {
         delay?: number;
         palette?: GifPalette;
         repeat?: GifRepeat;
-      }
+      },
     ): void;
   };
 
   export function applyPalette(
     rgba: Uint8Array | Uint8ClampedArray,
-    palette: GifPalette
+    palette: GifPalette,
   ): Uint8Array;
 
   export function GIFEncoder(): GifEncoder;
 
-  export function quantize(
-    rgba: Uint8Array | Uint8ClampedArray,
-    maxColors: number
-  ): GifPalette;
+  export function quantize(rgba: Uint8Array | Uint8ClampedArray, maxColors: number): GifPalette;
 }

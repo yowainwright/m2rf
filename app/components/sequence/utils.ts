@@ -22,11 +22,11 @@ export const getMessagePath = (
   sourceY: number,
   targetX: number,
   targetY: number,
-  selfMessage: boolean
+  selfMessage: boolean,
 ) => {
   if (!selfMessage) return `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
   const controlX = Math.max(sourceX, targetX) + 48;
-  const midpointY = sourceY + ((targetY - sourceY) / 2);
+  const midpointY = sourceY + (targetY - sourceY) / 2;
   return `M ${sourceX},${sourceY} C ${controlX},${sourceY} ${controlX},${midpointY} ${targetX},${targetY}`;
 };
 

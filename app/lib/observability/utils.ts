@@ -1,9 +1,5 @@
 import pino, { type LogFn } from 'pino';
-import {
-  BROWSER_LOG_LEVEL,
-  OBSERVABILITY_LOGGER_NAME,
-  SERVER_LOG_LEVEL,
-} from './constants';
+import { BROWSER_LOG_LEVEL, OBSERVABILITY_LOGGER_NAME, SERVER_LOG_LEVEL } from './constants';
 import { redactTelemetry } from './redact';
 import type {
   BrowserLoggerInput,
@@ -23,15 +19,12 @@ const redactLogArguments = (args: Parameters<LogFn>) => {
 const logMethod = function redactedLogMethod(
   this: ObservabilityLogger,
   args: Parameters<LogFn>,
-  method: LogFn
+  method: LogFn,
 ) {
   method.apply(this, redactLogArguments(args));
 };
 
-export const writeBrowserLog = (
-  value: unknown,
-  writer = defaultBrowserWriter
-) => {
+export const writeBrowserLog = (value: unknown, writer = defaultBrowserWriter) => {
   writer(redactTelemetry(value));
 };
 

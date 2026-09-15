@@ -1,9 +1,4 @@
-export {
-  exportGif,
-  exportPng,
-  exportSvg,
-  getSvgExportElement,
-} from './utils';
+export { exportGif, exportPng, exportSvg, getSvgExportElement } from './utils';
 export type {
   GifExportInput,
   GifExportRepeat,

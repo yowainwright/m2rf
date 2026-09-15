@@ -2,7 +2,13 @@
 
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/app/components/ui/field';
 import { Input } from '@/app/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select';
 import { Slider } from '@/app/components/ui/slider';
 import { Switch } from '@/app/components/ui/switch';
 import {
@@ -51,20 +57,42 @@ const GradientTools = ({ gradient, idPrefix, onUpdate }: GradientToolsProps) => 
   return (
     <>
       <Field className="col-span-3 min-w-0 gap-1">
-        <FieldLabel className="text-xs" htmlFor={colorAId}>{TOOLKIT_LABELS.gradientColorA}</FieldLabel>
-        <Input className="h-8 cursor-pointer p-0.5" id={colorAId} type="color" value={gradient.colorA} onChange={(event) => updateGradient({ colorA: event.target.value })} />
+        <FieldLabel className="text-xs" htmlFor={colorAId}>
+          {TOOLKIT_LABELS.gradientColorA}
+        </FieldLabel>
+        <Input
+          className="h-8 cursor-pointer p-0.5"
+          id={colorAId}
+          type="color"
+          value={gradient.colorA}
+          onChange={(event) => updateGradient({ colorA: event.target.value })}
+        />
       </Field>
       <Field className="col-span-3 min-w-0 gap-1">
-        <FieldLabel className="text-xs" htmlFor={colorBId}>{TOOLKIT_LABELS.gradientColorB}</FieldLabel>
-        <Input className="h-8 cursor-pointer p-0.5" id={colorBId} type="color" value={gradient.colorB} onChange={(event) => updateGradient({ colorB: event.target.value })} />
+        <FieldLabel className="text-xs" htmlFor={colorBId}>
+          {TOOLKIT_LABELS.gradientColorB}
+        </FieldLabel>
+        <Input
+          className="h-8 cursor-pointer p-0.5"
+          id={colorBId}
+          type="color"
+          value={gradient.colorB}
+          onChange={(event) => updateGradient({ colorB: event.target.value })}
+        />
       </Field>
       <Field className="col-span-6 min-w-0 gap-1">
-        <FieldLabel className="text-xs" htmlFor={directionId}>{TOOLKIT_LABELS.gradientDirection}</FieldLabel>
+        <FieldLabel className="text-xs" htmlFor={directionId}>
+          {TOOLKIT_LABELS.gradientDirection}
+        </FieldLabel>
         <Select onValueChange={handleDirectionUpdate} value={gradient.direction}>
-          <SelectTrigger className="h-8 px-2 text-xs" id={directionId}><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 px-2 text-xs" id={directionId}>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             {GRADIENT_DIRECTION_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -72,7 +100,9 @@ const GradientTools = ({ gradient, idPrefix, onUpdate }: GradientToolsProps) => 
       <Field className="col-span-6 min-w-0 gap-1">
         <FieldLabel className="justify-between text-xs" htmlFor={balanceId}>
           <span>{TOOLKIT_LABELS.gradientBalance}</span>
-          <span className="text-muted-foreground">{split}% / {100 - split}%</span>
+          <span className="text-muted-foreground">
+            {split}% / {100 - split}%
+          </span>
         </FieldLabel>
         <Slider
           aria-label={TOOLKIT_LABELS.gradientBalance}
@@ -100,12 +130,28 @@ const PatternTools = ({ idPrefix, onUpdate, pattern }: PatternToolsProps) => {
   return (
     <>
       <Field className="col-span-3 min-w-0 gap-1">
-        <FieldLabel className="text-xs" htmlFor={colorId}>{TOOLKIT_LABELS.patternColor}</FieldLabel>
-        <Input className="h-8 cursor-pointer p-0.5" id={colorId} type="color" value={pattern.color} onChange={(event) => updatePattern({ color: event.target.value })} />
+        <FieldLabel className="text-xs" htmlFor={colorId}>
+          {TOOLKIT_LABELS.patternColor}
+        </FieldLabel>
+        <Input
+          className="h-8 cursor-pointer p-0.5"
+          id={colorId}
+          type="color"
+          value={pattern.color}
+          onChange={(event) => updatePattern({ color: event.target.value })}
+        />
       </Field>
       <Field className="col-span-3 min-w-0 gap-1">
-        <FieldLabel className="text-xs" htmlFor={backgroundColorId}>{TOOLKIT_LABELS.patternBackgroundColor}</FieldLabel>
-        <Input className="h-8 cursor-pointer p-0.5" id={backgroundColorId} type="color" value={pattern.backgroundColor} onChange={(event) => updatePattern({ backgroundColor: event.target.value })} />
+        <FieldLabel className="text-xs" htmlFor={backgroundColorId}>
+          {TOOLKIT_LABELS.patternBackgroundColor}
+        </FieldLabel>
+        <Input
+          className="h-8 cursor-pointer p-0.5"
+          id={backgroundColorId}
+          type="color"
+          value={pattern.backgroundColor}
+          onChange={(event) => updatePattern({ backgroundColor: event.target.value })}
+        />
       </Field>
       <Field className="col-span-6 min-w-0 gap-1">
         <FieldLabel className="justify-between text-xs" htmlFor={densityId}>
@@ -131,8 +177,16 @@ const PatternTools = ({ idPrefix, onUpdate, pattern }: PatternToolsProps) => {
 
 const ShaderColorField = ({ id, label, onChange, value }: ShaderColorFieldProps) => (
   <Field className="col-span-3 min-w-0 gap-1">
-    <FieldLabel className="text-xs" htmlFor={id}>{label}</FieldLabel>
-    <Input className="h-8 cursor-pointer p-0.5" id={id} type="color" value={value} onChange={onChange} />
+    <FieldLabel className="text-xs" htmlFor={id}>
+      {label}
+    </FieldLabel>
+    <Input
+      className="h-8 cursor-pointer p-0.5"
+      id={id}
+      type="color"
+      value={value}
+      onChange={onChange}
+    />
   </Field>
 );
 
@@ -153,8 +207,18 @@ const ShaderTools = ({ background, onUpdate, shader }: ShaderToolsProps) => {
 
   return (
     <>
-      <ShaderColorField id="canvas-shader-color-a" label={TOOLKIT_LABELS.shaderColorA} onChange={handleColorAUpdate} value={colors.colorA} />
-      <ShaderColorField id="canvas-shader-color-b" label={TOOLKIT_LABELS.shaderColorB} onChange={handleColorBUpdate} value={colors.colorB} />
+      <ShaderColorField
+        id="canvas-shader-color-a"
+        label={TOOLKIT_LABELS.shaderColorA}
+        onChange={handleColorAUpdate}
+        value={colors.colorA}
+      />
+      <ShaderColorField
+        id="canvas-shader-color-b"
+        label={TOOLKIT_LABELS.shaderColorB}
+        onChange={handleColorBUpdate}
+        value={colors.colorB}
+      />
       {colorCField}
     </>
   );
@@ -162,18 +226,28 @@ const ShaderTools = ({ background, onUpdate, shader }: ShaderToolsProps) => {
 
 export const NodeTools = (props: NodeToolProps) => {
   const borders = NODE_BORDER_OPTIONS.map((option) => (
-    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+    <SelectItem key={option.value} value={option.value}>
+      {option.label}
+    </SelectItem>
   ));
   const shadows = NODE_SHADOW_OPTIONS.map((option) => (
-    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+    <SelectItem key={option.value} value={option.value}>
+      {option.label}
+    </SelectItem>
   ));
   const shapes = NODE_SHAPE_OPTIONS.map((option) => (
-    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+    <SelectItem key={option.value} value={option.value}>
+      {option.label}
+    </SelectItem>
   ));
   const surfaces = NODE_SURFACE_OPTIONS.map((option) => (
     <SelectItem key={option.value} value={option.value}>
       <span className="flex items-center gap-2">
-        <span aria-hidden="true" className="size-4 shrink-0 rounded-sm border" style={getPatternPreviewStyle(option.value, option.preview)} />
+        <span
+          aria-hidden="true"
+          className="size-4 shrink-0 rounded-sm border"
+          style={getPatternPreviewStyle(option.value, option.preview)}
+        />
         {option.label}
       </span>
     </SelectItem>
@@ -181,46 +255,84 @@ export const NodeTools = (props: NodeToolProps) => {
 
   return (
     <FieldSet className="gap-2">
-      <FieldLegend className="mb-1 font-semibold" variant="label">{TOOLKIT_LABELS.nodes}</FieldLegend>
+      <FieldLegend className="mb-1 font-semibold" variant="label">
+        {TOOLKIT_LABELS.nodes}
+      </FieldLegend>
       <FieldGroup className="grid grid-cols-12 gap-x-3 gap-y-3">
         <Field className="col-span-3 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="node-fill">{TOOLKIT_LABELS.fill}</FieldLabel>
-          <Input className="h-8 cursor-pointer p-0.5" id="node-fill" type="color" value={props.fillValue} onChange={props.onFillUpdate} />
+          <FieldLabel className="text-xs" htmlFor="node-fill">
+            {TOOLKIT_LABELS.fill}
+          </FieldLabel>
+          <Input
+            className="h-8 cursor-pointer p-0.5"
+            id="node-fill"
+            type="color"
+            value={props.fillValue}
+            onChange={props.onFillUpdate}
+          />
         </Field>
         <Field className="col-span-3 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="node-text">{TOOLKIT_LABELS.text}</FieldLabel>
-          <Input className="h-8 cursor-pointer p-0.5" id="node-text" type="color" value={props.textValue} onChange={props.onTextUpdate} />
+          <FieldLabel className="text-xs" htmlFor="node-text">
+            {TOOLKIT_LABELS.text}
+          </FieldLabel>
+          <Input
+            className="h-8 cursor-pointer p-0.5"
+            id="node-text"
+            type="color"
+            value={props.textValue}
+            onChange={props.onTextUpdate}
+          />
         </Field>
         <Field className="col-span-6 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="node-border">{TOOLKIT_LABELS.border}</FieldLabel>
+          <FieldLabel className="text-xs" htmlFor="node-border">
+            {TOOLKIT_LABELS.border}
+          </FieldLabel>
           <Select onValueChange={props.onBorderUpdate} value={props.borderValue}>
-            <SelectTrigger className="h-8 px-2 text-xs" id="node-border"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 px-2 text-xs" id="node-border">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>{borders}</SelectContent>
           </Select>
         </Field>
         <Field className="col-span-6 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="node-shadow">{TOOLKIT_LABELS.shadow}</FieldLabel>
+          <FieldLabel className="text-xs" htmlFor="node-shadow">
+            {TOOLKIT_LABELS.shadow}
+          </FieldLabel>
           <Select onValueChange={props.onShadowUpdate} value={props.shadowValue}>
-            <SelectTrigger className="h-8 px-2 text-xs" id="node-shadow"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 px-2 text-xs" id="node-shadow">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>{shadows}</SelectContent>
           </Select>
         </Field>
         <Field className="col-span-6 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="node-shape">{TOOLKIT_LABELS.shape}</FieldLabel>
+          <FieldLabel className="text-xs" htmlFor="node-shape">
+            {TOOLKIT_LABELS.shape}
+          </FieldLabel>
           <Select onValueChange={props.onShapeUpdate} value={props.shapeValue}>
-            <SelectTrigger className="h-8 px-2 text-xs" id="node-shape"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 px-2 text-xs" id="node-shape">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>{shapes}</SelectContent>
           </Select>
         </Field>
         <Field className="col-span-6 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="node-surface">{TOOLKIT_LABELS.surface}</FieldLabel>
+          <FieldLabel className="text-xs" htmlFor="node-surface">
+            {TOOLKIT_LABELS.surface}
+          </FieldLabel>
           <Select onValueChange={props.onSurfaceUpdate} value={props.surfaceValue}>
-            <SelectTrigger className="h-8 px-2 text-xs" id="node-surface"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 px-2 text-xs" id="node-surface">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>{surfaces}</SelectContent>
           </Select>
         </Field>
         {props.surfaceValue === 'gradient' ? (
-          <GradientTools gradient={props.gradient} idPrefix="node" onUpdate={props.onGradientUpdate} />
+          <GradientTools
+            gradient={props.gradient}
+            idPrefix="node"
+            onUpdate={props.onGradientUpdate}
+          />
         ) : null}
       </FieldGroup>
     </FieldSet>
@@ -229,47 +341,95 @@ export const NodeTools = (props: NodeToolProps) => {
 
 export const EdgeTools = (props: EdgeToolProps) => {
   const types = EDGE_TYPE_OPTIONS.map((option) => (
-    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+    <SelectItem key={option.value} value={option.value}>
+      {option.label}
+    </SelectItem>
   ));
   const markers = EDGE_MARKER_OPTIONS.map((option) => (
-    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+    <SelectItem key={option.value} value={option.value}>
+      {option.label}
+    </SelectItem>
   ));
   const animations = EDGE_ANIMATION_OPTIONS.map((option) => (
-    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+    <SelectItem key={option.value} value={option.value}>
+      {option.label}
+    </SelectItem>
   ));
 
   return (
     <FieldSet className="gap-2">
-      <FieldLegend className="mb-1 font-semibold" variant="label">{TOOLKIT_LABELS.edges}</FieldLegend>
+      <FieldLegend className="mb-1 font-semibold" variant="label">
+        {TOOLKIT_LABELS.edges}
+      </FieldLegend>
       <FieldGroup className="@container-normal grid grid-cols-12 gap-x-3 gap-y-3">
         <Field className="col-span-6 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="edge-type">{TOOLKIT_LABELS.type}</FieldLabel>
+          <FieldLabel className="text-xs" htmlFor="edge-type">
+            {TOOLKIT_LABELS.type}
+          </FieldLabel>
           <Select onValueChange={props.onTypeUpdate} value={props.typeValue}>
-            <SelectTrigger className="h-8 gap-1 px-2 text-xs [&>span]:min-w-0 [&>svg]:shrink-0" id="edge-type"><SelectValue /></SelectTrigger>
+            <SelectTrigger
+              className="h-8 gap-1 px-2 text-xs [&>span]:min-w-0 [&>svg]:shrink-0"
+              id="edge-type"
+            >
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent className="w-max whitespace-nowrap">{types}</SelectContent>
           </Select>
         </Field>
         <Field className="col-span-6 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="edge-marker">{TOOLKIT_LABELS.marker}</FieldLabel>
+          <FieldLabel className="text-xs" htmlFor="edge-marker">
+            {TOOLKIT_LABELS.marker}
+          </FieldLabel>
           <Select onValueChange={props.onMarkerUpdate} value={props.markerValue}>
-            <SelectTrigger className="h-8 gap-1 px-2 text-xs [&>span]:min-w-0 [&>svg]:shrink-0" id="edge-marker"><SelectValue /></SelectTrigger>
+            <SelectTrigger
+              className="h-8 gap-1 px-2 text-xs [&>span]:min-w-0 [&>svg]:shrink-0"
+              id="edge-marker"
+            >
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent className="w-max whitespace-nowrap">{markers}</SelectContent>
           </Select>
         </Field>
         <Field className="col-span-6 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="edge-animation">{TOOLKIT_LABELS.animation}</FieldLabel>
+          <FieldLabel className="text-xs" htmlFor="edge-animation">
+            {TOOLKIT_LABELS.animation}
+          </FieldLabel>
           <Select onValueChange={props.onAnimationUpdate} value={props.animationValue}>
-            <SelectTrigger className="h-8 gap-1 px-2 text-xs [&>span]:min-w-0 [&>svg]:shrink-0" id="edge-animation"><SelectValue /></SelectTrigger>
+            <SelectTrigger
+              className="h-8 gap-1 px-2 text-xs [&>span]:min-w-0 [&>svg]:shrink-0"
+              id="edge-animation"
+            >
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent className="w-max whitespace-nowrap">{animations}</SelectContent>
           </Select>
         </Field>
         <Field className="col-span-3 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="edge-color">{TOOLKIT_LABELS.color}</FieldLabel>
-          <Input className="h-8 cursor-pointer p-0.5" id="edge-color" onChange={props.onColorUpdate} type="color" value={props.colorValue} />
+          <FieldLabel className="text-xs" htmlFor="edge-color">
+            {TOOLKIT_LABELS.color}
+          </FieldLabel>
+          <Input
+            className="h-8 cursor-pointer p-0.5"
+            id="edge-color"
+            onChange={props.onColorUpdate}
+            type="color"
+            value={props.colorValue}
+          />
         </Field>
         <Field className="col-span-3 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="edge-width" id="edge-width-label">{TOOLKIT_LABELS.width}</FieldLabel>
-          <Input className="h-8 px-2 text-xs" id="edge-width" max={EDGE_WIDTH_LIMITS.maximum} min={EDGE_WIDTH_LIMITS.minimum} onChange={props.onWidthUpdate} step={1} type="number" value={props.widthValue} />
+          <FieldLabel className="text-xs" htmlFor="edge-width" id="edge-width-label">
+            {TOOLKIT_LABELS.width}
+          </FieldLabel>
+          <Input
+            className="h-8 px-2 text-xs"
+            id="edge-width"
+            max={EDGE_WIDTH_LIMITS.maximum}
+            min={EDGE_WIDTH_LIMITS.minimum}
+            onChange={props.onWidthUpdate}
+            step={1}
+            type="number"
+            value={props.widthValue}
+          />
         </Field>
       </FieldGroup>
     </FieldSet>
@@ -280,14 +440,19 @@ export const CanvasTools = (props: CanvasToolProps) => {
   const isAuroraBackground = props.settings.background === 'aurora';
   const isMeshBackground = props.settings.background === 'gradient-mesh';
   const isShaderBackground = isAuroraBackground || isMeshBackground;
-  const isPatternBackground = props.settings.background === 'grid'
-    || props.settings.background === 'dot-pattern'
-    || props.settings.background.startsWith('pattern-');
+  const isPatternBackground =
+    props.settings.background === 'grid' ||
+    props.settings.background === 'dot-pattern' ||
+    props.settings.background.startsWith('pattern-');
   const toggleClassName = isPatternBackground ? 'col-span-6' : 'col-span-4';
   const backgrounds = CANVAS_BACKGROUND_OPTIONS.map((option) => (
     <SelectItem key={option.value} value={option.value}>
       <span className="flex items-center gap-2">
-        <span aria-hidden="true" className="size-4 shrink-0 rounded-sm border" style={getPatternPreviewStyle(option.value, option.preview)} />
+        <span
+          aria-hidden="true"
+          className="size-4 shrink-0 rounded-sm border"
+          style={getPatternPreviewStyle(option.value, option.preview)}
+        />
         {option.label}
       </span>
     </SelectItem>
@@ -295,35 +460,72 @@ export const CanvasTools = (props: CanvasToolProps) => {
 
   return (
     <FieldSet className="gap-2">
-      <FieldLegend className="mb-1 font-semibold" variant="label">{TOOLKIT_LABELS.canvas}</FieldLegend>
+      <FieldLegend className="mb-1 font-semibold" variant="label">
+        {TOOLKIT_LABELS.canvas}
+      </FieldLegend>
       <FieldGroup className="grid grid-cols-12 gap-x-3 gap-y-3">
         <Field className="col-span-6 min-w-0 gap-1">
-          <FieldLabel className="text-xs" htmlFor="canvas-background">{TOOLKIT_LABELS.background}</FieldLabel>
+          <FieldLabel className="text-xs" htmlFor="canvas-background">
+            {TOOLKIT_LABELS.background}
+          </FieldLabel>
           <Select onValueChange={props.onBackgroundUpdate} value={props.settings.background}>
-            <SelectTrigger className="h-8 px-2 text-xs" id="canvas-background"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 px-2 text-xs" id="canvas-background">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>{backgrounds}</SelectContent>
           </Select>
         </Field>
         {props.settings.background === 'gradient' ? (
-          <GradientTools gradient={props.gradient} idPrefix="canvas" onUpdate={props.onGradientUpdate} />
+          <GradientTools
+            gradient={props.gradient}
+            idPrefix="canvas"
+            onUpdate={props.onGradientUpdate}
+          />
         ) : null}
         {isShaderBackground ? (
-          <ShaderTools background={props.settings.background} onUpdate={props.onShaderUpdate} shader={props.shader} />
+          <ShaderTools
+            background={props.settings.background}
+            onUpdate={props.onShaderUpdate}
+            shader={props.shader}
+          />
         ) : null}
         {isPatternBackground ? (
-          <PatternTools idPrefix="canvas" onUpdate={props.onPatternUpdate} pattern={props.pattern} />
+          <PatternTools
+            idPrefix="canvas"
+            onUpdate={props.onPatternUpdate}
+            pattern={props.pattern}
+          />
         ) : null}
         <Field className={toggleClassName} orientation="horizontal">
-          <FieldLabel className="text-xs" htmlFor="canvas-grid">{TOOLKIT_LABELS.grid}</FieldLabel>
-          <Switch checked={props.settings.gridVisible} id="canvas-grid" onCheckedChange={props.onGridUpdate} />
+          <FieldLabel className="text-xs" htmlFor="canvas-grid">
+            {TOOLKIT_LABELS.grid}
+          </FieldLabel>
+          <Switch
+            checked={props.settings.gridVisible}
+            id="canvas-grid"
+            onCheckedChange={props.onGridUpdate}
+          />
         </Field>
         <Field className={toggleClassName} orientation="horizontal">
-          <FieldLabel className="text-xs" htmlFor="canvas-snap">{TOOLKIT_LABELS.snap}</FieldLabel>
-          <Switch checked={props.settings.snapToGrid} id="canvas-snap" onCheckedChange={props.onSnapUpdate} />
+          <FieldLabel className="text-xs" htmlFor="canvas-snap">
+            {TOOLKIT_LABELS.snap}
+          </FieldLabel>
+          <Switch
+            checked={props.settings.snapToGrid}
+            id="canvas-snap"
+            onCheckedChange={props.onSnapUpdate}
+          />
         </Field>
         <Field className={toggleClassName} orientation="horizontal">
-          <FieldLabel className="text-xs" htmlFor="canvas-lock">{TOOLKIT_LABELS.lock}</FieldLabel>
-          <Switch checked={props.settings.locked} id="canvas-lock" onCheckedChange={props.onLockUpdate} title={TOOLKIT_LABELS.lockDescription} />
+          <FieldLabel className="text-xs" htmlFor="canvas-lock">
+            {TOOLKIT_LABELS.lock}
+          </FieldLabel>
+          <Switch
+            checked={props.settings.locked}
+            id="canvas-lock"
+            onCheckedChange={props.onLockUpdate}
+            title={TOOLKIT_LABELS.lockDescription}
+          />
         </Field>
       </FieldGroup>
     </FieldSet>

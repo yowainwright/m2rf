@@ -1,11 +1,27 @@
 'use client';
 
 import { Badge } from '@/app/components/ui/badge';
-import { Field, FieldDescription, FieldGroup, FieldSet, FieldTitle } from '@/app/components/ui/field';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/app/components/ui/tooltip';
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldSet,
+  FieldTitle,
+} from '@/app/components/ui/field';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip';
 import { cn } from '@/app/lib/utils';
 import { TOOLKIT_DATE_OPTIONS, TOOLKIT_METADATA_LABELS as LABELS } from './constants';
-import type { EdgeMetadataProps, MetadataFieldsProps, NodeMetadataProps, ToolkitMetadataProps } from './types';
+import type {
+  EdgeMetadataProps,
+  MetadataFieldsProps,
+  NodeMetadataProps,
+  ToolkitMetadataProps,
+} from './types';
 
 const metadataBadgeClassName = 'px-2 py-0 text-xs';
 const TITLE_TOOLTIP_MAX_LENGTH = 24;
@@ -16,7 +32,11 @@ function MetadataFields({ className, fields }: MetadataFieldsProps) {
     const descriptionClassName = emphasized
       ? 'min-w-0 max-w-full flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold leading-5 text-foreground'
       : 'min-w-0 shrink-0 truncate text-xs leading-4 text-foreground';
-    const description = <FieldDescription className={descriptionClassName} title={emphasized ? undefined : text}>{text}</FieldDescription>;
+    const description = (
+      <FieldDescription className={descriptionClassName} title={emphasized ? undefined : text}>
+        {text}
+      </FieldDescription>
+    );
     const needsTooltip = emphasized && text.length > TITLE_TOOLTIP_MAX_LENGTH;
     const content = needsTooltip ? (
       <Tooltip>
@@ -25,11 +45,18 @@ function MetadataFields({ className, fields }: MetadataFieldsProps) {
         </TooltipTrigger>
         <TooltipContent>{text}</TooltipContent>
       </Tooltip>
-    ) : description;
-    const caption = hideLabel ? null : (
-      <FieldTitle className="shrink-0 text-xs font-normal text-muted-foreground">{label}</FieldTitle>
+    ) : (
+      description
     );
-    const fieldClassName = cn('w-auto min-w-0 max-w-full gap-1', emphasized ? 'flex-1' : 'shrink-0');
+    const caption = hideLabel ? null : (
+      <FieldTitle className="shrink-0 text-xs font-normal text-muted-foreground">
+        {label}
+      </FieldTitle>
+    );
+    const fieldClassName = cn(
+      'w-auto min-w-0 max-w-full gap-1',
+      emphasized ? 'flex-1' : 'shrink-0',
+    );
     return (
       <Field aria-label={label} className={fieldClassName} key={label} orientation="horizontal">
         {caption}
@@ -37,7 +64,11 @@ function MetadataFields({ className, fields }: MetadataFieldsProps) {
       </Field>
     );
   });
-  return <FieldGroup className={cn('flex-row flex-wrap gap-x-3 gap-y-0.5', className)}>{items}</FieldGroup>;
+  return (
+    <FieldGroup className={cn('flex-row flex-wrap gap-x-3 gap-y-0.5', className)}>
+      {items}
+    </FieldGroup>
+  );
 }
 
 function GlobalMetadata({ version, workspaceName }: ToolkitMetadataProps) {
@@ -104,8 +135,12 @@ export function ToolkitMetadata(props: ToolkitMetadataProps) {
     <TooltipProvider>
       <FieldSet className="gap-1">
         <div className="flex items-center justify-between gap-2">
-          <Badge className={metadataBadgeClassName} variant="outline">{versionNumber}</Badge>
-          <Badge className={metadataBadgeClassName} variant="outline">{props.scope}</Badge>
+          <Badge className={metadataBadgeClassName} variant="outline">
+            {versionNumber}
+          </Badge>
+          <Badge className={metadataBadgeClassName} variant="outline">
+            {props.scope}
+          </Badge>
         </div>
         <ToolkitDetails {...props} />
       </FieldSet>

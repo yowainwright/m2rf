@@ -1,5 +1,11 @@
 import type { ChangeEvent } from 'react';
-import type { GraphCanvasSettings, GraphGradientSettings, GraphPatternSettings, GraphShaderSettings, TranslationSettings } from '@/app/graph';
+import type {
+  GraphCanvasSettings,
+  GraphGradientSettings,
+  GraphPatternSettings,
+  GraphShaderSettings,
+  TranslationSettings,
+} from '@/app/graph';
 import {
   CANVAS_BACKGROUND_OPTIONS,
   EDGE_ANIMATION_OPTIONS,
@@ -15,9 +21,12 @@ import type { EdgeChange, NodeChange, Viewport } from 'reactflow';
 import type { RenderSend } from './types';
 
 const createNodeActions = (send: RenderSend) => {
-  const update = (settings: Partial<TranslationSettings>) => send({ type: 'nodes.style', settings });
-  const handleColor = (event: ChangeEvent<HTMLInputElement>) => update({ primaryColor: event.target.value });
-  const handleText = (event: ChangeEvent<HTMLInputElement>) => update({ inverseColor: event.target.value });
+  const update = (settings: Partial<TranslationSettings>) =>
+    send({ type: 'nodes.style', settings });
+  const handleColor = (event: ChangeEvent<HTMLInputElement>) =>
+    update({ primaryColor: event.target.value });
+  const handleText = (event: ChangeEvent<HTMLInputElement>) =>
+    update({ inverseColor: event.target.value });
   const handleBorder = (value: string) => {
     const option = NODE_BORDER_OPTIONS.find((item) => item.value === value);
     if (option) update({ nodeBorder: option.value });
@@ -47,8 +56,10 @@ const createNodeActions = (send: RenderSend) => {
 };
 
 const createEdgeActions = (send: RenderSend) => {
-  const update = (settings: Partial<TranslationSettings>) => send({ type: 'edges.style', settings });
-  const handleColor = (event: ChangeEvent<HTMLInputElement>) => update({ edgeColor: event.target.value });
+  const update = (settings: Partial<TranslationSettings>) =>
+    send({ type: 'edges.style', settings });
+  const handleColor = (event: ChangeEvent<HTMLInputElement>) =>
+    update({ edgeColor: event.target.value });
   const handleWidth = (event: ChangeEvent<HTMLInputElement>) => {
     const value = Number(event.target.value);
     if (Number.isFinite(value)) update({ edgeWidth: clampEdgeWidth(value) });
@@ -75,7 +86,8 @@ const createEdgeActions = (send: RenderSend) => {
 };
 
 const createCanvasActions = (send: RenderSend) => {
-  const update = (settings: Partial<GraphCanvasSettings>) => send({ type: 'canvas.update', settings });
+  const update = (settings: Partial<GraphCanvasSettings>) =>
+    send({ type: 'canvas.update', settings });
   const handleBackground = (value: string) => {
     const option = CANVAS_BACKGROUND_OPTIONS.find((item) => item.value === value);
     if (option) update({ background: option.value });
@@ -86,7 +98,15 @@ const createCanvasActions = (send: RenderSend) => {
   const handleShader = (shader: GraphShaderSettings) => update({ shader });
   const handleSnap = (snapToGrid: boolean) => update({ snapToGrid });
   const handleLock = (locked: boolean) => update({ locked });
-  return { handleBackground, handleGrid, handleGradient, handlePattern, handleShader, handleSnap, handleLock };
+  return {
+    handleBackground,
+    handleGrid,
+    handleGradient,
+    handlePattern,
+    handleShader,
+    handleSnap,
+    handleLock,
+  };
 };
 
 export const createRenderActions = (send: RenderSend) => {
@@ -97,8 +117,13 @@ export const createRenderActions = (send: RenderSend) => {
   const handleNodes = (changes: NodeChange[]) => send({ type: 'nodes.update', changes });
   const handleEdges = (changes: EdgeChange[]) => send({ type: 'edges.update', changes });
   const handleLayout = () => send({ type: 'layout.reset' });
-  const handleViewport = (_event: MouseEvent | TouchEvent, viewport: Viewport) => send({ type: 'viewport.update', viewport });
+  const handleViewport = (_event: MouseEvent | TouchEvent, viewport: Viewport) =>
+    send({ type: 'viewport.update', viewport });
   return Object.assign({}, nodeActions, edgeActions, canvasActions, {
-    handleToolkit, handleNodes, handleEdges, handleLayout, handleViewport,
+    handleToolkit,
+    handleNodes,
+    handleEdges,
+    handleLayout,
+    handleViewport,
   });
 };

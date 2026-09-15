@@ -30,7 +30,7 @@ const clearIndexedDb = async (page: Page) => {
           request.onerror = () => reject(request.error);
           request.onsuccess = () => resolve();
         });
-      })
+      }),
     );
   });
 };
@@ -43,16 +43,10 @@ const updateEditor = async (page: Page, content = source) => {
   await page.keyboard.insertText(content);
 };
 
-const setColorInput = async (
-  locator: Locator,
-  value: string
-) => {
+const setColorInput = async (locator: Locator, value: string) => {
   await locator.evaluate((element, color) => {
     const input = element as HTMLInputElement;
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      'value'
-    );
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
 
     descriptor?.set?.call(input, color);
     input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -105,12 +99,16 @@ const versionSource = (version: number) => {
 const saveSnapshot = async (page: Page, version: number) => {
   await page.getByRole('button', { name: /^(Save|Saved)$/ }).click();
   const history = page.getByRole('region', { name: 'Version history' });
-  await expect(history.getByRole('button', { name: new RegExp(`^v${version}\\b`) })).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    history.getByRole('button', { name: new RegExp(`^v${version}\\b`) }),
+  ).toHaveAttribute('aria-pressed', 'true');
 };
 
 const editSnapshot = async (page: Page, version: number) => {
   await updateEditor(page, versionSource(version));
-  await expect(page.locator('.react-flow__node').filter({ hasText: `Snapshot ${version}` })).toBeVisible();
+  await expect(
+    page.locator('.react-flow__node').filter({ hasText: `Snapshot ${version}` }),
+  ).toBeVisible();
 };
 
 const renameGraph = async (page: Page, name: string) => {
@@ -122,7 +120,9 @@ const renameGraph = async (page: Page, name: string) => {
   await expect(title).toHaveText(name);
 };
 
-test('edits titles with keyboard confirmation, cancellation and blank validation', async ({ page }) => {
+test('edits titles with keyboard confirmation, cancellation and blank validation', async ({
+  page,
+}) => {
   await page.goto('/');
   const title = page.getByRole('button', { name: 'Rename graph', exact: true });
   const graphName = page.getByRole('textbox', { name: 'Graph name', exact: true });
@@ -138,7 +138,10 @@ test('edits titles with keyboard confirmation, cancellation and blank validation
   await expect(title).toBeFocused();
   await expect(page.getByText('No saved graphs')).toBeVisible();
   await title.click();
-  const selection = await graphName.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd]);
+  const selection = await graphName.evaluate((element: HTMLInputElement) => [
+    element.selectionStart,
+    element.selectionEnd,
+  ]);
   expect(selection).toEqual([0, 'Release plan'.length]);
   await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill('Discard this');
   await graphName.press('Escape');
@@ -173,10 +176,14 @@ test('saves a title on blur and reloads it without adding a diagram version', as
   await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill('Final road map');
   await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(title).toHaveText('Untitled graph');
-  await expect(navigation.getByRole('button', { name: 'Final road map', exact: true })).toBeVisible();
+  await expect(
+    navigation.getByRole('button', { name: 'Final road map', exact: true }),
+  ).toBeVisible();
 });
 
-test('restores version styling and saves the oldest as newest while keeping five', async ({ page }, testInfo) => {
+test('restores version styling and saves the oldest as newest while keeping five', async ({
+  page,
+}, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await editSnapshot(page, 1);
@@ -220,13 +227,22 @@ test('restores version styling and saves the oldest as newest while keeping five
   await expect(viewport).toHaveCSS('transform', firstCamera);
   await editSnapshot(page, 6);
   await saveSnapshot(page, 6);
-  await expect(history.getByRole('button').locator('span')).toHaveText(['v6', 'v5', 'v4', 'v3', 'v2']);
+  await expect(history.getByRole('button').locator('span')).toHaveText([
+    'v6',
+    'v5',
+    'v4',
+    'v3',
+    'v2',
+  ]);
   await page.screenshot({ path: testInfo.outputPath('version-history-desktop.png') });
 
   await page.reload();
   await expect(page.locator('.cm-content')).toContainText('Snapshot 6');
   await page.keyboard.press('Escape');
-  await expect(history.getByRole('button', { name: /^v6\b/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(history.getByRole('button', { name: /^v6\b/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await history.getByRole('button', { name: /^v2\b/ }).click();
   await expect(node).toHaveCSS('background-color', 'rgb(34, 197, 94)');
   await expect(page.locator('.cm-content')).toContainText('Snapshot 2');
@@ -241,7 +257,9 @@ test('restores version styling and saves the oldest as newest while keeping five
   await expect(page.locator('.cm-content')).toContainText('Snapshot 6');
 });
 
-test('lists, renames, switches, and deletes saved graphs in the sidebar', async ({ page }, testInfo) => {
+test('lists, renames, switches, and deletes saved graphs in the sidebar', async ({
+  page,
+}, testInfo) => {
   let reactFlowWarnings: string[] = [];
 
   page.on('console', (message) => {
@@ -293,7 +311,10 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await navigation.getByRole('button', { name: 'Release plan' }).click();
   await expect(graphName).toHaveText('Release plan');
   await expect(page.locator('.cm-content')).toContainText('Idea');
-  await expect(navigation.getByRole('button', { name: 'Release plan' })).toHaveAttribute('data-active', 'true');
+  await expect(navigation.getByRole('button', { name: 'Release plan' })).toHaveAttribute(
+    'data-active',
+    'true',
+  );
   await page.reload();
   await expect(graphButtons).toHaveCount(2);
   await page.keyboard.press('Escape');
@@ -315,7 +336,9 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await expect(navigation.getByRole('button', { name: 'API dependencies' })).toBeVisible();
 });
 
-test('changes edge markers and matching colors globally and per edge, then restores them', async ({ page }, testInfo) => {
+test('changes edge markers and matching colors globally and per edge, then restores them', async ({
+  page,
+}, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   const edges = page.locator('.react-flow__edge');
@@ -323,7 +346,9 @@ test('changes edge markers and matching colors globally and per edge, then resto
   const secondEdge = edges.nth(1);
   const width = page.getByRole('spinbutton', { name: 'Width' });
   await expect(edges).toHaveCount(2);
-  await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'rgb(23, 23, 23)', stroke: 'rgb(23, 23, 23)' });
+  await expect
+    .poll(() => readMarker(firstEdge))
+    .toEqual({ fill: 'rgb(23, 23, 23)', stroke: 'rgb(23, 23, 23)' });
 
   await selectMarker(page, 'Open arrow');
   await setColorInput(page.getByLabel('Color', { exact: true }), '#ef4444');
@@ -331,8 +356,12 @@ test('changes edge markers and matching colors globally and per edge, then resto
   await expect(width).toHaveValue('8');
   await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke-width', '8px');
   await expect(secondEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke-width', '8px');
-  await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
-  await expect.poll(() => readMarker(secondEdge)).toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
+  await expect
+    .poll(() => readMarker(firstEdge))
+    .toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
+  await expect
+    .poll(() => readMarker(secondEdge))
+    .toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
 
   await page.keyboard.press('Escape');
   await firstEdge.click();
@@ -342,8 +371,12 @@ test('changes edge markers and matching colors globally and per edge, then resto
   await page.getByRole('spinbutton', { name: 'Width' }).fill('0');
   await expect(width).toHaveValue('1');
   await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke', 'rgb(37, 99, 235)');
-  await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'rgb(37, 99, 235)', stroke: 'rgb(37, 99, 235)' });
-  await expect.poll(() => readMarker(secondEdge)).toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
+  await expect
+    .poll(() => readMarker(firstEdge))
+    .toEqual({ fill: 'rgb(37, 99, 235)', stroke: 'rgb(37, 99, 235)' });
+  await expect
+    .poll(() => readMarker(secondEdge))
+    .toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
   await page.screenshot({ path: testInfo.outputPath('edge-markers.png') });
 
   await selectMarker(page, 'None');
@@ -357,9 +390,13 @@ test('changes edge markers and matching colors globally and per edge, then resto
   await expect(page.getByRole('combobox', { name: 'Marker', exact: true })).toHaveText('None');
   await expect.poll(() => readMarker(firstEdge)).toBeNull();
   await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke', 'rgb(34, 197, 94)');
-  await expect.poll(() => readMarker(secondEdge)).toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
+  await expect
+    .poll(() => readMarker(secondEdge))
+    .toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
   await selectMarker(page, 'Filled arrow');
-  await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'rgb(34, 197, 94)', stroke: 'rgb(34, 197, 94)' });
+  await expect
+    .poll(() => readMarker(firstEdge))
+    .toEqual({ fill: 'rgb(34, 197, 94)', stroke: 'rgb(34, 197, 94)' });
 });
 
 test('loads legacy marker colors, oversized edges, and untitled names', async ({ page }) => {
@@ -368,45 +405,58 @@ test('loads legacy marker colors, oversized edges, and untitled names', async ({
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
-  await page.evaluate(() => new Promise<void>((resolve, reject) => {
-    const request = indexedDB.open('m2rf-studio');
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      const database = request.result;
-      const transaction = database.transaction(['translations', 'workspaces'], 'readwrite');
-      const translations = transaction.objectStore('translations');
-      const workspaces = transaction.objectStore('workspaces');
-      const readTranslations = translations.getAll();
-      const readWorkspaces = workspaces.getAll();
-      readTranslations.onsuccess = () => {
-        const [translation] = readTranslations.result;
-        const settingsEntries = Object.entries(translation.settings);
-        const legacyEntries = settingsEntries.filter(([key]) => key !== 'edgeMarker');
-        const settings = Object.fromEntries(legacyEntries);
-        const [first, second] = translation.elements.edges;
-        const style = Object.assign({}, first.style, { stroke: '#a855f7', strokeWidth: 99 });
-        const edge = Object.assign({}, first, { markerEnd: { type: 'arrowclosed' }, style });
-        const elements = Object.assign({}, translation.elements, { edges: [edge, second] });
-        const legacy = Object.assign({}, translation, { elements, settings });
-        translations.put(legacy);
-      };
-      readWorkspaces.onsuccess = () => {
-        const [workspace] = readWorkspaces.result;
-        const legacy = Object.assign({}, workspace, { name: 'Untitled Graph' });
-        workspaces.put(legacy);
-      };
-      transaction.oncomplete = () => { database.close(); resolve(); };
-      transaction.onabort = () => { database.close(); reject(transaction.error); };
-    };
-  }));
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('m2rf-studio');
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction(['translations', 'workspaces'], 'readwrite');
+          const translations = transaction.objectStore('translations');
+          const workspaces = transaction.objectStore('workspaces');
+          const readTranslations = translations.getAll();
+          const readWorkspaces = workspaces.getAll();
+          readTranslations.onsuccess = () => {
+            const [translation] = readTranslations.result;
+            const settingsEntries = Object.entries(translation.settings);
+            const legacyEntries = settingsEntries.filter(([key]) => key !== 'edgeMarker');
+            const settings = Object.fromEntries(legacyEntries);
+            const [first, second] = translation.elements.edges;
+            const style = Object.assign({}, first.style, { stroke: '#a855f7', strokeWidth: 99 });
+            const edge = Object.assign({}, first, { markerEnd: { type: 'arrowclosed' }, style });
+            const elements = Object.assign({}, translation.elements, { edges: [edge, second] });
+            const legacy = Object.assign({}, translation, { elements, settings });
+            translations.put(legacy);
+          };
+          readWorkspaces.onsuccess = () => {
+            const [workspace] = readWorkspaces.result;
+            const legacy = Object.assign({}, workspace, { name: 'Untitled Graph' });
+            workspaces.put(legacy);
+          };
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onabort = () => {
+            database.close();
+            reject(transaction.error);
+          };
+        };
+      }),
+  );
 
   await page.reload();
   const firstEdge = page.locator('.react-flow__edge').first();
-  await expect.poll(() => readMarker(firstEdge)).toEqual({ fill: 'rgb(168, 85, 247)', stroke: 'rgb(168, 85, 247)' });
+  await expect
+    .poll(() => readMarker(firstEdge))
+    .toEqual({ fill: 'rgb(168, 85, 247)', stroke: 'rgb(168, 85, 247)' });
   await expect(firstEdge.locator('.react-flow__edge-path')).toHaveCSS('stroke-width', '8px');
   const graphName = page.getByRole('button', { name: 'Rename graph', exact: true });
   await expect(graphName).toHaveText(/^[a-f0-9-]{36}$/);
-  await expect(page.getByRole('combobox', { name: 'Marker', exact: true })).toHaveText('Filled arrow');
+  await expect(page.getByRole('combobox', { name: 'Marker', exact: true })).toHaveText(
+    'Filled arrow',
+  );
 });
 
 test('renders sequence diagrams as React Flow elements', async ({ page }) => {
@@ -432,7 +482,9 @@ test('renders sequence diagrams as React Flow elements', async ({ page }) => {
   await expect(alice.locator('.z-10 > div').first()).toHaveCSS('background-color', participantFill);
 
   await updateEditor(page, sequenceSource.replace('A->>B: Hello', 'A-->>B: Hello'));
-  const firstMessage = page.getByRole('button', { name: 'Edge from A to action-message-i0', exact: true }).locator('.react-flow__edge-path');
+  const firstMessage = page
+    .getByRole('button', { name: 'Edge from A to action-message-i0', exact: true })
+    .locator('.react-flow__edge-path');
   await expect(firstMessage).toHaveCSS('stroke-dasharray', '6px, 4px');
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -444,12 +496,17 @@ test('renders sequence diagrams as React Flow elements', async ({ page }) => {
   await expect(firstMessage).toHaveCSS('stroke-dasharray', '6px, 4px');
 });
 
-test('shows render errors in a dismissible dialog and keeps the editor usable', async ({ page }) => {
+test('shows render errors in a dismissible dialog and keeps the editor usable', async ({
+  page,
+}) => {
   await page.goto('/');
-  await updateEditor(page, `pie title Pets
+  await updateEditor(
+    page,
+    `pie title Pets
   "Dogs" : 45
   "Cats" : 55
-`);
+`,
+  );
 
   const dialog = page.getByRole('dialog', { name: 'Unable to update the graph' });
   await expect(dialog).toBeVisible();
@@ -476,8 +533,14 @@ test('starts new diagrams with default styles and canvas settings', async ({ pag
   await expect(page.getByLabel('Fill')).toHaveValue('#cccccc');
   await expect(page.getByRole('combobox', { name: 'Surface', exact: true })).toHaveText('Solid');
   await expect(page.getByRole('combobox', { name: 'Background', exact: true })).toHaveText('None');
-  await expect(page.getByRole('switch', { name: 'Show grid', exact: true })).toHaveAttribute('aria-checked', 'false');
-  await expect(page.locator('.react-flow__node').first()).toHaveCSS('background-color', 'rgb(204, 204, 204)');
+  await expect(page.getByRole('switch', { name: 'Show grid', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
+  await expect(page.locator('.react-flow__node').first()).toHaveCSS(
+    'background-color',
+    'rgb(204, 204, 204)',
+  );
   await expect(page.locator('.react-flow__node').first()).toHaveCSS('background-image', 'none');
 });
 
@@ -492,7 +555,9 @@ test('supports no canvas background', async ({ page }) => {
   await expect(page.getByLabel('Density')).toHaveCount(0);
 });
 
-test('opens the saved graph drawer and closes it after selection on mobile', async ({ page }, testInfo) => {
+test('opens the saved graph drawer and closes it after selection on mobile', async ({
+  page,
+}, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
@@ -509,7 +574,9 @@ test('opens the saved graph drawer and closes it after selection on mobile', asy
   await page.screenshot({ path: testInfo.outputPath('mobile-sidebar.png') });
   await drawer.getByRole('button', { name: 'Mobile graph' }).click();
   await expect(drawer).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Rename graph', exact: true })).toHaveText('Mobile graph');
+  await expect(page.getByRole('button', { name: 'Rename graph', exact: true })).toHaveText(
+    'Mobile graph',
+  );
   await expect(page.locator('.cm-content')).toContainText('Idea');
 });
 
@@ -536,16 +603,22 @@ test('resizes the editor and canvas with pointer and keyboard', async ({ page },
 
   const minimumEditorWidth = editorBefore.width + 100;
   const maximumCanvasWidth = canvasBefore.width - 100;
-  await expect.poll(async () => (await getBounds(editor)).width).toBeGreaterThan(minimumEditorWidth);
+  await expect
+    .poll(async () => (await getBounds(editor)).width)
+    .toBeGreaterThan(minimumEditorWidth);
   await expect.poll(async () => (await getBounds(canvas)).width).toBeLessThan(maximumCanvasWidth);
 
   const editorAfterDrag = await getBounds(editor);
   await handle.focus();
   await page.keyboard.press('ArrowLeft');
-  await expect.poll(async () => (await getBounds(editor)).width).toBeLessThan(editorAfterDrag.width);
+  await expect
+    .poll(async () => (await getBounds(editor)).width)
+    .toBeLessThan(editorAfterDrag.width);
 
   await updateEditor(page);
-  await expect(page.locator('.react-flow__node').filter({ hasText: 'Write Mermaid' })).toBeVisible();
+  await expect(
+    page.locator('.react-flow__node').filter({ hasText: 'Write Mermaid' }),
+  ).toBeVisible();
   await expect(page.locator('.react-flow__edge-path')).toHaveCount(2);
   await page.getByRole('button', { name: 'fit view', exact: true }).click();
   await page.screenshot({ path: testInfo.outputPath('desktop-resizable.png') });
@@ -577,7 +650,9 @@ test('stacks the editor above the canvas on mobile', async ({ page }, testInfo) 
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.locator('#workspace-panels')).toHaveCSS('flex-direction', 'row');
-  await expect(page.getByRole('separator', { name: 'Resize Mermaid and React Flow panels' })).toBeVisible();
+  await expect(
+    page.getByRole('separator', { name: 'Resize Mermaid and React Flow panels' }),
+  ).toBeVisible();
 });
 
 test('saves selected node visual edits after Mermaid update', async ({ page }) => {
@@ -611,13 +686,15 @@ test('saves selected node visual edits after Mermaid update', async ({ page }) =
 
   await updateEditor(page);
 
-  await expect.poll(() => consoleMessages).toContainEqual(
-    expect.objectContaining({
-      event: 'input.update',
-      msg: 'm2rf app event',
-      source: '[REDACTED]',
-    })
-  );
+  await expect
+    .poll(() => consoleMessages)
+    .toContainEqual(
+      expect.objectContaining({
+        event: 'input.update',
+        msg: 'm2rf app event',
+        source: '[REDACTED]',
+      }),
+    );
 
   const node = page.locator('.react-flow__node').filter({
     hasText: 'Write Mermaid',
