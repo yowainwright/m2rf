@@ -24,12 +24,11 @@ import VersionTree, { type VersionTreeItem } from './versiontree';
 import {
   APP_LICENSE,
   APP_VERSION,
-  AUTHOR_URL,
   CURRENT_YEAR,
-  FOOTER_CREDITS_INTRO,
-  FOOTER_PROJECT_NAME,
   FOOTER_SUPPORTED_DIAGRAMS,
+  OSS_ADDITIONAL_CREDITS,
   OSS_CREDITS,
+  OSS_FRAMEWORK_CREDITS,
   REPOSITORY_URL,
 } from './constants';
 
@@ -143,7 +142,8 @@ export function WorkspaceSidebar() {
 }
 
 function WorkspaceCredits() {
-  const credits = OSS_CREDITS.map(({ name, href }) => (
+  const tools = OSS_CREDITS.concat(OSS_ADDITIONAL_CREDITS, OSS_FRAMEWORK_CREDITS);
+  const credits = tools.map(({ name, href }) => (
     <li key={name}>
       <a
         href={href}
@@ -155,6 +155,10 @@ function WorkspaceCredits() {
       </a>
     </li>
   ));
+  const coreCredits = credits.slice(0, OSS_CREDITS.length);
+  const frameworkStart = OSS_CREDITS.length + OSS_ADDITIONAL_CREDITS.length;
+  const additionalCredits = credits.slice(OSS_CREDITS.length, frameworkStart);
+  const frameworkCredits = credits.slice(frameworkStart);
 
   return (
     <SidebarFooter className="shrink-0 items-center gap-3 border-t border-sidebar-border px-2 pt-4 pb-6 text-center text-xs text-muted-foreground">
@@ -170,33 +174,16 @@ function WorkspaceCredits() {
         {FOOTER_SUPPORTED_DIAGRAMS}
       </p>
       <Separator className="bg-sidebar-border" />
-      <p className="w-full px-2 text-left">
-        FOSS{' '}
-        <a
-          href={REPOSITORY_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="hover:underline focus-visible:underline"
-        >
-          {FOOTER_PROJECT_NAME}
-        </a>{' '}
-        by{' '}
-        <a
-          href={AUTHOR_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="hover:underline focus-visible:underline"
-        >
-          jeff
-        </a>{' '}
-        {FOOTER_CREDITS_INTRO}
-      </p>
-      <Separator className="bg-sidebar-border" />
-      <ul
-        aria-label="Open-source credits"
-        className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-2 text-foreground"
-      >
-        {credits}
+      <ul aria-label="Open-source credits" className="flex flex-col gap-1 px-2 text-foreground">
+        <li>
+          <ul className="flex justify-center gap-3 whitespace-nowrap">{coreCredits}</ul>
+        </li>
+        <li>
+          <ul className="flex justify-center gap-3 whitespace-nowrap">{additionalCredits}</ul>
+        </li>
+        <li>
+          <ul className="flex justify-center gap-3 whitespace-nowrap">{frameworkCredits}</ul>
+        </li>
       </ul>
       <Separator className="bg-sidebar-border" />
       <p className="px-2">

@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 
 import Dexie from 'dexie';
 import { createElement } from 'react';
+import { fromPromise } from 'xstate';
 import { act, cleanup, fireEvent, render, renderHook, waitFor } from '@testing-library/react';
 import type { Edge, Node } from 'reactflow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -13,8 +14,14 @@ import {
   graphRepository,
   parseMermaidSvg,
 } from '@/app/graph';
-import type { CreateGraphRecordsInput, NodeShape, NodeSurface } from '@/app/graph';
-import { AppContext } from '@/app';
+import type {
+  CreateGraphRecordsInput,
+  GraphRenderResult,
+  NodeShape,
+  NodeSurface,
+} from '@/app/graph';
+import type { AppContext as AppMachineContext } from '@/app/types';
+import { AppContext, appMachine } from '@/app';
 import { SidebarProvider } from '@/app/components/ui/sidebar';
 import { WorkspaceHeader } from '@/app/components/workspace/header';
 import { WorkspaceSidebar } from '@/app/components/workspace/sidebar';
@@ -131,13 +138,21 @@ describe('graphRepository', () => {
   });
 
   it('shows the sidebar only when saved graphs exist, including after reload and deletion', async () => {
+    const rendered: GraphRenderResult = {
+      diagramType: 'flowchart',
+      elements: input.translation.elements,
+    };
+    const renderGraph = fromPromise<GraphRenderResult, AppMachineContext>(() =>
+      Promise.resolve(rendered),
+    );
+    const logic = appMachine.provide({ actors: { render: renderGraph } });
     const workspace = createElement(
       SidebarProvider,
       null,
       createElement(WorkspaceHeader),
       createElement(WorkspaceSidebar),
     );
-    const app = createElement(AppContext.Provider, null, workspace);
+    const app = createElement(AppContext.Provider, { logic, children: workspace });
     const ui = render(app);
     await waitFor(() =>
       expect(ui.getByRole('button', { name: 'Save' }).hasAttribute('disabled')).toBe(false),

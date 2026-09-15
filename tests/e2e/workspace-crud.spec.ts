@@ -167,29 +167,27 @@ test('shows minimal navigation with tooltips and OSS credits', async ({ page }, 
     repository.url,
   );
   await expect(
-    footer.getByText('m2rf currently supports flow diagrams and sequence diagrams; more soon!', {
-      exact: true,
-    }),
+    footer.getByText(
+      'm2rf currently supports flow diagrams and sequence diagrams; more soon! made with:',
+      { exact: true },
+    ),
   ).toBeVisible();
   const footerMetadata = `v${version} · ${license} · ${new Date().getFullYear()}`;
   await expect(footer.getByText(footerMetadata, { exact: true })).toBeVisible();
-  await expect(
-    footer.getByText('FOSS mermaid to react flow by jeff only because of these awesome tools', {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(
-    footer.getByRole('link', { name: 'mermaid to react flow', exact: true }),
-  ).toHaveAttribute('href', repository.url);
-  await expect(footer.getByRole('link', { name: 'jeff', exact: true })).toHaveAttribute(
-    'href',
-    'https://jeffry.in',
-  );
   await expect(
     header.getByRole('link', { name: 'GitHub repository', exact: true }),
   ).toHaveAttribute('href', repository.url);
   await expect(footer.getByRole('heading')).toHaveCount(0);
   const credits = footer.getByRole('list', { name: 'Open-source credits' });
+  const creditRows = credits.locator(':scope > li > ul');
+  await expect(creditRows).toHaveCount(3);
+  await expect(creditRows.nth(0).getByRole('link')).toHaveText(['Mermaid', 'React Flow', 'XState']);
+  await expect(creditRows.nth(1).getByRole('link')).toHaveText(['Effect', 'shadcn/ui', 'Codex']);
+  await expect(creditRows.nth(2).getByRole('link')).toHaveText([
+    'Tailwind CSS',
+    'Next.js',
+    'Dexie',
+  ]);
   expect(
     await credits
       .getByRole('link')
@@ -198,10 +196,12 @@ test('shows minimal navigation with tooltips and OSS credits', async ({ page }, 
     ['Mermaid', 'https://mermaid.js.org/'],
     ['React Flow', 'https://reactflow.dev/'],
     ['XState', 'https://stately.ai/docs/xstate'],
-    ['Dexie', 'https://dexie.org/'],
     ['Effect', 'https://effect.website/'],
     ['shadcn/ui', 'https://ui.shadcn.com/'],
     ['Codex', 'https://github.com/openai/codex'],
+    ['Tailwind CSS', 'https://tailwindcss.com/'],
+    ['Next.js', 'https://nextjs.org/'],
+    ['Dexie', 'https://dexie.org/'],
   ]);
   await page.mouse.move(0, 0);
   await page.screenshot({ path: testInfo.outputPath('desktop-navigation.png') });
