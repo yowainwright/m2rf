@@ -1,5 +1,7 @@
 'use client';
 
+import type { ChangeEvent } from 'react';
+import type { GraphShaderSettings } from '@/app/graph';
 import { Badge } from '@/app/components/ui/badge';
 import {
   Field,
@@ -15,16 +17,20 @@ import {
   TooltipTrigger,
 } from '@/app/components/ui/tooltip';
 import { cn } from '@/app/lib/utils';
-import { TOOLKIT_DATE_OPTIONS, TOOLKIT_METADATA_LABELS as LABELS } from './constants';
+import {
+  TOOLKIT_DATE_OPTIONS,
+  TOOLKIT_METADATA_LABELS as LABELS,
+  METADATA_BADGE_CLASS_NAME,
+  TITLE_TOOLTIP_MAX_LENGTH,
+} from './constants';
 import type {
   EdgeMetadataProps,
   MetadataFieldsProps,
   NodeMetadataProps,
+  ShaderColorKey,
+  ShaderToolsProps,
   ToolkitMetadataProps,
 } from './types';
-
-const metadataBadgeClassName = 'px-2 py-0 text-xs';
-const TITLE_TOOLTIP_MAX_LENGTH = 24;
 
 function MetadataFields({ className, fields }: MetadataFieldsProps) {
   const items = fields.map(({ emphasized, label, value, hideLabel }) => {
@@ -135,10 +141,10 @@ export function ToolkitMetadata(props: ToolkitMetadataProps) {
     <TooltipProvider>
       <FieldSet className="gap-1">
         <div className="flex items-center justify-between gap-2">
-          <Badge className={metadataBadgeClassName} variant="outline">
+          <Badge className={METADATA_BADGE_CLASS_NAME} variant="outline">
             {versionNumber}
           </Badge>
-          <Badge className={metadataBadgeClassName} variant="outline">
+          <Badge className={METADATA_BADGE_CLASS_NAME} variant="outline">
             {props.scope}
           </Badge>
         </div>
@@ -147,3 +153,49 @@ export function ToolkitMetadata(props: ToolkitMetadataProps) {
     </TooltipProvider>
   );
 }
+
+export const getPatternPreviewStyle = (value: string, preview: string) => {
+  if (value === 'pattern-diagonal') return { background: preview };
+  if (value.startsWith('pattern-')) return { background: preview, backgroundSize: '8px 8px' };
+  return { background: preview };
+};
+
+const updateShaderColor = (
+  shader: GraphShaderSettings,
+  isAurora: boolean,
+  key: ShaderColorKey,
+  value: string,
+) => {
+  const isAuroraColorA = isAurora && key === 'colorA';
+  const isAuroraColorB = isAurora && key === 'colorB';
+  if (isAuroraColorA)
+    return Object.assign({}, shader, {
+      aurora: Object.assign({}, shader.aurora, { colorA: value }),
+    });
+  if (isAuroraColorB)
+    return Object.assign({}, shader, {
+      aurora: Object.assign({}, shader.aurora, { colorB: value }),
+    });
+  if (isAurora)
+    return Object.assign({}, shader, {
+      aurora: Object.assign({}, shader.aurora, { colorC: value }),
+    });
+  if (key === 'colorA')
+    return Object.assign({}, shader, {
+      gradientMesh: Object.assign({}, shader.gradientMesh, { colorA: value }),
+    });
+  return Object.assign({}, shader, {
+    gradientMesh: Object.assign({}, shader.gradientMesh, { colorB: value }),
+  });
+};
+
+export const createShaderColorHandler =
+  (
+    shader: GraphShaderSettings,
+    isAurora: boolean,
+    key: ShaderColorKey,
+    onUpdate: ShaderToolsProps['onUpdate'],
+  ) =>
+  (event: ChangeEvent<HTMLInputElement>) => {
+    onUpdate(updateShaderColor(shader, isAurora, key, event.target.value));
+  };

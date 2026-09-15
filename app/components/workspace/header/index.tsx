@@ -9,9 +9,14 @@ import { SidebarTrigger } from '@/app/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip';
 import { AppContext } from '@/app';
 import { getSaveLabel, logAppEvent } from '@/app/utils';
-import { ExportMenu } from './export-menu';
-import { WorkspaceTitle } from './title';
-import { REPOSITORY_URL, SAVE_KEY_SHORTCUTS, SAVE_SHORTCUT_LABEL } from './constants';
+import { ExportMenu, WorkspaceTitle } from './utils';
+import {
+  HEADER_LABELS,
+  REPOSITORY_URL,
+  SAVE_KEY_SHORTCUTS,
+  SAVE_SHORTCUT_LABEL,
+} from './constants';
+import type { ExportMenuProps } from './types';
 
 export function WorkspaceHeader() {
   const actor = AppContext.useActorRef();
@@ -37,7 +42,7 @@ export function WorkspaceHeader() {
     logAppEvent('workspace.save');
     actor.send({ type: 'workspace.save' });
   }, [actor]);
-  const handleExport = (format: 'gif' | 'png' | 'svg', repeat: 'forever' | 'once') => {
+  const handleExport: ExportMenuProps['onExport'] = (format, repeat) => {
     if (format === 'gif') {
       logAppEvent('translation.read', { format, repeat });
     } else {
@@ -71,13 +76,13 @@ export function WorkspaceHeader() {
   return (
     <header className="grid min-h-12 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b px-4 py-2">
       <div className="flex shrink-0 items-center gap-2">
-        {hasWorkspaces && <SidebarTrigger title="Toggle saved graphs" />}
-        <h1 className="text-xl leading-none font-bold">m2rf</h1>
+        {hasWorkspaces && <SidebarTrigger title={HEADER_LABELS.sidebar} />}
+        <h1 className="text-xl leading-none font-bold">{HEADER_LABELS.title}</h1>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button asChild className="h-7 w-7" size="icon" variant="ghost">
               <a
-                aria-label="GitHub repository"
+                aria-label={HEADER_LABELS.repository}
                 href={REPOSITORY_URL}
                 target="_blank"
                 rel="noreferrer"
@@ -92,7 +97,7 @@ export function WorkspaceHeader() {
               </a>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>GitHub repository</TooltipContent>
+          <TooltipContent>{HEADER_LABELS.repository}</TooltipContent>
         </Tooltip>
       </div>
       <div className="col-span-3 row-start-2 flex min-w-0 items-center justify-center gap-2 sm:col-span-1 sm:col-start-2 sm:row-start-1">
@@ -100,7 +105,7 @@ export function WorkspaceHeader() {
           <TooltipTrigger asChild>
             <span className="inline-flex shrink-0">
               <Button
-                aria-label="New"
+                aria-label={HEADER_LABELS.create}
                 className="h-7 w-7"
                 disabled={!canNavigate}
                 size="icon"
@@ -112,7 +117,7 @@ export function WorkspaceHeader() {
               </Button>
             </span>
           </TooltipTrigger>
-          <TooltipContent>New</TooltipContent>
+          <TooltipContent>{HEADER_LABELS.create}</TooltipContent>
         </Tooltip>
         <WorkspaceTitle>
           <InputGroupAddon align="inline-end" className="shrink-0">
@@ -137,7 +142,7 @@ export function WorkspaceHeader() {
           <TooltipTrigger asChild>
             <span className="inline-flex shrink-0">
               <Button
-                aria-label="Delete"
+                aria-label={HEADER_LABELS.delete}
                 className="h-7 w-7"
                 disabled={!canDelete}
                 size="icon"
@@ -149,7 +154,7 @@ export function WorkspaceHeader() {
               </Button>
             </span>
           </TooltipTrigger>
-          <TooltipContent>Delete</TooltipContent>
+          <TooltipContent>{HEADER_LABELS.delete}</TooltipContent>
         </Tooltip>
       </div>
     </header>

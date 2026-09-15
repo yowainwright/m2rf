@@ -6,7 +6,7 @@
       "**",
       "!app/**",
       "app/**/{index,utils,types,constants}.ts",
-      "app/components/**/index.tsx",
+      "app/components/**/{index,utils}.tsx",
       "!app/components/**/index.ts",
       "app/**/{page,layout,loading,error,global-error,not-found,template,default}.tsx",
       "app/**/route.ts",

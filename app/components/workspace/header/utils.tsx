@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { Download } from 'lucide-react';
 import { AppContext } from '@/app';
 import {
   APP_INITIAL_CONTEXT,
@@ -12,7 +13,16 @@ import { getWorkspaceLabel } from '@/app/graph';
 import { UNTITLED_GRAPH_NAME } from '@/app/graph/constants';
 import { Button } from '@/app/components/ui/button';
 import { InputGroup, InputGroupInput } from '@/app/components/ui/input-group';
-import type { WorkspaceTitleProps } from './types';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu';
+import { HEADER_LABELS } from './constants';
+import type { ExportMenuProps, WorkspaceTitleProps } from './types';
 
 export function WorkspaceTitle({ children }: WorkspaceTitleProps) {
   const actor = AppContext.useActorRef();
@@ -67,7 +77,7 @@ export function WorkspaceTitle({ children }: WorkspaceTitleProps) {
 
   if (!showInput) {
     return (
-      <InputGroup className="w-96 min-w-0 max-w-full" aria-label="Graph name and save">
+      <InputGroup className="w-96 min-w-0 max-w-full" aria-label={HEADER_LABELS.graphNameAndSave}>
         <Button
           ref={button}
           aria-label={RENAME_GRAPH_LABEL}
@@ -86,7 +96,7 @@ export function WorkspaceTitle({ children }: WorkspaceTitleProps) {
 
   return (
     <div className="w-96 min-w-0 max-w-full">
-      <InputGroup aria-label="Graph name and save" onBlur={handleBlur}>
+      <InputGroup aria-label={HEADER_LABELS.graphNameAndSave} onBlur={handleBlur}>
         <InputGroupInput
           ref={input}
           aria-label={GRAPH_NAME_LABEL}
@@ -108,5 +118,46 @@ export function WorkspaceTitle({ children }: WorkspaceTitleProps) {
         </p>
       )}
     </div>
+  );
+}
+
+export function ExportMenu({ canExport, onExport }: ExportMenuProps) {
+  return (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex shrink-0">
+            <DropdownMenuTrigger asChild>
+              <Button
+                aria-label={HEADER_LABELS.download}
+                className="h-7 w-7"
+                disabled={!canExport}
+                size="icon"
+                type="button"
+                variant="ghost"
+              >
+                <Download aria-hidden="true" className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{HEADER_LABELS.download}</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end" className="min-w-0">
+        <DropdownMenuItem className="text-xs" onSelect={() => onExport('svg', 'forever')}>
+          SVG
+        </DropdownMenuItem>
+        <DropdownMenuItem className="text-xs" onSelect={() => onExport('png', 'forever')}>
+          PNG
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="text-xs" onSelect={() => onExport('gif', 'forever')}>
+          GIF loop
+        </DropdownMenuItem>
+        <DropdownMenuItem className="text-xs" onSelect={() => onExport('gif', 'once')}>
+          GIF once
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

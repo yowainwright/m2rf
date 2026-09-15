@@ -14,6 +14,14 @@ import {
   SEQUENCE_PARTICIPANT_NODE_TYPE,
 } from '@/app/graph/constants';
 
+export const RENDER_LABELS = {
+  output: 'React Flow output',
+  resetLayout: 'Reset layout',
+  nodeSelected: 'Node selected',
+  edgeSelected: 'Edge selected',
+};
+export const RENDER_PRO_OPTIONS = { hideAttribution: true };
+
 export const RENDER_EDGE_TYPES = Object.assign({}, SURGE_EDGE_TYPES, {
   [SEQUENCE_MESSAGE_EDGE_TYPE]: SequenceMessageEdge,
 });

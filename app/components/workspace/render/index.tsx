@@ -30,9 +30,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/ca
 import { Separator } from '@/app/components/ui/separator';
 import { AppContext } from '@/app';
 import { getSelectionLabel } from '@/app/utils';
-import { createRenderActions } from './actions';
-import { GraphCanvas } from './canvas';
-import { RenderToolkit } from './toolkit';
+import { createRenderActions, GraphCanvas, RenderToolkit } from './utils';
+import { RENDER_LABELS } from './constants';
 
 export function GraphPreview() {
   const { send } = AppContext.useActorRef();
@@ -154,7 +153,7 @@ export function GraphPreview() {
   return (
     <Card className="flex h-full min-h-0 flex-col overflow-hidden">
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
-        <CardTitle className="text-sm">React Flow output</CardTitle>
+        <CardTitle className="text-sm">{RENDER_LABELS.output}</CardTitle>
         <div className="flex items-center gap-2">
           <Button
             size="sm"
@@ -163,7 +162,7 @@ export function GraphPreview() {
             onClick={actions.handleLayout}
             disabled={!canReset}
           >
-            Reset layout
+            {RENDER_LABELS.resetLayout}
           </Button>
           <RenderToolkit
             canEditDraft={canEditDraft}
