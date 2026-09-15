@@ -1,7 +1,8 @@
 'use client';
 
-import { ChevronDown, Download, FileCode, FileImage, Film } from 'lucide-react';
+import { Download, FileCode, FileImage, Film } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,13 +15,25 @@ import type { ExportMenuProps } from './types';
 export function ExportMenu({ canExport, onExport }: ExportMenuProps) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button disabled={!canExport} size="sm" type="button" variant="outline">
-          <Download aria-hidden="true" className="size-4" />
-          Download
-          <ChevronDown aria-hidden="true" className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex shrink-0">
+            <DropdownMenuTrigger asChild>
+              <Button
+                aria-label="Download"
+                className="h-7 w-7"
+                disabled={!canExport}
+                size="icon"
+                type="button"
+                variant="ghost"
+              >
+                <Download aria-hidden="true" className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Download</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onSelect={() => onExport('svg', 'forever')}>
           <FileCode aria-hidden="true" /> SVG

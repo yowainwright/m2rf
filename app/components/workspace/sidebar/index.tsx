@@ -1,13 +1,17 @@
 'use client';
 
 import { cn } from '@/app/lib/utils';
-import { ChevronRight, Workflow } from 'lucide-react';
+import { ChevronRight, Workflow, X } from 'lucide-react';
 import { getWorkspaceLabel } from '@/app/graph';
+import { Button } from '@/app/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -16,6 +20,7 @@ import {
 } from '@/app/components/ui/sidebar';
 import { AppContext } from '@/app';
 import VersionTree, { type VersionTreeItem } from './versiontree';
+import { APP_VERSION, OSS_CREDITS, REPOSITORY_URL, SUPPORTED_DIAGRAMS } from './constants';
 
 export function WorkspaceSidebar() {
   const { send } = AppContext.useActorRef();
@@ -25,7 +30,14 @@ export function WorkspaceSidebar() {
   const versions = AppContext.useSelector((state) => state.context.versions);
   const workspaces = AppContext.useSelector((state) => state.context.workspaces);
   const canNavigate = AppContext.useSelector((state) => state.can({ type: 'workspace.create' }));
-  const { setOpenMobile } = useSidebar();
+  const { isMobile, setOpen, setOpenMobile } = useSidebar();
+  const handleClose = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+      return;
+    }
+    setOpen(false);
+  };
   const versionItems: VersionTreeItem[] = versions.map((version) => {
     return { id: version.id, timestamp: version.updatedAt, version: version.version };
   });
@@ -84,16 +96,72 @@ export function WorkspaceSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b px-4 py-4">
-        <h2 className="text-sm font-semibold">Saved graphs</h2>
+      <SidebarHeader className="min-h-12 border-b px-4 py-2">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold">m2rf</p>
+            <p className="text-[10px] leading-3 text-muted-foreground">mermaid to react flow</p>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="Close sidebar"
+                size="icon"
+                type="button"
+                variant="ghost"
+                onClick={handleClose}
+              >
+                <X aria-hidden="true" className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Close sidebar</TooltipContent>
+          </Tooltip>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupLabel asChild>
+            <h2>Saved graphs</h2>
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <nav aria-label="Saved graphs">{content}</nav>
           </SidebarGroupContent>
         </SidebarGroup>
+        <WorkspaceCredits />
       </SidebarContent>
     </Sidebar>
+  );
+}
+
+function WorkspaceCredits() {
+  const credits = OSS_CREDITS.map(({ name, href }) => (
+    <li key={name}>
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="hover:underline focus-visible:underline"
+      >
+        {name}
+      </a>
+    </li>
+  ));
+
+  return (
+    <SidebarFooter className="mt-auto border-t px-4 py-4 text-xs text-muted-foreground">
+      <p>{APP_VERSION}</p>
+      <p>{SUPPORTED_DIAGRAMS}</p>
+      <a
+        href={REPOSITORY_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="w-fit hover:underline focus-visible:underline"
+      >
+        GitHub
+      </a>
+      <ul aria-label="Open-source credits" className="flex flex-wrap gap-x-3 gap-y-1">
+        {credits}
+      </ul>
+    </SidebarFooter>
   );
 }

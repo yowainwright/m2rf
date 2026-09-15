@@ -1,5 +1,8 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import packageMetadata from '../../package.json' with { type: 'json' };
+
+const { repository, version } = packageMetadata;
 
 const source = `flowchart LR
   Alpha[Write Mermaid] --> Beta[Build graph]
@@ -120,6 +123,112 @@ const renameGraph = async (page: Page, name: string) => {
   await expect(title).toHaveText(name);
 };
 
+test('shows minimal navigation with tooltips and OSS credits', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  const header = page.locator('header');
+  const names = await header.getByRole('button').evaluateAll((buttons) => {
+    return buttons.map((button) => button.getAttribute('aria-label') || button.textContent?.trim());
+  });
+  expect(names).toEqual(['Toggle Sidebar', 'New', 'Rename graph', 'Save', 'Download', 'Delete']);
+  const actions = header.locator('button[aria-label]').filter({ has: page.locator('svg') });
+  await expect(actions).toHaveCount(3);
+  expect(await actions.allTextContents()).toEqual(['', '', '']);
+  const classes = await actions.evaluateAll((buttons) => buttons.map((button) => button.className));
+  expect(
+    classes.every((value) => !value.includes('bg-background') && value.includes('h-7 w-7')),
+  ).toBe(true);
+  await expect(header.getByRole('heading', { name: 'm2rf', exact: true })).toBeVisible();
+
+  const create = header.getByRole('button', { name: 'New', exact: true });
+  await create.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('New');
+  await page.mouse.move(0, 0);
+  await create.focus();
+  await expect(page.getByRole('tooltip')).toHaveText('New');
+  const save = header.getByRole('button', { name: 'Save', exact: true });
+  await expect(save).toHaveText('save(⌃s / ⌘s)');
+  await expect(save).toHaveAttribute('aria-keyshortcuts', 'Control+s Meta+s');
+  await save.click();
+  await expect(header.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
+  await header.getByRole('button', { name: 'Download', exact: true }).click();
+  await expect(page.getByRole('menuitem')).toHaveText(['SVG', 'PNG', 'GIF (loop)', 'GIF (once)']);
+  await page.keyboard.press('Escape');
+
+  const sidebar = page.locator('[data-sidebar="sidebar"]');
+  await expect(sidebar.getByText('m2rf', { exact: true })).toBeVisible();
+  await expect(sidebar.getByRole('heading', { name: 'Saved graphs', exact: true })).toBeVisible();
+  const footer = sidebar.locator('[data-sidebar="footer"]');
+  await expect(footer.getByText(`v${version}`, { exact: true })).toBeVisible();
+  await expect(footer.getByText('Flowcharts · Sequence diagrams', { exact: true })).toBeVisible();
+  await expect(footer.getByRole('link', { name: 'GitHub', exact: true })).toHaveAttribute(
+    'href',
+    repository.url,
+  );
+  await expect(footer.getByRole('heading')).toHaveCount(0);
+  const credits = footer.getByRole('list', { name: 'Open-source credits' });
+  expect(
+    await credits
+      .getByRole('link')
+      .evaluateAll((links) => links.map((link) => [link.textContent, link.getAttribute('href')])),
+  ).toEqual([
+    ['Mermaid', 'https://mermaid.js.org/'],
+    ['React Flow', 'https://reactflow.dev/'],
+    ['XState', 'https://stately.ai/docs/xstate'],
+    ['Dexie', 'https://dexie.org/'],
+    ['Effect', 'https://effect.website/'],
+    ['shadcn/ui', 'https://ui.shadcn.com/'],
+  ]);
+  await page.mouse.move(0, 0);
+  await page.screenshot({ path: testInfo.outputPath('desktop-navigation.png') });
+  const close = sidebar.getByRole('button', { name: 'Close sidebar', exact: true });
+  await close.focus();
+  await close.press('Enter');
+  await expect(page.locator('[data-state="collapsed"][data-side="left"]')).toBeVisible();
+  await header.getByRole('button', { name: 'Toggle Sidebar' }).press('Enter');
+  await expect(page.locator('[data-state="expanded"][data-side="left"]')).toBeVisible();
+});
+
+test('keeps navigation and sidebar reachable with a long title on mobile', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto('/');
+  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  await renameGraph(
+    page,
+    'A long graph title that must not hide any navigation actions on a narrow screen',
+  );
+  const header = page.locator('header');
+  const create = await getBounds(header.getByRole('button', { name: 'New', exact: true }));
+  const title = await getBounds(header.getByRole('button', { name: 'Rename graph', exact: true }));
+  const save = await getBounds(header.getByRole('button', { name: 'Save', exact: true }));
+  const download = await getBounds(header.getByRole('button', { name: 'Download', exact: true }));
+  const remove = await getBounds(header.getByRole('button', { name: 'Delete', exact: true }));
+  expect(create.x + create.width).toBeLessThanOrEqual(title.x);
+  expect(title.x + title.width).toBeLessThanOrEqual(save.x);
+  expect(download.x + download.width).toBeLessThanOrEqual(remove.x);
+  expect(remove.x + remove.width).toBeLessThanOrEqual(320);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  await page.screenshot({ path: testInfo.outputPath('mobile-navigation.png') });
+  await header.getByRole('button', { name: 'Download', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: 'SVG', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await header.getByRole('button', { name: 'Toggle Sidebar' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Sidebar', exact: true });
+  await expect(drawer.getByRole('button', { name: 'Close sidebar', exact: true })).toHaveCount(1);
+  await drawer.getByRole('list', { name: 'Open-source credits' }).scrollIntoViewIfNeeded();
+  await expect(drawer.getByRole('link', { name: 'shadcn/ui', exact: true })).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath('mobile-navigation-sidebar.png') });
+  await drawer.getByRole('button', { name: 'Close sidebar', exact: true }).click();
+  await expect(drawer).toBeHidden();
+  await header.getByRole('button', { name: 'Toggle Sidebar' }).press('Enter');
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole('button', { name: 'Close sidebar', exact: true }).press('Enter');
+  await expect(drawer).toBeHidden();
+});
+
 test('edits titles with keyboard confirmation, cancellation and blank validation', async ({
   page,
 }) => {
@@ -156,16 +265,25 @@ test('edits titles with keyboard confirmation, cancellation and blank validation
   await expect(title).toHaveText('Release plan');
 });
 
-test('saves a title on blur and reloads it without adding a diagram version', async ({ page }) => {
+test('restores the last confirmed title on blur without adding a diagram version', async ({
+  page,
+}) => {
   await page.goto('/');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await saveSnapshot(page, 1);
   const title = page.getByRole('button', { name: 'Rename graph', exact: true });
   const history = page.getByRole('region', { name: 'Version history' });
+  const previousName = await title.innerText();
   await title.click();
-  await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill('  Road map  ');
+  await page.getByRole('heading', { name: 'm2rf', exact: true }).click();
+  await expect(title).toHaveText(previousName);
+  await renameGraph(page, 'Road map');
+  await title.click();
+  await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill('');
   await page.getByRole('heading', { name: 'm2rf', exact: true }).click();
   await expect(title).toHaveText('Road map');
+  await expect(page.getByRole('textbox', { name: 'Graph name', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('alert').filter({ hasText: 'Enter a graph name.' })).toHaveCount(0);
   const navigation = page.getByRole('navigation', { name: 'Saved graphs' });
   await expect(navigation.getByRole('button', { name: 'Road map', exact: true })).toBeVisible();
   await expect(history.getByRole('button')).toHaveCount(1);
@@ -176,9 +294,10 @@ test('saves a title on blur and reloads it without adding a diagram version', as
   await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill('Final road map');
   await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(title).toHaveText('Untitled graph');
-  await expect(
-    navigation.getByRole('button', { name: 'Final road map', exact: true }),
-  ).toBeVisible();
+  await expect(navigation.getByRole('button', { name: 'Final road map', exact: true })).toHaveCount(
+    0,
+  );
+  await expect(navigation.getByRole('button', { name: 'Road map', exact: true })).toBeVisible();
 });
 
 test('restores version styling and saves the oldest as newest while keeping five', async ({

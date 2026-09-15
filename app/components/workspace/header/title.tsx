@@ -11,9 +11,10 @@ import {
 import { getWorkspaceLabel } from '@/app/graph';
 import { UNTITLED_GRAPH_NAME } from '@/app/graph/constants';
 import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
+import { InputGroup, InputGroupInput } from '@/app/components/ui/input-group';
+import type { WorkspaceTitleProps } from './types';
 
-export function WorkspaceTitle() {
+export function WorkspaceTitle({ children }: WorkspaceTitleProps) {
   const actor = AppContext.useActorRef();
   const workspace = AppContext.useSelector((state) => state.context.workspace);
   const isSaved = AppContext.useSelector(
@@ -56,45 +57,51 @@ export function WorkspaceTitle() {
     const type = isCancel ? 'title.cancel' : 'title.confirm';
     actor.send({ type });
   };
-  const handleBlur = () => {
+  const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    const staysInGroup = event.currentTarget.contains(event.relatedTarget);
+    if (staysInGroup) return;
     if (!actor.getSnapshot().matches({ title: 'editing' })) return;
     restoreFocus.current = false;
-    actor.send({ type: 'title.confirm' });
+    actor.send({ type: 'title.cancel' });
   };
 
   if (!showInput) {
     return (
-      <Button
-        ref={button}
-        aria-label={RENAME_GRAPH_LABEL}
-        disabled={!canEdit}
-        title={label}
-        variant="ghost"
-        size="sm"
-        className="min-w-0 justify-start font-semibold"
-        onClick={() => actor.send({ type: 'title.edit' })}
-      >
-        <span className="truncate">{label}</span>
-      </Button>
+      <InputGroup className="w-96 min-w-0 max-w-full" aria-label="Graph name and save">
+        <Button
+          ref={button}
+          aria-label={RENAME_GRAPH_LABEL}
+          disabled={!canEdit}
+          title={label}
+          variant="ghost"
+          className="h-full min-w-0 flex-1 justify-start px-3 font-bold"
+          onClick={() => actor.send({ type: 'title.edit' })}
+        >
+          <span className="truncate">{label}</span>
+        </Button>
+        {children}
+      </InputGroup>
     );
   }
 
   return (
-    <div className="min-w-0 flex-1">
-      <Input
-        ref={input}
-        aria-label={GRAPH_NAME_LABEL}
-        aria-invalid={Boolean(error)}
-        aria-describedby={errorId}
-        aria-busy={saving}
-        disabled={saving}
-        value={draft}
-        placeholder={GRAPH_NAME_LABEL}
-        className="h-8 font-semibold"
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        onChange={(event) => actor.send({ type: 'workspace.rename', name: event.target.value })}
-      />
+    <div className="w-96 min-w-0 max-w-full">
+      <InputGroup aria-label="Graph name and save" onBlur={handleBlur}>
+        <InputGroupInput
+          ref={input}
+          aria-label={GRAPH_NAME_LABEL}
+          aria-invalid={Boolean(error)}
+          aria-describedby={errorId}
+          aria-busy={saving}
+          disabled={saving}
+          value={draft}
+          placeholder={GRAPH_NAME_LABEL}
+          className="h-full min-w-0 font-bold"
+          onKeyDown={handleKeyDown}
+          onChange={(event) => actor.send({ type: 'workspace.rename', name: event.target.value })}
+        />
+        {children}
+      </InputGroup>
       {error && (
         <p id={GRAPH_NAME_ERROR_ID} role="alert" className="text-xs text-destructive">
           {error}

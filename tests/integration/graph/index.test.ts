@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 
 import Dexie from 'dexie';
 import { createElement } from 'react';
-import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, waitFor } from '@testing-library/react';
 import type { Edge, Node } from 'reactflow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -15,6 +15,8 @@ import {
 } from '@/app/graph';
 import type { CreateGraphRecordsInput, NodeShape, NodeSurface } from '@/app/graph';
 import { AppContext } from '@/app';
+import { SidebarProvider } from '@/app/components/ui/sidebar';
+import { WorkspaceHeader } from '@/app/components/workspace/header';
 
 const settings = {
   edgeAnimation: 'none',
@@ -125,6 +127,37 @@ describe('graphRepository', () => {
     vi.restoreAllMocks();
     vi.useRealTimers();
     await deleteWorkspaces();
+  });
+
+  it('commits with embedded Save and discards a draft when focus leaves the title group', async () => {
+    const saved = await graphRepository.create(input);
+    const header = createElement(SidebarProvider, null, createElement(WorkspaceHeader));
+    const ui = render(createElement(AppContext.Provider, null, header));
+    await waitFor(() =>
+      expect(ui.getByRole('button', { name: 'Rename graph' }).textContent).toBe(saved.workspace.id),
+    );
+    fireEvent.click(ui.getByRole('button', { name: 'Rename graph' }));
+    const field = ui.getByRole('textbox', { name: 'Graph name' });
+    fireEvent.change(field, { target: { value: 'Confirmed title' } });
+    const save = ui.getByRole('button', { name: 'Save' });
+    fireEvent.blur(field, { relatedTarget: save });
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(ui.getByRole('button', { name: 'Rename graph' }).textContent).toBe('Confirmed title'),
+    );
+    await waitFor(() => expect(ui.getByRole('button', { name: 'Saved' })).toBeDefined());
+    fireEvent.click(ui.getByRole('button', { name: 'Rename graph' }));
+    fireEvent.change(ui.getByRole('textbox', { name: 'Graph name' }), {
+      target: { value: 'Discard' },
+    });
+    const currentSave = ui.getByRole('button', { name: 'Saved' });
+    fireEvent.blur(ui.getByRole('textbox', { name: 'Graph name' }), { relatedTarget: currentSave });
+    expect(ui.getByRole('textbox', { name: 'Graph name' })).toBeDefined();
+    fireEvent.blur(currentSave, { relatedTarget: document.body });
+    expect(ui.getByRole('button', { name: 'Rename graph' }).textContent).toBe('Confirmed title');
+    expect((await graphRepository.read(saved.workspace.id))?.workspace.name).toBe(
+      'Confirmed title',
+    );
   });
 
   it('renames metadata without changing diagram records or versions', async () => {
