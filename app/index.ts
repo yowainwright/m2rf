@@ -1,33 +1,60 @@
 'use client';
 
 import { createActorContext } from '@xstate/react';
-import { and, assign, assertEvent, fromPromise, not, setup, stateIn } from 'xstate';
+import { and, assign, assertEvent, enqueueActions, fromPromise, not, setup, stateIn } from 'xstate';
 import { APP_INITIAL_CONTEXT, SAVE_FEEDBACK_MS } from './constants';
-import type { AppContext, AppEvent, LoadedWorkspace } from './types';
+import { EMPTY_GRAPH_NAME_ERROR, LEGACY_UNTITLED_GRAPH_NAME } from './graph/constants';
+import type { AppContext as AppMachineContext, AppEvent, LoadedWorkspace } from './types';
 import {
-  acceptRenderedElements, acceptSavedWorkspace, deleteWorkspace, exportWorkspace,
-  getUpdatedAt, isCurrentDraft, loadInitialWorkspace, loadWorkspace, logAppEvent, renderWorkspace,
-  resetWorkspace, restoreWorkspace, runOperation, saveWorkspace, toErrorMessage,
-  shouldRerenderWorkspace, updateCanvas, updateEdgeChanges, updateNodeChanges, updateStyles, updateTranslation,
+  acceptRenderedElements,
+  acceptSavedWorkspace,
+  deleteWorkspace,
+  exportWorkspace,
+  getUpdatedAt,
+  isCurrentDraft,
+  loadInitialWorkspace,
+  loadWorkspace,
+  logAppEvent,
+  renderWorkspace,
+  renameWorkspace,
+  resetWorkspace,
+  restoreWorkspace,
+  runOperation,
+  saveWorkspace,
+  toErrorMessage,
+  shouldRerenderWorkspace,
+  updateCanvas,
+  updateEdgeChanges,
+  updateNodeChanges,
+  updateStyles,
+  updateTranslation,
 } from './utils';
 
 export const appMachine = setup({
-  types: {} as { context: AppContext; events: AppEvent },
+  types: {} as { context: AppMachineContext; events: AppEvent },
   actors: {
-    initialize: fromPromise<LoadedWorkspace>(({ signal }) => runOperation(loadInitialWorkspace(), signal)),
-    load: fromPromise(({ input, signal }: { input: AppContext; signal: AbortSignal }) => {
+    initialize: fromPromise<LoadedWorkspace>(({ signal }) =>
+      runOperation(loadInitialWorkspace(), signal),
+    ),
+    load: fromPromise(({ input, signal }: { input: AppMachineContext; signal: AbortSignal }) => {
       return runOperation(loadWorkspace(input.loadRequest), signal);
     }),
-    save: fromPromise(({ input, signal }: { input: AppContext; signal: AbortSignal }) => {
-      return runOperation(saveWorkspace(input), signal).then((records) => ({ records, draft: input }));
+    save: fromPromise(({ input, signal }: { input: AppMachineContext; signal: AbortSignal }) => {
+      return runOperation(saveWorkspace(input), signal).then((records) => ({
+        records,
+        draft: input,
+      }));
     }),
-    delete: fromPromise(({ input, signal }: { input: AppContext; signal: AbortSignal }) => {
+    rename: fromPromise(({ input, signal }: { input: AppMachineContext; signal: AbortSignal }) => {
+      return runOperation(renameWorkspace(input), signal);
+    }),
+    delete: fromPromise(({ input, signal }: { input: AppMachineContext; signal: AbortSignal }) => {
       return runOperation(deleteWorkspace(input.workspace.id), signal);
     }),
-    render: fromPromise(({ input, signal }: { input: AppContext; signal: AbortSignal }) => {
+    render: fromPromise(({ input, signal }: { input: AppMachineContext; signal: AbortSignal }) => {
       return runOperation(renderWorkspace(input), signal);
     }),
-    export: fromPromise(({ input, signal }: { input: AppContext; signal: AbortSignal }) => {
+    export: fromPromise(({ input, signal }: { input: AppMachineContext; signal: AbortSignal }) => {
       return runOperation(exportWorkspace(input), signal);
     }),
   },
@@ -36,6 +63,7 @@ export const appMachine = setup({
     hasValidGraph: ({ context }) => context.translation.error === null,
     isSavedWorkspace: ({ context }) => context.input.id !== APP_INITIAL_CONTEXT.input.id,
     isNotExporting: not(stateIn({ exporting: 'running' })),
+    isNotRenaming: not(stateIn({ title: 'saving' })),
     canExport: ({ context }) => {
       const hasNodes = context.translation.elements.nodes.length > 0;
       const hasError = context.translation.error !== null;
@@ -61,11 +89,33 @@ export const appMachine = setup({
       assertEvent(event, 'toolkit.update');
       return { toolkitOpen: event.open };
     }),
-    renameWorkspace: assign(({ context, event }) => {
+    editTitle: assign(({ context }) => {
+      const titleDraft =
+        context.workspace.name === LEGACY_UNTITLED_GRAPH_NAME ? '' : context.workspace.name;
+      return { titleDraft, titleError: null };
+    }),
+    updateTitle: assign(({ event }) => {
       assertEvent(event, 'workspace.rename');
+      return { titleDraft: event.name, titleError: null };
+    }),
+    acceptDraftTitle: assign(({ context }) => {
       const updatedAt = getUpdatedAt();
-      const workspace = Object.assign({}, context.workspace, { name: event.name, updatedAt });
-      return { workspace };
+      const name = context.titleDraft.trim();
+      const workspace = Object.assign({}, context.workspace, { name, updatedAt });
+      return { workspace, titleError: null };
+    }),
+    queueAfterRename: assign(({ event }) => {
+      assertEvent(event, [
+        'workspace.create',
+        'workspace.save',
+        'workspace.load',
+        'workspace.delete',
+      ]);
+      return { afterRename: event };
+    }),
+    resumeAfterRename: enqueueActions(({ context, enqueue }) => {
+      if (context.afterRename) enqueue.raise(context.afterRename);
+      enqueue.assign({ afterRename: null });
     }),
     updateInput: assign(({ context, event }) => {
       assertEvent(event, 'input.update');
@@ -116,7 +166,7 @@ export const appMachine = setup({
     requestLayoutReset: assign({ resetLayout: true, needsRender: true }),
   },
 }).createMachine({
-  id: 'm2rf-studio',
+  id: 'm2rf',
   type: 'parallel',
   context: APP_INITIAL_CONTEXT,
   on: {
@@ -136,7 +186,8 @@ export const appMachine = setup({
             src: 'initialize',
             onDone: [
               {
-                guard: ({ event }) => event.output.records !== null && shouldRerenderWorkspace(event.output.records),
+                guard: ({ event }) =>
+                  event.output.records !== null && shouldRerenderWorkspace(event.output.records),
                 target: 'active.rendering',
                 actions: assign(({ context, event }) => {
                   const { records, workspaces } = event.output;
@@ -160,26 +211,43 @@ export const appMachine = setup({
             ],
             onError: {
               target: 'active.rendering',
-              actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),
+              actions: assign(({ event }) => ({
+                operationError: toErrorMessage(event.error),
+                errorDialogDismissed: false,
+              })),
             },
           },
         },
         active: {
           initial: 'ready',
           on: {
-            'workspace.rename': { actions: 'renameWorkspace' },
             'nodes.update': { actions: 'updateNodes' },
             'edges.update': { actions: 'updateEdges' },
             'nodes.style': { actions: 'updateStyles' },
             'edges.style': { actions: 'updateStyles' },
             'canvas.update': { actions: 'updateCanvas' },
             'viewport.update': { actions: 'updateViewport' },
-            'input.update': { target: '.rendering', reenter: true, actions: ['logInputUpdate', 'updateInput'] },
+            'input.update': {
+              target: '.rendering',
+              reenter: true,
+              actions: ['logInputUpdate', 'updateInput'],
+            },
             'layout.reset': { target: '.rendering', reenter: true, actions: 'requestLayoutReset' },
-            'workspace.create': { guard: 'isNotExporting', target: '.rendering', actions: 'resetWorkspace' },
-            'workspace.load': { guard: 'isNotExporting', target: '#studio-loading', actions: 'requestWorkspace' },
-            'workspace.delete': { guard: and(['isSavedWorkspace', 'isNotExporting']), target: '#studio-deleting' },
-            'workspace.save': { guard: 'hasValidGraph', target: '.saving' },
+            'workspace.create': {
+              guard: and(['isNotExporting', 'isNotRenaming']),
+              target: '.rendering',
+              actions: 'resetWorkspace',
+            },
+            'workspace.load': {
+              guard: and(['isNotExporting', 'isNotRenaming']),
+              target: '#workspace-loading',
+              actions: 'requestWorkspace',
+            },
+            'workspace.delete': {
+              guard: and(['isSavedWorkspace', 'isNotExporting', 'isNotRenaming']),
+              target: '#workspace-deleting',
+            },
+            'workspace.save': { guard: and(['hasValidGraph', 'isNotRenaming']), target: '.saving' },
           },
           states: {
             ready: {},
@@ -191,14 +259,20 @@ export const appMachine = setup({
                 input: ({ context }) => context,
                 onDone: {
                   target: 'ready',
-                  actions: assign(({ context, event }) => acceptRenderedElements(context, event.output)),
+                  actions: assign(({ context, event }) =>
+                    acceptRenderedElements(context, event.output),
+                  ),
                 },
                 onError: {
                   target: 'ready',
                   actions: assign(({ context, event }) => {
                     const error = toErrorMessage(event.error);
                     const update = updateTranslation(context, { error });
-                    return Object.assign({}, update, { needsRender: false, resetLayout: false, errorDialogDismissed: false });
+                    return Object.assign({}, update, {
+                      needsRender: false,
+                      resetLayout: false,
+                      errorDialogDismissed: false,
+                    });
                   }),
                 },
               },
@@ -221,22 +295,32 @@ export const appMachine = setup({
                   {
                     guard: ({ context, event }) => isCurrentDraft(context, event.output.draft),
                     target: 'saved',
-                    actions: assign(({ context, event }) => acceptSavedWorkspace(context, event.output.records)),
+                    actions: assign(({ context, event }) =>
+                      acceptSavedWorkspace(context, event.output.records),
+                    ),
                   },
                   {
                     target: 'recover',
-                    actions: assign(({ context, event }) => acceptSavedWorkspace(context, event.output.records)),
+                    actions: assign(({ context, event }) =>
+                      acceptSavedWorkspace(context, event.output.records),
+                    ),
                   },
                 ],
                 onError: [
                   {
                     guard: 'needsRender',
                     target: 'rendering',
-                    actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),
+                    actions: assign(({ event }) => ({
+                      operationError: toErrorMessage(event.error),
+                      errorDialogDismissed: false,
+                    })),
                   },
                   {
                     target: 'ready',
-                    actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),
+                    actions: assign(({ event }) => ({
+                      operationError: toErrorMessage(event.error),
+                      errorDialogDismissed: false,
+                    })),
                   },
                 ],
               },
@@ -246,15 +330,12 @@ export const appMachine = setup({
               after: { savedFeedback: 'ready' },
             },
             recover: {
-              always: [
-                { guard: 'needsRender', target: 'rendering' },
-                { target: 'ready' },
-              ],
+              always: [{ guard: 'needsRender', target: 'rendering' }, { target: 'ready' }],
             },
           },
         },
         loading: {
-          id: 'studio-loading',
+          id: 'workspace-loading',
           tags: ['reading', 'storageBusy'],
           entry: 'clearOperationError',
           invoke: {
@@ -273,12 +354,15 @@ export const appMachine = setup({
             ],
             onError: {
               target: 'active.recover',
-              actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),
+              actions: assign(({ event }) => ({
+                operationError: toErrorMessage(event.error),
+                errorDialogDismissed: false,
+              })),
             },
           },
         },
         deleting: {
-          id: 'studio-deleting',
+          id: 'workspace-deleting',
           tags: ['deleting', 'storageBusy'],
           entry: 'clearOperationError',
           invoke: {
@@ -287,13 +371,96 @@ export const appMachine = setup({
             onDone: {
               target: 'active.rendering',
               actions: assign(({ context }) => {
-                const workspaces = context.workspaces.filter((item) => item.id !== context.workspace.id);
+                const workspaces = context.workspaces.filter(
+                  (item) => item.id !== context.workspace.id,
+                );
                 return Object.assign({}, resetWorkspace(context), { workspaces });
               }),
             },
             onError: {
               target: 'active.recover',
-              actions: assign(({ event }) => ({ operationError: toErrorMessage(event.error), errorDialogDismissed: false })),
+              actions: assign(({ event }) => ({
+                operationError: toErrorMessage(event.error),
+                errorDialogDismissed: false,
+              })),
+            },
+          },
+        },
+      },
+    },
+    title: {
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            'title.edit': {
+              guard: and([
+                stateIn({ document: 'active' }),
+                not(stateIn({ document: { active: 'saving' } })),
+              ]),
+              target: 'editing',
+              actions: 'editTitle',
+            },
+          },
+        },
+        editing: {
+          on: {
+            'workspace.rename': { actions: 'updateTitle' },
+            'title.cancel': { target: 'idle', actions: assign({ titleError: null }) },
+            'workspace.create': 'idle',
+            'workspace.load': 'idle',
+            'workspace.delete': 'idle',
+            'workspace.save': 'idle',
+            'title.confirm': [
+              {
+                guard: ({ context }) => context.titleDraft.trim().length === 0,
+                actions: assign({ titleError: EMPTY_GRAPH_NAME_ERROR }),
+              },
+              {
+                guard: ({ context }) => context.titleDraft.trim() === context.workspace.name,
+                target: 'idle',
+              },
+              { guard: 'isSavedWorkspace', target: 'saving' },
+              { target: 'idle', actions: 'acceptDraftTitle' },
+            ],
+          },
+        },
+        saving: {
+          tags: ['storageBusy'],
+          entry: assign({ afterRename: null }),
+          on: {
+            'workspace.create': { guard: 'isNotExporting', actions: 'queueAfterRename' },
+            'workspace.load': { guard: 'isNotExporting', actions: 'queueAfterRename' },
+            'workspace.delete': {
+              guard: and(['isSavedWorkspace', 'isNotExporting']),
+              actions: 'queueAfterRename',
+            },
+            'workspace.save': {
+              guard: and(['hasValidGraph', not('needsRender')]),
+              actions: 'queueAfterRename',
+            },
+          },
+          invoke: {
+            src: 'rename',
+            input: ({ context }) => context,
+            onDone: {
+              target: 'idle',
+              actions: [
+                assign(({ context, event }) => {
+                  const workspace = event.output;
+                  const others = context.workspaces.filter((item) => item.id !== workspace.id);
+                  const workspaces = [workspace].concat(others);
+                  return { workspace, workspaces, titleError: null };
+                }),
+                'resumeAfterRename',
+              ],
+            },
+            onError: {
+              target: 'editing',
+              actions: assign(({ event }) => ({
+                titleError: toErrorMessage(event.error),
+                afterRename: null,
+              })),
             },
           },
         },
@@ -319,7 +486,10 @@ export const appMachine = setup({
             onDone: 'idle',
             onError: {
               target: 'idle',
-              actions: assign(({ event }) => ({ exportError: toErrorMessage(event.error), errorDialogDismissed: false })),
+              actions: assign(({ event }) => ({
+                exportError: toErrorMessage(event.error),
+                errorDialogDismissed: false,
+              })),
             },
           },
         },
@@ -328,4 +498,4 @@ export const appMachine = setup({
   },
 });
 
-export const StudioContext = createActorContext(appMachine);
+export const AppContext = createActorContext(appMachine);

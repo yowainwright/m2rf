@@ -8,7 +8,11 @@ import {
   MCP_CONFIG_PATH,
   SHADCN_IMAGE,
 } from '../../../../scripts/mcp/constants.ts';
-import { createMcpConfiguration, createMcpFiles, generateMcpSkill } from '../../../../scripts/mcp/utils.ts';
+import {
+  createMcpConfiguration,
+  createMcpFiles,
+  generateMcpSkill,
+} from '../../../../scripts/mcp/utils.ts';
 
 const root = resolve(import.meta.dirname, '../../../..');
 
@@ -18,7 +22,7 @@ const createFixture = async () => {
   return mkdtemp(resolve(directory, 'mcp-test-'));
 };
 
-test('launches the pinned shadcn image with a local env file and targeted config mount', () => {
+test('launches the pinned shadcn image without credentials and with a targeted config mount', () => {
   const server = createMcpConfiguration(root).mcpServers.shadcn;
   assert.equal(server.command, 'docker');
   assert.equal(server.args.at(-1), SHADCN_IMAGE);
@@ -26,15 +30,16 @@ test('launches the pinned shadcn image with a local env file and targeted config
   assert.ok(server.args.includes('-i'));
   assert.ok(server.args.includes('--rm'));
   assert.ok(server.args.includes('--read-only'));
-  const environmentFileIndex = server.args.indexOf('--env-file');
-  assert.equal(server.args[environmentFileIndex + 1], resolve(root, '.env'));
   const mountIndex = server.args.indexOf('--mount');
   assert.equal(
     server.args[mountIndex + 1],
     `type=bind,source=${resolve(root, 'components.json')},target=${COMPONENTS_TARGET},readonly`,
   );
-  const forbidden = ['--privileged', '--volume', '-v', '--env'];
-  assert.equal(server.args.some((argument) => forbidden.includes(argument)), false);
+  const forbidden = ['--privileged', '--volume', '-v', '--env', '-e', '--env-file'];
+  assert.equal(
+    server.args.some((argument) => forbidden.includes(argument)),
+    false,
+  );
 });
 
 test('regenerates the skill and config without changing unrelated agent files', async (context) => {

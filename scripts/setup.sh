@@ -22,6 +22,53 @@ has_command() {
 	command -v "$1" >/dev/null 2>&1
 }
 
+can_prompt_for_install() {
+	is_ci && return 1
+	test -t 0
+}
+
+confirm_lint_install() {
+	can_prompt_for_install || {
+		printf 'Noninteractive setup: install tools first with brew install %s\n' "$*" >&2
+		return 1
+	}
+	printf 'Install these with Homebrew? [y/N] '
+	IFS= read -r lint_answer || return 1
+	case "$lint_answer" in
+	y | Y | [Yy][Ee][Ss]) return 0 ;;
+	*)
+		echo "Setup cancelled."
+		return 1
+		;;
+	esac
+}
+
+verify_lint_tools() {
+	for lint_formula; do
+		has_command "${lint_formula##*/}" || {
+			echo "Installed $lint_formula, but ${lint_formula##*/} is not on PATH." >&2
+			return 1
+		}
+	done
+}
+
+install_lint_tools() {
+	set --
+	for lint_formula in shellcheck shfmt yowainwright/tap/shellcheck-legibility yowainwright/tap/fs-lint yowainwright/tap/src-lint; do
+		has_command "${lint_formula##*/}" || set -- "$@" "$lint_formula"
+	done
+	[ "$#" -gt 0 ] || return 0
+	printf 'Missing lint tools:\n'
+	printf '  %s\n' "$@"
+	has_command brew || {
+		echo "Install Homebrew and add it to PATH, then rerun setup." >&2
+		return 1
+	}
+	confirm_lint_install "$@"
+	brew install "$@"
+	verify_lint_tools "$@"
+}
+
 read_pnpm_version() {
 	node -p "require('./package.json').packageManager.split('@')[1]"
 }
@@ -203,6 +250,7 @@ normalize_command() {
 }
 
 run_local_setup() {
+	install_lint_tools
 	run_hooks
 	repo_root=$(git rev-parse --show-toplevel)
 	run_setup "$repo_root"

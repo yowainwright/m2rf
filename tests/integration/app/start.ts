@@ -43,12 +43,12 @@ describe('app startup', () => {
     vi.unstubAllGlobals();
   });
 
-  it('loads the studio shell, editor, and graph output', () => {
+  it('loads the app shell, editor, and graph output', () => {
     vi.stubGlobal('matchMedia', matchMedia);
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(layoutRect);
     render(createElement(Home));
 
-    expect(screen.getByRole('heading', { name: 'm2rf Studio' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'm2rf' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Mermaid input' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'React Flow output' })).toBeTruthy();
   });

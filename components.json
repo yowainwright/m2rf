@@ -19,12 +19,6 @@
   "iconLibrary": "lucide",
   "registries": {
     "@react-flow": "https://ui.reactflow.dev/{name}",
-    "@approvals-ui": "https://approvals-ui.vercel.app/r/{name}.json",
-    "@shadcnio": {
-      "url": "https://www.shadcn.io/r/{name}.json",
-      "params": {
-        "token": "${SHADCNIO_TOKEN}"
-      }
-    }
+    "@approvals-ui": "https://approvals-ui.vercel.app/r/{name}.json"
   }
 }

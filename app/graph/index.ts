@@ -57,7 +57,17 @@ export type {
 export { GraphRenderError } from './types';
 
 export type {
-  CanvasBackground, EdgeAnimation, EdgeMarkerValue, EdgeType, GradientDirection, GraphGradientSettings,
-  GraphPatternSettings, GraphShaderSettings, NodeBorder, NodeShape, NodeShadow, NodeSurface,
+  CanvasBackground,
+  EdgeAnimation,
+  EdgeMarkerValue,
+  EdgeType,
+  GradientDirection,
+  GraphGradientSettings,
+  GraphPatternSettings,
+  GraphShaderSettings,
+  NodeBorder,
+  NodeShape,
+  NodeShadow,
+  NodeSurface,
   TranslationSettings,
 } from './types';

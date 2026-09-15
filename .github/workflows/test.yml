@@ -28,10 +28,14 @@ jobs:
         run: pnpm run deps:security
 
   lint-and-typecheck:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      FS_LINT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/setup@v2
@@ -48,6 +52,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
+
+      - name: Install structure linters
+        run: |
+          /home/linuxbrew/.linuxbrew/bin/brew install yowainwright/tap/fs-lint yowainwright/tap/src-lint
+          echo /home/linuxbrew/.linuxbrew/bin >> "$GITHUB_PATH"
 
       - name: Type check
         run: pnpm run typecheck

@@ -67,3 +67,6 @@ export const TOOLKIT_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
   hour: 'numeric',
   minute: '2-digit',
 };
+
+export const METADATA_BADGE_CLASS_NAME = 'px-2 py-0 text-xs';
+export const TITLE_TOOLTIP_MAX_LENGTH = 24;

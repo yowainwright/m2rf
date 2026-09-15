@@ -1,6 +1,10 @@
 'use client';
 
-import { SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from '@/app/components/ui/sidebar';
+import {
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from '@/app/components/ui/sidebar';
 import { VERSION_DATE_OPTIONS } from './constants';
 import type { VersionRowProps, VersionTreeProps } from './types';
 export type { VersionTreeItem } from './types';
@@ -15,7 +19,9 @@ function VersionRow({ activeId, disabled, onSelect, version }: VersionRowProps) 
       <SidebarMenuSubButton asChild isActive={isActive} size="sm">
         <button aria-pressed={isActive} disabled={disabled} onClick={handleSelect} type="button">
           <span className="font-mono">v{version.version}</span>
-          <time className="ml-auto text-muted-foreground" dateTime={version.timestamp}>{timestamp}</time>
+          <time className="ml-auto text-muted-foreground" dateTime={version.timestamp}>
+            {timestamp}
+          </time>
         </button>
       </SidebarMenuSubButton>
     </SidebarMenuSubItem>
@@ -24,7 +30,13 @@ function VersionRow({ activeId, disabled, onSelect, version }: VersionRowProps) 
 
 export default function VersionTree({ activeId, disabled, onSelect, versions }: VersionTreeProps) {
   const rows = versions.map((version) => (
-    <VersionRow activeId={activeId} disabled={disabled} key={version.id} onSelect={onSelect} version={version} />
+    <VersionRow
+      activeId={activeId}
+      disabled={disabled}
+      key={version.id}
+      onSelect={onSelect}
+      version={version}
+    />
   ));
 
   return (

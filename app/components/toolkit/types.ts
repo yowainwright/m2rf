@@ -1,7 +1,14 @@
 import type { ChangeEvent, ChangeEventHandler } from 'react';
 import type { Edge, Node } from 'reactflow';
 import type {
-  CanvasBackground, GraphCanvasSettings, GraphElements, GraphGradientSettings, GraphPatternSettings, GraphShaderSettings, GraphTranslationSettings, GraphVersion,
+  CanvasBackground,
+  GraphCanvasSettings,
+  GraphElements,
+  GraphGradientSettings,
+  GraphPatternSettings,
+  GraphShaderSettings,
+  GraphTranslationSettings,
+  GraphVersion,
 } from '@/app/graph';
 
 export type ToolkitMetadataProps = {
@@ -14,7 +21,12 @@ export type ToolkitMetadataProps = {
 };
 export type MetadataFieldsProps = {
   className?: string;
-  fields: Array<{ label: string; value: string | number; hideLabel?: boolean; emphasized?: boolean }>;
+  fields: Array<{
+    label: string;
+    value: string | number;
+    hideLabel?: boolean;
+    emphasized?: boolean;
+  }>;
 };
 export type NodeMetadataProps = { node: Node };
 export type EdgeMetadataProps = { edge: Edge };

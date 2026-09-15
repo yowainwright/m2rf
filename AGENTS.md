@@ -23,7 +23,7 @@ This tool aims to provide a precise way to convert Mermaid to React Flow in a ma
 - All app state belongs in XState. If there is an exception, invoke a 2-question grill to understand how we are thinking wrong.
 - Utilities should use Effect. If there is an exception, invoke a 2-question grill to understand how we are thinking wrong.
 - CRUD should be a direct handoff between XState and Dexie. If there is an exception, invoke a 2-question grill to understand how we are thinking wrong.
-- Prefer oxlint with eslint-plugin-legibility in strict mode.
+- Prefer oxlint with oxlint-plugin-legibility in strict mode.
 
 ## Stop Conditions
 

@@ -1,8 +1,4 @@
-export {
-  createBrowserLogger,
-  createServerLogger,
-  writeBrowserLog,
-} from './utils';
+export { createBrowserLogger, createServerLogger, writeBrowserLog } from './utils';
 export { redactString, redactTelemetry } from './redact';
 export type {
   BrowserLoggerInput,

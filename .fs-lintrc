@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "newFiles": {
+    "default": "deny",
+    "allow": [
+      "**",
+      "!app/**",
+      "app/**/{index,utils,types,constants}.ts",
+      "app/components/**/{index,utils}.tsx",
+      "!app/components/**/index.ts",
+      "app/**/{page,layout,loading,error,global-error,not-found,template,default}.tsx",
+      "app/**/route.ts",
+      "!app/components/**/{page,layout,loading,error,global-error,not-found,template,default,route}.{ts,tsx}",
+      "app/globals.css",
+      "app/components/ui/**",
+      "app/hooks/use*.ts",
+      "!app/hooks/*{-,_}*.ts",
+      "app/export/gifenc.d.ts"
+    ]
+  }
+}

@@ -8,7 +8,7 @@ import {
 import type { RedactableRecord } from './types';
 
 const normalizedSensitiveFieldNames = new Set(
-  SENSITIVE_FIELD_NAMES.map((field) => field.toLowerCase())
+  SENSITIVE_FIELD_NAMES.map((field) => field.toLowerCase()),
 );
 
 const redactObjectPaths = createRedactor({
@@ -59,7 +59,7 @@ const redactRecord = (value: RedactableRecord, seen: WeakSet<object>) => {
         }
 
         return [key, redactValue(item, seen)];
-      })
+      }),
   );
 };
 

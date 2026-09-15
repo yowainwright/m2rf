@@ -2,11 +2,21 @@ import type { ReactNode } from 'react';
 import type { EdgeChange, NodeChange, Viewport } from 'reactflow';
 import type { GifExportRepeat } from '@/app/export';
 import type {
-  GraphCanvasSettings, GraphInput, GraphRecords, GraphTranslation,
-  GraphVersion, GraphWorkspace, TranslationSettings,
+  GraphCanvasSettings,
+  GraphInput,
+  GraphRecords,
+  GraphTranslation,
+  GraphVersion,
+  GraphWorkspace,
+  TranslationSettings,
 } from '@/app/graph';
 
 export type WorkspaceRequest = { workspaceId: string; versionId?: string };
+export type WorkspaceOperation =
+  | { type: 'workspace.create' }
+  | { type: 'workspace.save' }
+  | { type: 'workspace.load'; request: WorkspaceRequest }
+  | { type: 'workspace.delete' };
 export type ExportRequest = { format: 'svg' | 'png' | 'gif'; repeat: GifExportRepeat };
 export type AppContext = {
   isDesktop: boolean;
@@ -18,6 +28,9 @@ export type AppContext = {
   resetLayout: boolean;
   errorDialogDismissed: boolean;
   operationError: string | null;
+  titleDraft: string;
+  titleError: string | null;
+  afterRename: WorkspaceOperation | null;
   exportError: string | null;
   loadRequest: WorkspaceRequest | null;
   exportRequest: ExportRequest;
@@ -29,15 +42,15 @@ export type AppContext = {
 };
 
 export type AppEvent =
+  | WorkspaceOperation
   | { type: 'layout.update'; isDesktop: boolean }
   | { type: 'sidebar.update'; open: boolean }
   | { type: 'version-history.update'; open: boolean }
   | { type: 'toolkit.update'; open: boolean }
-  | { type: 'workspace.create' }
-  | { type: 'workspace.save' }
   | { type: 'workspace.rename'; name: string }
-  | { type: 'workspace.load'; request: WorkspaceRequest }
-  | { type: 'workspace.delete' }
+  | { type: 'title.edit' }
+  | { type: 'title.confirm' }
+  | { type: 'title.cancel' }
   | { type: 'input.update'; source: string }
   | { type: 'nodes.update'; changes: NodeChange[] }
   | { type: 'edges.update'; changes: EdgeChange[] }

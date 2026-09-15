@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'm2rf Studio',
+  title: 'm2rf',
   description: 'CRUD Mermaid input into React Flow graph output.',
 };
 

@@ -2,13 +2,32 @@ import { Cause, Effect, Exit } from 'effect';
 import mermaid from 'mermaid';
 import { applyEdgeChanges, applyNodeChanges } from 'reactflow';
 import {
-  applySavedAppearance, applySettings, getElementIds, getSelectedEdges,
-  getSelectedNodes, getTranslation, graphRepository,
-  parseMermaidSvg, updateSelectedEdges, updateSelectedNodes,
+  applySavedAppearance,
+  applySettings,
+  getElementIds,
+  getSelectedEdges,
+  getSelectedNodes,
+  getTranslation,
+  graphRepository,
+  parseMermaidSvg,
+  updateSelectedEdges,
+  updateSelectedNodes,
 } from '@/app/graph';
 import { GraphRenderError } from '@/app/graph';
-import type { GraphCanvasSettings, GraphDiagramType, GraphRecords, GraphRenderResult, GraphTranslation, GraphTranslationSettings, GraphWorkspace } from '@/app/graph';
-import { DEFAULT_CANVAS_SETTINGS, DEFAULT_SETTINGS, GRAPH_DIAGRAM_TYPES } from '@/app/graph/constants';
+import type {
+  GraphCanvasSettings,
+  GraphDiagramType,
+  GraphRecords,
+  GraphRenderResult,
+  GraphTranslation,
+  GraphTranslationSettings,
+  GraphWorkspace,
+} from '@/app/graph';
+import {
+  DEFAULT_CANVAS_SETTINGS,
+  DEFAULT_SETTINGS,
+  GRAPH_DIAGRAM_TYPES,
+} from '@/app/graph/constants';
 import { exportGif, exportPng, exportSvg, getSvgExportElement } from '@/app/export';
 import { createBrowserLogger } from '@/app/lib/observability';
 import { APP_INITIAL_CONTEXT } from './constants';
@@ -16,7 +35,14 @@ import type { AppContext, AppEvent, LoadedWorkspace, WorkspaceRequest } from './
 
 mermaid.initialize({
   securityLevel: 'strict',
-  sequence: { mirrorActors: true, actorFontSize: 16, messageFontSize: 16, noteFontSize: 14, messageMargin: 48, boxTextMargin: 10 },
+  sequence: {
+    mirrorActors: true,
+    actorFontSize: 16,
+    messageFontSize: 16,
+    noteFontSize: 14,
+    messageMargin: 48,
+    boxTextMargin: 10,
+  },
   startOnLoad: false,
   themeVariables: { rectBkgColor: 'transparent' },
 });
@@ -36,13 +62,16 @@ export const getSupportedDiagramType = (diagramType: string): GraphDiagramType =
     throw new GraphRenderError(
       'unsupported',
       `Mermaid diagram type "${diagramType}" is not supported in the React Flow view yet.`,
-      diagramType
+      diagramType,
     );
   }
   return normalizedType as GraphDiagramType;
 };
 
-export const runOperation = <Value>(operation: Effect.Effect<Value, Error>, signal: AbortSignal) => {
+export const runOperation = <Value>(
+  operation: Effect.Effect<Value, Error>,
+  signal: AbortSignal,
+) => {
   return Effect.runPromiseExit(operation, { signal }).then((result) => {
     // React StrictMode can restart the actor before its cancelled promise settles.
     // The Effect has stopped; leave that obsolete promise without a completion event.
@@ -56,103 +85,124 @@ const storageError = (cause: unknown) => {
   return new Error(`Saved graphs: ${toErrorMessage(cause)}`, { cause });
 };
 
-export const loadInitialWorkspace = () => Effect.tryPromise({
-  try: async (): Promise<LoadedWorkspace> => {
-    const workspaces = await graphRepository.list();
-    const [workspace] = workspaces;
-    const records = workspace ? await graphRepository.read(workspace.id) : null;
-    return { records, workspaces };
-  },
-  catch: storageError,
-});
+export const loadInitialWorkspace = () =>
+  Effect.tryPromise({
+    try: async (): Promise<LoadedWorkspace> => {
+      const workspaces = await graphRepository.list();
+      const [workspace] = workspaces;
+      const records = workspace ? await graphRepository.read(workspace.id) : null;
+      return { records, workspaces };
+    },
+    catch: storageError,
+  });
 
-export const loadWorkspace = (request: WorkspaceRequest | null) => Effect.tryPromise({
-  try: async () => {
-    if (!request) throw new Error('No graph was selected.');
-    const records = await graphRepository.read(request.workspaceId, request.versionId);
-    if (!records) throw new Error('This graph version is no longer available.');
-    return records;
-  },
-  catch: storageError,
-});
+export const loadWorkspace = (request: WorkspaceRequest | null) =>
+  Effect.tryPromise({
+    try: async () => {
+      if (!request) throw new Error('No graph was selected.');
+      const records = await graphRepository.read(request.workspaceId, request.versionId);
+      if (!records) throw new Error('This graph version is no longer available.');
+      return records;
+    },
+    catch: storageError,
+  });
 
-export const saveWorkspace = (context: AppContext) => Effect.tryPromise({
-  try: () => {
-    const { diagramType, elements, error, settings, view } = context.translation;
-    const translation = { diagramType, elements, error, settings, view };
-    const input = { format: context.input.format, source: context.input.source };
-    const isInitialDraft = context.workspace.id === APP_INITIAL_CONTEXT.workspace.id;
-    const workspaceId = isInitialDraft ? undefined : context.workspace.id;
-    const workspace = { id: workspaceId, name: context.workspace.name };
-    const isNew = context.input.id === APP_INITIAL_CONTEXT.input.id;
-    if (isNew) return graphRepository.create({ input, translation, workspace });
-    const savedWorkspace = Object.assign({}, workspace, { id: context.workspace.id });
-    return graphRepository.update({ input, translation, workspace: savedWorkspace });
-  },
-  catch: storageError,
-});
+export const saveWorkspace = (context: AppContext) =>
+  Effect.tryPromise({
+    try: () => {
+      const { diagramType, elements, error, settings, view } = context.translation;
+      const translation = { diagramType, elements, error, settings, view };
+      const input = { format: context.input.format, source: context.input.source };
+      const isInitialDraft = context.workspace.id === APP_INITIAL_CONTEXT.workspace.id;
+      const workspaceId = isInitialDraft ? undefined : context.workspace.id;
+      const workspace = { id: workspaceId, name: context.workspace.name };
+      const isNew = context.input.id === APP_INITIAL_CONTEXT.input.id;
+      if (isNew) return graphRepository.create({ input, translation, workspace });
+      const savedWorkspace = Object.assign({}, workspace, { id: context.workspace.id });
+      return graphRepository.update({ input, translation, workspace: savedWorkspace });
+    },
+    catch: storageError,
+  });
 
-export const deleteWorkspace = (id: string) => Effect.tryPromise({
-  try: () => graphRepository.delete(id),
-  catch: storageError,
-});
+export const deleteWorkspace = (id: string) =>
+  Effect.tryPromise({
+    try: () => graphRepository.delete(id),
+    catch: storageError,
+  });
 
-const createDefaultTranslationSettings = (): GraphTranslationSettings => Object.assign({}, DEFAULT_SETTINGS, {
-  nodeGradient: Object.assign({}, DEFAULT_SETTINGS.nodeGradient),
-});
+export const renameWorkspace = (context: AppContext) =>
+  Effect.tryPromise({
+    try: () => graphRepository.rename(context.workspace.id, context.titleDraft),
+    catch: storageError,
+  });
 
-const createDefaultCanvasSettings = (): GraphCanvasSettings => Object.assign({}, DEFAULT_CANVAS_SETTINGS, {
-  background: 'none' as const,
-  gradient: Object.assign({}, DEFAULT_CANVAS_SETTINGS.gradient),
-  pattern: Object.assign({}, DEFAULT_CANVAS_SETTINGS.pattern),
-  shader: Object.assign({}, DEFAULT_CANVAS_SETTINGS.shader, {
-    aurora: Object.assign({}, DEFAULT_CANVAS_SETTINGS.shader.aurora),
-    gradientMesh: Object.assign({}, DEFAULT_CANVAS_SETTINGS.shader.gradientMesh),
-  }),
-});
+const createDefaultTranslationSettings = (): GraphTranslationSettings =>
+  Object.assign({}, DEFAULT_SETTINGS, {
+    nodeGradient: Object.assign({}, DEFAULT_SETTINGS.nodeGradient),
+  });
 
-export const renderWorkspace = (context: AppContext) => Effect.tryPromise({
-  try: async () => {
-    const id = `m2rf-${crypto.randomUUID()}`;
-    const result = await mermaid.render(id, context.input.source);
-    const diagramType = getSupportedDiagramType(result.diagramType);
-    const elements = parseMermaidSvg(result.svg, context.translation.settings, diagramType);
-    return { diagramType, elements } satisfies GraphRenderResult;
-  },
-  catch: (cause) => {
-    if (cause instanceof GraphRenderError) return cause;
-    return new GraphRenderError('invalid', `Mermaid: ${toErrorMessage(cause)}`);
-  },
-});
+const createDefaultCanvasSettings = (): GraphCanvasSettings =>
+  Object.assign({}, DEFAULT_CANVAS_SETTINGS, {
+    background: 'none' as const,
+    gradient: Object.assign({}, DEFAULT_CANVAS_SETTINGS.gradient),
+    pattern: Object.assign({}, DEFAULT_CANVAS_SETTINGS.pattern),
+    shader: Object.assign({}, DEFAULT_CANVAS_SETTINGS.shader, {
+      aurora: Object.assign({}, DEFAULT_CANVAS_SETTINGS.shader.aurora),
+      gradientMesh: Object.assign({}, DEFAULT_CANVAS_SETTINGS.shader.gradientMesh),
+    }),
+  });
+
+export const renderWorkspace = (context: AppContext) =>
+  Effect.tryPromise({
+    try: async () => {
+      const id = `m2rf-${crypto.randomUUID()}`;
+      const result = await mermaid.render(id, context.input.source);
+      const diagramType = getSupportedDiagramType(result.diagramType);
+      const elements = parseMermaidSvg(result.svg, context.translation.settings, diagramType);
+      return { diagramType, elements } satisfies GraphRenderResult;
+    },
+    catch: (cause) => {
+      if (cause instanceof GraphRenderError) return cause;
+      return new GraphRenderError('invalid', `Mermaid: ${toErrorMessage(cause)}`);
+    },
+  });
 
 const hasLegacySequenceElements = (records: GraphRecords) => {
   const translation = records.translation;
   const isSequence = translation.diagramType === 'sequence';
   if (!isSequence) return false;
-  const participantNodes = translation.elements.nodes.filter((node) => node.data?.kind === 'sequence-participant');
+  const participantNodes = translation.elements.nodes.filter(
+    (node) => node.data?.kind === 'sequence-participant',
+  );
   const hasLegacyHandles = participantNodes.some((node) => !Array.isArray(node.data?.handles));
-  const hasMessageEdges = translation.elements.edges.some((edge) => edge.data?.kind === 'sequence-message');
-  const hasActionNodes = translation.elements.nodes.some((node) => node.data?.kind === 'sequence-action');
+  const hasMessageEdges = translation.elements.edges.some(
+    (edge) => edge.data?.kind === 'sequence-message',
+  );
+  const hasActionNodes = translation.elements.nodes.some(
+    (node) => node.data?.kind === 'sequence-action',
+  );
   const hasLegacyMessages = hasMessageEdges && !hasActionNodes;
   const hasLegacyStyles = participantNodes.some((node) => node.data.styleVersion !== 1);
   const needsUpgrade = hasLegacyHandles || hasLegacyMessages || hasLegacyStyles;
   return needsUpgrade;
 };
 
-export const shouldRerenderWorkspace = (records: GraphRecords) => hasLegacySequenceElements(records);
+export const shouldRerenderWorkspace = (records: GraphRecords) =>
+  hasLegacySequenceElements(records);
 
-export const exportWorkspace = (context: AppContext) => Effect.tryPromise({
-  try: async () => {
-    const element = getSvgExportElement();
-    if (!element) throw new Error('There is no graph to export.');
-    const name = context.workspace.name;
-    const { format, repeat } = context.exportRequest;
-    if (format === 'gif') return await exportGif({ element, name, repeat });
-    if (format === 'png') return await exportPng({ element, name });
-    return await exportSvg({ element, name });
-  },
-  catch: (cause) => new Error(`Export: ${toErrorMessage(cause)}`, { cause }),
-});
+export const exportWorkspace = (context: AppContext) =>
+  Effect.tryPromise({
+    try: async () => {
+      const element = getSvgExportElement();
+      if (!element) throw new Error('There is no graph to export.');
+      const name = context.workspace.name;
+      const { format, repeat } = context.exportRequest;
+      if (format === 'gif') return await exportGif({ element, name, repeat });
+      if (format === 'png') return await exportPng({ element, name });
+      return await exportSvg({ element, name });
+    },
+    catch: (cause) => new Error(`Export: ${toErrorMessage(cause)}`, { cause }),
+  });
 
 export const resetWorkspace = (context: AppContext) => {
   const workspaceId = crypto.randomUUID();
@@ -184,8 +234,13 @@ export const restoreWorkspace = (context: AppContext, records: GraphRecords) => 
   const canvasRevision = context.canvasRevision + 1;
   const needsRender = shouldRerenderWorkspace(records);
   return Object.assign({}, records, {
-    translation, canvasRevision, needsRender, resetLayout: needsRender,
-    loadRequest: null, operationError: null, exportError: null,
+    translation,
+    canvasRevision,
+    needsRender,
+    resetLayout: needsRender,
+    loadRequest: null,
+    operationError: null,
+    exportError: null,
     errorDialogDismissed: false,
   });
 };
@@ -199,7 +254,8 @@ export const acceptSavedWorkspace = (context: AppContext, records: GraphRecords)
   const { id, version, workspaceId } = records.input;
   const input = Object.assign({}, context.input, { id, version, workspaceId });
   const translation = Object.assign({}, context.translation, {
-    id: records.translation.id, inputId: id,
+    id: records.translation.id,
+    inputId: id,
   });
   const workspace = Object.assign({}, records.workspace, { name: context.workspace.name });
   const workspaces = rememberWorkspace(context.workspaces, records.workspace);
@@ -225,13 +281,22 @@ export const acceptRenderedElements = (context: AppContext, rendered: GraphRende
   const isSequence = diagramType === 'sequence';
   const styleTargets = isSequence ? { nodes: [], edges: renderedElements.edges } : renderedElements;
   const styled = applySettings(styleTargets, context.translation.settings);
-  const defaults = Object.assign({}, styled, { nodes: isSequence ? renderedElements.nodes : styled.nodes });
-  const elements = applySavedAppearance(defaults, context.translation.elements, context.resetLayout);
+  const defaults = Object.assign({}, styled, {
+    nodes: isSequence ? renderedElements.nodes : styled.nodes,
+  });
+  const elements = applySavedAppearance(
+    defaults,
+    context.translation.elements,
+    context.resetLayout,
+  );
   const update = updateTranslation(context, { diagramType, elements, error: null });
   return Object.assign({}, update, { needsRender: false, resetLayout: false });
 };
 
-export const updateNodeChanges = (context: AppContext, event: Extract<AppEvent, { type: 'nodes.update' }>) => {
+export const updateNodeChanges = (
+  context: AppContext,
+  event: Extract<AppEvent, { type: 'nodes.update' }>,
+) => {
   const nodes = applyNodeChanges(event.changes, context.translation.elements.nodes);
   const remainingIds = new Set(getElementIds(nodes));
   const edges = context.translation.elements.edges.filter((edge) => {
@@ -240,13 +305,19 @@ export const updateNodeChanges = (context: AppContext, event: Extract<AppEvent, 
   return updateTranslation(context, { elements: { nodes, edges } });
 };
 
-export const updateEdgeChanges = (context: AppContext, event: Extract<AppEvent, { type: 'edges.update' }>) => {
+export const updateEdgeChanges = (
+  context: AppContext,
+  event: Extract<AppEvent, { type: 'edges.update' }>,
+) => {
   const edges = applyEdgeChanges(event.changes, context.translation.elements.edges);
   const elements = Object.assign({}, context.translation.elements, { edges });
   return updateTranslation(context, { elements });
 };
 
-export const updateStyles = (context: AppContext, event: Extract<AppEvent, { type: 'nodes.style' | 'edges.style' }>) => {
+export const updateStyles = (
+  context: AppContext,
+  event: Extract<AppEvent, { type: 'nodes.style' | 'edges.style' }>,
+) => {
   const current = context.translation.elements;
   const isNodeStyle = event.type === 'nodes.style';
   const selected = isNodeStyle ? getSelectedNodes(current.nodes) : getSelectedEdges(current.edges);
@@ -262,8 +333,16 @@ export const updateStyles = (context: AppContext, event: Extract<AppEvent, { typ
   return updateTranslation(context, { elements });
 };
 
-export const updateCanvas = (context: AppContext, event: Extract<AppEvent, { type: 'canvas.update' }>) => {
-  const canvas = Object.assign({}, DEFAULT_CANVAS_SETTINGS, context.translation.view.canvas, event.settings);
+export const updateCanvas = (
+  context: AppContext,
+  event: Extract<AppEvent, { type: 'canvas.update' }>,
+) => {
+  const canvas = Object.assign(
+    {},
+    DEFAULT_CANVAS_SETTINGS,
+    context.translation.view.canvas,
+    event.settings,
+  );
   const view = Object.assign({}, context.translation.view, { canvas });
   return updateTranslation(context, { view });
 };
@@ -282,9 +361,11 @@ export const getSelectionLabel = (nodeCount: number, edgeCount: number) => {
   const hasNodes = nodeCount > 0;
   const hasEdges = edgeCount > 0;
   const hasBoth = hasNodes && hasEdges;
-  if (hasBoth) return `${nodeCount} node, ${edgeCount} edge`;
-  if (hasNodes) return `${nodeCount} node`;
-  if (hasEdges) return `${edgeCount} edge`;
+  const nodeLabel = nodeCount === 1 ? '1 node' : `${nodeCount} nodes`;
+  const edgeLabel = edgeCount === 1 ? '1 edge' : `${edgeCount} edges`;
+  if (hasBoth) return `${nodeLabel}, ${edgeLabel}`;
+  if (hasNodes) return nodeLabel;
+  if (hasEdges) return edgeLabel;
   return 'Global';
 };
 

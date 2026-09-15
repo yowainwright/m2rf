@@ -6,16 +6,27 @@ export const SKILL_PATH = '.agents/skills/shadcn-mcp/SKILL.md';
 export const COMPONENTS_TARGET = '/workspace/components.json';
 
 export const DOCKER_ARGUMENTS: readonly string[] = [
-  'run', '--rm', '-i', '--init',
+  'run',
+  '--rm',
+  '-i',
+  '--init',
   '--read-only',
-  '--user', '1000:1000',
-  '--cap-drop', 'ALL',
-  '--security-opt', 'no-new-privileges',
-  '--cpus', '1',
-  '--memory', '1g',
-  '--pids-limit', '128',
-  '--tmpfs', '/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777',
-  '--pull', 'never',
+  '--user',
+  '1000:1000',
+  '--cap-drop',
+  'ALL',
+  '--security-opt',
+  'no-new-privileges',
+  '--cpus',
+  '1',
+  '--memory',
+  '1g',
+  '--pids-limit',
+  '128',
+  '--tmpfs',
+  '/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777',
+  '--pull',
+  'never',
 ];
 
 export const SKILL_CONTENT = `---
@@ -48,9 +59,8 @@ node "$HOME/.agents/lib/mcp/client.js" --config .agents/mcp/shadcn.json shadcn g
 
 Read components.json, package.json, and the target files first.
 Use get_project_registries to check the container's registry configuration.
-The generated server mounts only components.json read-only and loads the
-ignored .env file for the MCP process. The .env file is materialized once
-from .env.1password with op inject; do not print or commit its values.
+The generated server mounts only components.json read-only and does not pass
+environment files or tokens to the MCP process.
 If the container configuration differs from components.json, report the
 mismatch before proceeding.
 Search only the registries approved for this project. Use
@@ -91,7 +101,7 @@ already be installed. If the image is missing, report that prerequisite; do not
 substitute an image or install packages automatically.
 
 The container has one read-only host-file mount for components.json and
-loads the ignored .env file. Its root filesystem is read-only, with
+receives no environment files or tokens. Its root filesystem is read-only, with
 bounded temporary storage. Outbound internet is enabled for registry requests;
 there is no domain allowlist. Never send secrets or diagram content as tool
 arguments.
