@@ -153,7 +153,7 @@ test('shows minimal navigation with tooltips and OSS credits', async ({ page }, 
   await save.click();
   await expect(header.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
   await header.getByRole('button', { name: 'Download', exact: true }).click();
-  await expect(page.getByRole('menuitem')).toHaveText(['SVG', 'PNG', 'GIF (loop)', 'GIF (once)']);
+  await expect(page.getByRole('menuitem')).toHaveText(['SVG', 'PNG', 'GIF loop', 'GIF once']);
   await page.keyboard.press('Escape');
 
   const sidebar = page.locator('[data-sidebar="sidebar"]');
@@ -873,7 +873,7 @@ test('saves selected node visual edits after Mermaid update', async ({ page }) =
 
   const gifDownloadPromise = page.waitForEvent('download');
 
-  await selectDownload(page, 'GIF (loop)');
+  await selectDownload(page, 'GIF loop');
 
   const gifDownload = await gifDownloadPromise;
   const gifOutputPath = '.next/cache/playwright/export.gif';
@@ -888,7 +888,7 @@ test('saves selected node visual edits after Mermaid update', async ({ page }) =
 
   const onceDownloadPromise = page.waitForEvent('download');
 
-  await selectDownload(page, 'GIF (once)');
+  await selectDownload(page, 'GIF once');
 
   const onceDownload = await onceDownloadPromise;
   const onceOutputPath = '.next/cache/playwright/export-once.gif';

@@ -81,7 +81,13 @@ export function WorkspaceHeader() {
                 target="_blank"
                 rel="noreferrer"
               >
-                <Image src="/github.svg" alt="" width={16} height={16} className="size-4 dark:invert" />
+                <Image
+                  src="/github.svg"
+                  alt=""
+                  width={16}
+                  height={16}
+                  className="size-4 dark:invert"
+                />
               </a>
             </Button>
           </TooltipTrigger>

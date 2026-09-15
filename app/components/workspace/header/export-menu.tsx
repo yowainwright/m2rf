@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, FileCode, FileImage, Film } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip';
 import {
@@ -34,19 +34,19 @@ export function ExportMenu({ canExport, onExport }: ExportMenuProps) {
         </TooltipTrigger>
         <TooltipContent>Download</TooltipContent>
       </Tooltip>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => onExport('svg', 'forever')}>
-          <FileCode aria-hidden="true" /> SVG
+      <DropdownMenuContent align="end" className="min-w-0">
+        <DropdownMenuItem className="text-xs" onSelect={() => onExport('svg', 'forever')}>
+          SVG
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onExport('png', 'forever')}>
-          <FileImage aria-hidden="true" /> PNG
+        <DropdownMenuItem className="text-xs" onSelect={() => onExport('png', 'forever')}>
+          PNG
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => onExport('gif', 'forever')}>
-          <Film aria-hidden="true" /> GIF (loop)
+        <DropdownMenuItem className="text-xs" onSelect={() => onExport('gif', 'forever')}>
+          GIF loop
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onExport('gif', 'once')}>
-          <Film aria-hidden="true" /> GIF (once)
+        <DropdownMenuItem className="text-xs" onSelect={() => onExport('gif', 'once')}>
+          GIF once
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
