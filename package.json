@@ -21,9 +21,13 @@
   "scripts": {
     "dev": "next dev --port ${M2RF_APP_PORT:-54783}",
     "build": "next build --webpack",
+    "preview": "mkdir -p .next/cache/pages && ln -sfn ../../../out .next/cache/pages/m2rf && python3 -m http.server ${M2RF_PREVIEW_PORT:-54784} --bind 127.0.0.1 --directory .next/cache/pages",
+    "release": "release-it patch",
+    "release:dry": "release-it patch --dry-run",
     "deps:check": "codependence",
     "deps:overrides": "pastoralist",
     "deps:security": "pastoralist --dry-run --checkSecurity --hasWorkspaceSecurityChecks --strict",
+    "deps:audit": "pnpm audit",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "lint": "pnpm run lint:all",
@@ -120,10 +124,49 @@
     "oxlint-plugin-legibility": "^0.0.4",
     "pastoralist": "^1.13.2",
     "postcss": "^8.5.28",
+    "release-it": "21.0.3",
     "rolldown": "^1.2.8",
     "shadcn": "4.21.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
+  },
+  "release-it": {
+    "git": {
+      "requireBranch": "main",
+      "requireCleanWorkingDir": true,
+      "commitMessage": "chore(release): ${version}",
+      "tagName": "v${version}",
+      "push": false
+    },
+    "npm": {
+      "publish": false
+    },
+    "github": {
+      "release": false
+    },
+    "hooks": {
+      "before:init": [
+        "pnpm run lint/session",
+        "pnpm run typecheck",
+        "pnpm run test",
+        "pnpm run deps:security",
+        "pnpm run deps:audit"
+      ]
+    }
+  },
+  "pastoralist": {
+    "appendix": {
+      "lodash-es@4.18.1": {
+        "dependents": {
+          "m2rf": "lodash-es (required by @chevrotain/cst-dts-gen, @chevrotain/gast, chevrotain)"
+        },
+        "ledger": {
+          "addedDate": "2026-09-15T21:47:22.982Z",
+          "reason": "Replace Mermaid/Chevrotain's vulnerable lodash-es pin for GHSA-r5fr-rjxr-66jc and GHSA-f23m-r3pf-42rh. Remove when upstream resolves a patched version without this override.",
+          "url": "https://github.com/advisories/GHSA-r5fr-rjxr-66jc"
+        }
+      }
+    }
   }
 }

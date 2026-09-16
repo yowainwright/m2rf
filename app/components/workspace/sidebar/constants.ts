@@ -1,5 +1,6 @@
-import { license, repository, version } from '@/package.json';
+import packageMetadata from '@/package.json';
 
+const { license, repository, version } = packageMetadata;
 export const APP_VERSION = `v${version}`;
 export const APP_LICENSE = license;
 export const REPOSITORY_URL = repository.url;

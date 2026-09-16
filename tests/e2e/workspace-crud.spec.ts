@@ -17,32 +17,11 @@ const sequenceSource = `sequenceDiagram
 `;
 const reactFlowTypeMapWarning = 'created a new nodeTypes or edgeTypes object';
 
-const clearIndexedDb = async (page: Page) => {
-  await page.evaluate(async () => {
-    const databases = await indexedDB.databases();
-
-    await Promise.allSettled(
-      databases.map((database) => {
-        if (!database.name) {
-          return Promise.resolve();
-        }
-
-        return new Promise<void>((resolve, reject) => {
-          const request = indexedDB.deleteDatabase(database.name || '');
-
-          request.onerror = () => reject(request.error);
-          request.onsuccess = () => resolve();
-        });
-      }),
-    );
-  });
-};
-
 const updateEditor = async (page: Page, content = source) => {
   const editor = page.locator('.cm-content');
 
   await editor.click();
-  await page.keyboard.press('Meta+A');
+  await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.insertText(content);
 };
 
@@ -176,7 +155,7 @@ const createScrollableGraphList = async (page: Page) => {
     test('appears after saving, survives reload, and hides after deleting the last graph', async ({
       page,
     }) => {
-      await page.goto('/');
+      await page.goto('./');
       await expect(page.locator('.react-flow__node')).toHaveCount(3);
       const toggle = page.getByRole('button', { name: 'Toggle Sidebar' });
       const sidebar = page.locator('[data-sidebar="sidebar"]');
@@ -217,7 +196,7 @@ const createScrollableGraphList = async (page: Page) => {
       page,
     }) => {
       test.setTimeout(60_000);
-      await page.goto('/');
+      await page.goto('./');
       await expect(page.locator('.react-flow__node')).toHaveCount(3);
       await createScrollableGraphList(page);
       const navigation = await openSavedGraphs(page);
@@ -259,7 +238,7 @@ const createScrollableGraphList = async (page: Page) => {
 
 test('shows minimal navigation with tooltips and OSS credits', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   const header = page.locator('header');
   const names = await header.getByRole('button').evaluateAll((buttons) => {
@@ -343,7 +322,7 @@ test('keeps navigation and sidebar reachable with a long title on mobile', async
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 640 });
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await renameGraph(
     page,
@@ -383,7 +362,7 @@ test('keeps navigation and sidebar reachable with a long title on mobile', async
 test('edits titles with keyboard confirmation, cancellation and blank validation', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('./');
   const title = page.getByRole('button', { name: 'Rename graph', exact: true });
   const graphName = page.getByRole('textbox', { name: 'Graph name', exact: true });
   await expect(title).toHaveText('Untitled graph');
@@ -419,7 +398,7 @@ test('edits titles with keyboard confirmation, cancellation and blank validation
 test('restores the last confirmed title on blur without adding a diagram version', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await saveSnapshot(page, 1);
   const title = page.getByRole('button', { name: 'Rename graph', exact: true });
@@ -455,7 +434,7 @@ test('restores version styling and saves the oldest as newest while keeping five
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('./');
   await editSnapshot(page, 1);
   await renameGraph(page, 'Versioned diagram');
   await page.getByRole('button', { name: 'Toolkit: Global' }).click();
@@ -544,7 +523,7 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   });
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   expect(reactFlowWarnings).toHaveLength(0);
   await page.keyboard.press('Escape');
@@ -610,7 +589,7 @@ test('changes edge markers and matching colors globally and per edge, then resto
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('./');
   const edges = page.locator('.react-flow__edge');
   const firstEdge = edges.nth(0);
   const secondEdge = edges.nth(1);
@@ -670,7 +649,7 @@ test('changes edge markers and matching colors globally and per edge, then resto
 });
 
 test('loads legacy marker colors, oversized edges, and untitled names', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.locator('.react-flow__edge')).toHaveCount(2);
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -731,7 +710,7 @@ test('loads legacy marker colors, oversized edges, and untitled names', async ({
 
 test('renders sequence diagrams as React Flow elements', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('./');
   await updateEditor(page, sequenceSource);
 
   const alice = page.locator('.react-flow__node[data-id="A"]');
@@ -769,7 +748,7 @@ test('renders sequence diagrams as React Flow elements', async ({ page }) => {
 test('shows render errors in a dismissible dialog and keeps the editor usable', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('./');
   await updateEditor(
     page,
     `pie title Pets
@@ -792,7 +771,7 @@ test('shows render errors in a dismissible dialog and keeps the editor usable', 
 
 test('starts new diagrams with default styles and canvas settings', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('./');
   await openToolkit(page);
   await setColorInput(page.getByLabel('Fill'), '#ef4444');
   await page.getByRole('combobox', { name: 'Background', exact: true }).click();
@@ -816,7 +795,7 @@ test('starts new diagrams with default styles and canvas settings', async ({ pag
 
 test('supports no canvas background', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('./');
   await openToolkit(page);
   await page.getByRole('combobox', { name: 'Background', exact: true }).click();
   await page.getByRole('option', { name: 'None', exact: true }).click();
@@ -829,7 +808,7 @@ test('opens the saved graph drawer and closes it after selection on mobile', asy
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await page.keyboard.press('Escape');
   await renameGraph(page, 'Mobile graph');
@@ -852,7 +831,7 @@ test('opens the saved graph drawer and closes it after selection on mobile', asy
 
 test('resizes the editor and canvas with pointer and keyboard', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await expect(page.locator('.react-flow__edge-path')).toHaveCount(2);
   await page.keyboard.press('Escape');
@@ -899,7 +878,7 @@ test('resizes the editor and canvas with pointer and keyboard', async ({ page },
 
 test('stacks the editor above the canvas on mobile', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await page.goto('./');
   await page.keyboard.press('Escape');
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await expect(page.locator('#workspace-panels')).toHaveCSS('flex-direction', 'column');
@@ -950,9 +929,7 @@ test('saves selected node visual edits after Mermaid update', async ({ page }) =
       .catch(() => {});
   });
 
-  await page.goto('/');
-  await clearIndexedDb(page);
-  await page.reload();
+  await page.goto('./');
 
   await updateEditor(page);
 

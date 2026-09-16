@@ -17,7 +17,7 @@ pnpm install --frozen-lockfile
 pnpm run dev
 ```
 
-Open [http://localhost:54783](http://localhost:54783). Set `M2RF_APP_PORT` to use another port.
+Open [http://localhost:54783/m2rf/](http://localhost:54783/m2rf/). Set `M2RF_APP_PORT` to use another port.
 
 ## Site structure
 
@@ -45,6 +45,19 @@ pnpm run test
 pnpm run build
 ```
 
+Browser tests run against the exported site, not the development server:
+
+```sh
+pnpm exec playwright install chromium
+pnpm run build
+pnpm run test:e2e
+```
+
+Playwright starts a loopback-only static preview using Python 3 and a fresh browser
+context per test. It never reuses a running server. Set `M2RF_PREVIEW_PORT` to change
+the default preview port, `54784`. Run `pnpm run preview` for a manual preview at
+[http://127.0.0.1:54784/m2rf/](http://127.0.0.1:54784/m2rf/).
+
 ## Dependency maintenance
 
 ```sh
@@ -52,6 +65,7 @@ pnpm run deps:check
 pnpm run update:deps --dryRun
 pnpm run update
 pnpm run deps:security
+pnpm run deps:audit
 ```
 
 Codependence reads its policy from `package.json`. The update script applies
@@ -59,14 +73,46 @@ latest-version updates, including majors, then refreshes `pnpm-lock.yaml` throug
 pnpm. Review the preview before updating and run the project checks afterward.
 See the [Codependence configuration guide](https://github.com/yowainwright/codependence#configuration).
 
-Pastoralist tracks overrides after installs. The security check is read-only,
-fails on provider errors, and also runs in CI. There are currently no overrides;
-Pastoralist creates its appendix when overrides are added.
+Pastoralist tracks overrides after installs. Its security check is read-only and
+fails on provider errors. Both it and a full resolved-tree pnpm audit run in CI:
+Pastoralist 1.13.2's default OSV check excludes transitive-only package names.
+The `lodash-es` override in `pnpm-workspace.yaml` covers Mermaid/Chevrotain's
+vulnerable transitive pin; its reason is recorded in the package appendix.
 See the [Pastoralist setup guide](https://github.com/yowainwright/pastoralist#add-pastoralist-to-a-project).
+
+## Release version
+
+The sidebar reads its version from `package.json` at build time. Keep the current
+version until releasing; do not increment it for each build or deployment.
+
+On a clean `main` checkout, preview with `pnpm run release:dry`, then use
+`pnpm run release` to create the next patch release. The first release changes
+`0.0.0` to `0.0.1`, creates a release commit, and tags it `v0.0.1`. release-it runs
+the local lint, type, test, and security checks, and keeps Git hooks enabled.
+It does not push, publish to npm, create a GitHub release, or deploy the site.
+
+Push the release commit and tag yourself, then dispatch the Pages workflow from
+the released `main` revision. The workflow builds and tests that version before
+deploying. Redeploying the same revision does not increment its version.
+See [release-it configuration](https://github.com/release-it/release-it/blob/main/docs/configuration.md).
 
 ## Deployment
 
-Deploy the repository root as the Next.js application.
+The site targets [https://jeffry.in/m2rf/](https://jeffry.in/m2rf/). Next.js exports
+the root application into `out/`, with `/m2rf` as its build-time base path.
+
+The **Deploy GitHub Pages** workflow is manual and restricted to `main`. It runs
+the reusable Test workflow and browser tests before uploading `out/` and deploying
+through the `github-pages` environment. Configure repository Pages to use GitHub
+Actions; leave its custom domain unset to inherit the account's `jeffry.in` domain.
+Verify HTTPS enforcement and protect the environment before the first dispatch.
+No project CNAME file, root DNS change, or npm publication is needed.
+
+Graphs are saved in browser-local IndexedDB, not uploaded to GitHub. URL paths do
+not isolate storage: other pages on `https://jeffry.in` share the origin. Localhost,
+HTTP, and HTTPS use separate storage. Never run destructive browser tests against
+the public site. Roll back by deploying a previously validated revision, without
+clearing browser storage.
 
 ## License
 
