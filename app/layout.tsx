@@ -4,6 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'm2rf',
   description: 'CRUD Mermaid input into React Flow graph output.',
+  alternates: { canonical: 'https://jeffry.in/m2rf/' },
 };
 
 export default function RootLayout({

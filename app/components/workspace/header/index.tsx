@@ -88,7 +88,7 @@ export function WorkspaceHeader() {
                 rel="noreferrer"
               >
                 <Image
-                  src="/github.svg"
+                  src="/m2rf/github.svg"
                   alt=""
                   width={16}
                   height={16}
