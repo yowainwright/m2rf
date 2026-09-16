@@ -110,11 +110,12 @@ const saveNamedGraph = async (page: Page, name: string) => {
 
 const openSavedGraphs = async (page: Page) => {
   const navigation = page.getByRole('navigation', { name: 'Saved graphs' });
-  const isVisible = await navigation.isVisible();
+  const heading = page.getByRole('heading', { name: 'Saved graphs', exact: true });
+  const isVisible = await heading.isVisible();
   const collapsed = await page.locator('[data-state="collapsed"][data-side="left"]').count();
   const shouldOpen = !isVisible || collapsed > 0;
   if (shouldOpen) await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
-  await expect(navigation).toBeInViewport();
+  await expect(heading).toBeInViewport();
   return navigation;
 };
 
@@ -152,20 +153,30 @@ const createScrollableGraphList = async (page: Page) => {
   test.describe(`sidebar ${name}`, () => {
     test.use({ viewport });
 
-    test('appears after saving, survives reload, and hides after deleting the last graph', async ({
+    test('opens without saved graphs and remains available after deleting the last graph', async ({
       page,
-    }) => {
+    }, testInfo) => {
       await page.goto('./');
-      await expect(page.locator('.react-flow__node')).toHaveCount(3);
+      await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
       const toggle = page.getByRole('button', { name: 'Toggle Sidebar' });
       const sidebar = page.locator('[data-sidebar="sidebar"]');
-      await expect(toggle).toHaveCount(0);
-      await expect(sidebar).toHaveCount(0);
-      await renameGraph(page, 'Unsaved draft');
-      await expect(toggle).toHaveCount(0);
-      await saveNamedGraph(page, 'Saved sidebar graph');
       await expect(toggle).toBeVisible();
       const navigation = await openSavedGraphs(page);
+      const empty = navigation.locator('[data-slot="empty"]');
+      await expect(empty).toContainText('No saved graphs yet');
+      await expect(empty).toContainText('Save a diagram to see it here.');
+      await expect(empty.locator('svg.lucide-file-x')).toBeVisible();
+      await page.screenshot({ path: testInfo.outputPath('empty-sidebar.png') });
+      await expect(navigation.locator('[data-sidebar="menu-button"]')).toHaveCount(0);
+      await expect(sidebar.getByRole('list', { name: 'Open-source credits' })).toBeVisible();
+      await sidebar.getByRole('button', { name: 'Close sidebar' }).click();
+      await expect(page.getByRole('heading', { name: 'Saved graphs' })).not.toBeInViewport();
+      await renameGraph(page, 'Unsaved draft');
+      await expect(toggle).toBeVisible();
+      await saveNamedGraph(page, 'Saved sidebar graph');
+      await expect(toggle).toBeVisible();
+      await openSavedGraphs(page);
+      await expect(empty).toHaveCount(0);
       await expect(
         navigation.getByRole('button', { name: 'Saved sidebar graph', exact: true }),
       ).toBeVisible();
@@ -185,11 +196,17 @@ const createScrollableGraphList = async (page: Page) => {
         'Saved sidebar graph',
       );
       await page.getByRole('button', { name: 'Delete', exact: true }).click();
-      await expect(toggle).toHaveCount(0);
-      await expect(sidebar).toHaveCount(0);
+      await expect(toggle).toBeVisible();
+      await openSavedGraphs(page);
+      await expect(navigation.locator('[data-sidebar="menu-button"]')).toHaveCount(0);
+      await expect(empty).toBeVisible();
+      await expect(sidebar.getByRole('list', { name: 'Open-source credits' })).toBeVisible();
+      await sidebar.getByRole('button', { name: 'Close sidebar' }).click();
       await page.reload();
-      await expect(page.locator('.react-flow__node')).toHaveCount(3);
-      await expect(toggle).toHaveCount(0);
+      await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
+      await expect(toggle).toBeVisible();
+      await openSavedGraphs(page);
+      await expect(navigation.locator('[data-sidebar="menu-button"]')).toHaveCount(0);
     });
 
     test('scrolls saved graphs independently and keeps the final graph clickable above the footer', async ({
@@ -197,7 +214,7 @@ const createScrollableGraphList = async (page: Page) => {
     }) => {
       test.setTimeout(60_000);
       await page.goto('./');
-      await expect(page.locator('.react-flow__node')).toHaveCount(3);
+      await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
       await createScrollableGraphList(page);
       const navigation = await openSavedGraphs(page);
       const sidebar = page.locator('[data-sidebar="sidebar"]');
@@ -239,12 +256,12 @@ const createScrollableGraphList = async (page: Page) => {
 test('shows minimal navigation with tooltips and OSS credits', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('./');
-  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
   const header = page.locator('header');
   const names = await header.getByRole('button').evaluateAll((buttons) => {
     return buttons.map((button) => button.getAttribute('aria-label') || button.textContent?.trim());
   });
-  expect(names).toEqual(['New', 'Rename graph', 'Save', 'Download', 'Delete']);
+  expect(names).toEqual(['Toggle Sidebar', 'New', 'Rename graph', 'Save', 'Download', 'Delete']);
   const actions = header.locator('button[aria-label]').filter({ has: page.locator('svg') });
   await expect(actions).toHaveCount(3);
   expect(await actions.allTextContents()).toEqual(['', '', '']);
@@ -255,6 +272,11 @@ test('shows minimal navigation with tooltips and OSS credits', async ({ page }, 
   await expect(header.getByRole('heading', { name: 'm2rf', exact: true })).toBeVisible();
 
   const create = header.getByRole('button', { name: 'New', exact: true });
+  const sidebarTrigger = header.getByRole('button', { name: 'Toggle Sidebar' });
+  await expect(sidebarTrigger).toHaveCSS('width', '28px');
+  await expect(sidebarTrigger).toHaveCSS('height', '28px');
+  await expect(sidebarTrigger.locator('svg')).toHaveCSS('width', '16px');
+  await expect(sidebarTrigger.locator('svg')).toHaveCSS('height', '16px');
   await create.hover();
   await expect(page.getByRole('tooltip')).toHaveText('New');
   await page.mouse.move(0, 0);
@@ -323,7 +345,7 @@ test('keeps navigation and sidebar reachable with a long title on mobile', async
 }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await page.goto('./');
-  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
   await renameGraph(
     page,
     'A long graph title that must not hide any navigation actions on a narrow screen',
@@ -375,7 +397,7 @@ test('edits titles with keyboard confirmation, cancellation and blank validation
   await graphName.press('Enter');
   await expect(title).toHaveText('Release plan');
   await expect(title).toBeFocused();
-  await expect(page.getByRole('button', { name: 'Toggle Sidebar' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Toggle Sidebar' })).toBeVisible();
   await title.click();
   const selection = await graphName.evaluate((element: HTMLInputElement) => [
     element.selectionStart,
@@ -399,7 +421,7 @@ test('restores the last confirmed title on blur without adding a diagram version
   page,
 }) => {
   await page.goto('./');
-  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
   await saveSnapshot(page, 1);
   const title = page.getByRole('button', { name: 'Rename graph', exact: true });
   const history = page.getByRole('region', { name: 'Version history' });
@@ -524,13 +546,13 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('./');
-  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
   expect(reactFlowWarnings).toHaveLength(0);
   await page.keyboard.press('Escape');
   const navigation = page.getByRole('navigation', { name: 'Saved graphs' });
   const graphButtons = navigation.locator('[data-sidebar="menu-button"]');
   const graphName = page.getByRole('button', { name: 'Rename graph', exact: true });
-  await expect(navigation).toHaveCount(0);
+  await expect(graphButtons).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
@@ -559,7 +581,7 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
 
   await navigation.getByRole('button', { name: 'Release plan' }).click();
   await expect(graphName).toHaveText('Release plan');
-  await expect(page.locator('.cm-content')).toContainText('Idea');
+  await expect(page.locator('.cm-content')).toContainText('Install command via shell hook');
   await expect(navigation.getByRole('button', { name: 'Release plan' })).toHaveAttribute(
     'data-active',
     'true',
@@ -590,6 +612,7 @@ test('changes edge markers and matching colors globally and per edge, then resto
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('./');
+  await updateEditor(page);
   const edges = page.locator('.react-flow__edge');
   const firstEdge = edges.nth(0);
   const secondEdge = edges.nth(1);
@@ -599,6 +622,7 @@ test('changes edge markers and matching colors globally and per edge, then resto
     .poll(() => readMarker(firstEdge))
     .toEqual({ fill: 'rgb(23, 23, 23)', stroke: 'rgb(23, 23, 23)' });
 
+  await openToolkit(page);
   await selectMarker(page, 'Open arrow');
   await setColorInput(page.getByLabel('Color', { exact: true }), '#ef4444');
   await page.getByRole('spinbutton', { name: 'Width' }).fill('99');
@@ -613,6 +637,7 @@ test('changes edge markers and matching colors globally and per edge, then resto
     .toEqual({ fill: 'none', stroke: 'rgb(239, 68, 68)' });
 
   await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'fit view', exact: true }).click();
   await firstEdge.click();
   await page.getByRole('button', { name: 'Toolkit: 1 edge', exact: true }).click();
   await selectMarker(page, 'Filled arrow');
@@ -650,6 +675,7 @@ test('changes edge markers and matching colors globally and per edge, then resto
 
 test('loads legacy marker colors, oversized edges, and untitled names', async ({ page }) => {
   await page.goto('./');
+  await updateEditor(page);
   await expect(page.locator('.react-flow__edge')).toHaveCount(2);
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -749,6 +775,7 @@ test('shows render errors in a dismissible dialog and keeps the editor usable', 
   page,
 }) => {
   await page.goto('./');
+  await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
   await updateEditor(
     page,
     `pie title Pets
@@ -766,17 +793,22 @@ test('shows render errors in a dismissible dialog and keeps the editor usable', 
   await dialog.getByRole('button', { name: 'Dismiss', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
-  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
 });
 
 test('starts new diagrams with default styles and canvas settings', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('./');
+  await updateEditor(page);
+  await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await openToolkit(page);
   await setColorInput(page.getByLabel('Fill'), '#ef4444');
   await page.getByRole('combobox', { name: 'Background', exact: true }).click();
   await page.getByRole('option', { name: 'Diagonal v3', exact: true }).click();
   await page.getByRole('button', { name: 'New', exact: true }).click();
+  await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
+  await updateEditor(page);
+  await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await openToolkit(page);
 
   await expect(page.getByLabel('Fill')).toHaveValue('#cccccc');
@@ -809,7 +841,7 @@ test('opens the saved graph drawer and closes it after selection on mobile', asy
 }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('./');
-  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
   await page.keyboard.press('Escape');
   await renameGraph(page, 'Mobile graph');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -826,12 +858,13 @@ test('opens the saved graph drawer and closes it after selection on mobile', asy
   await expect(page.getByRole('button', { name: 'Rename graph', exact: true })).toHaveText(
     'Mobile graph',
   );
-  await expect(page.locator('.cm-content')).toContainText('Idea');
+  await expect(page.locator('.cm-content')).toContainText('Install command via shell hook');
 });
 
 test('resizes the editor and canvas with pointer and keyboard', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('./');
+  await updateEditor(page);
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
   await expect(page.locator('.react-flow__edge-path')).toHaveCount(2);
   await page.keyboard.press('Escape');
@@ -880,7 +913,7 @@ test('stacks the editor above the canvas on mobile', async ({ page }, testInfo) 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('./');
   await page.keyboard.press('Escape');
-  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
   await expect(page.locator('#workspace-panels')).toHaveCSS('flex-direction', 'column');
   await expect(page.getByRole('separator', { includeHidden: true })).toBeHidden();
 
@@ -948,6 +981,7 @@ test('saves selected node visual edits after Mermaid update', async ({ page }) =
   });
 
   await expect(node).toBeVisible();
+  await page.getByRole('button', { name: 'fit view', exact: true }).click();
   await node.click();
   await expect(page.getByText('Node selected')).toBeVisible();
 

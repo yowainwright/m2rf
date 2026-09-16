@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { APP_INITIAL_CONTEXT } from '@/app/constants';
+import { APP_INITIAL_CONTEXT, DEFAULT_SOURCE } from '@/app/constants';
 import { DEFAULT_CANVAS_SETTINGS, DEFAULT_SETTINGS } from '@/app/graph/constants';
 import {
   createNodeStyle,
@@ -82,6 +82,9 @@ describe('app defaults', () => {
     );
     expect(draft.workspace.id).toBe(draft.input.workspaceId);
     expect(draft.workspace.id).not.toBe(APP_INITIAL_CONTEXT.workspace.id);
+    expect(draft.input.source).toBe(DEFAULT_SOURCE);
+    expect(draft.input.source).toMatch(/^sequenceDiagram\n/);
+    expect(draft.translation.diagramType).toBe('sequence');
     expect(draft.translation.elements).toEqual({ nodes: [], edges: [] });
     expect(draft.translation.elements).not.toBe(APP_INITIAL_CONTEXT.translation.elements);
     expect(draft.translation.settings).toEqual(DEFAULT_SETTINGS);

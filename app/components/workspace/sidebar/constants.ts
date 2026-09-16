@@ -8,6 +8,11 @@ export const CURRENT_YEAR = new Date().getFullYear();
 export const FOOTER_SUPPORTED_DIAGRAMS =
   'currently supports flow diagrams and sequence diagrams; more soon! made with:';
 
+export const EMPTY_GRAPHS = {
+  title: 'No saved graphs yet',
+  description: 'Save a diagram to see it here.',
+};
+
 export const OSS_CREDITS = [
   { name: 'Mermaid', href: 'https://mermaid.js.org/' },
   { name: 'React Flow', href: 'https://reactflow.dev/' },

@@ -21,7 +21,6 @@ import type { ExportMenuProps } from './types';
 export function WorkspaceHeader() {
   const actor = AppContext.useActorRef();
   const { send } = actor;
-  const hasWorkspaces = AppContext.useSelector((state) => state.context.workspaces.length > 0);
   const canDelete = AppContext.useSelector((state) => state.can({ type: 'workspace.delete' }));
   const canSave = AppContext.useSelector((state) => state.can({ type: 'workspace.save' }));
   const canNavigate = AppContext.useSelector((state) => state.can({ type: 'workspace.create' }));
@@ -76,7 +75,7 @@ export function WorkspaceHeader() {
   return (
     <header className="grid min-h-12 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b px-4 py-2">
       <div className="flex shrink-0 items-center gap-2">
-        {hasWorkspaces && <SidebarTrigger title={HEADER_LABELS.sidebar} />}
+        <SidebarTrigger className="[&>svg]:size-4" title={HEADER_LABELS.sidebar} />
         <h1 className="text-xl leading-none font-bold">{HEADER_LABELS.title}</h1>
         <Tooltip>
           <TooltipTrigger asChild>

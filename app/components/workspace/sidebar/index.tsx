@@ -1,9 +1,16 @@
 'use client';
 
 import { cn } from '@/app/lib/utils';
-import { ChevronRight, Workflow, X } from 'lucide-react';
+import { ChevronRight, FileX, Workflow, X } from 'lucide-react';
 import { getWorkspaceLabel } from '@/app/graph';
 import { Button } from '@/app/components/ui/button';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/app/components/ui/empty';
 import { Separator } from '@/app/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip';
 import {
@@ -25,6 +32,7 @@ import {
   APP_LICENSE,
   APP_VERSION,
   CURRENT_YEAR,
+  EMPTY_GRAPHS,
   FOOTER_SUPPORTED_DIAGRAMS,
   OSS_ADDITIONAL_CREDITS,
   OSS_CREDITS,
@@ -97,9 +105,8 @@ export function WorkspaceSidebar() {
       </SidebarMenuItem>
     );
   });
-  const hasWorkspaces = workspaces.length > 0;
-  if (!hasWorkspaces) return null;
-
+  const isEmpty = workspaces.length === 0;
+  const graphList = isEmpty ? <WorkspaceEmptyState /> : <SidebarMenu>{items}</SidebarMenu>;
   return (
     <Sidebar>
       <SidebarHeader className="min-h-12 border-b px-4 py-2">
@@ -130,14 +137,26 @@ export function WorkspaceSidebar() {
             <h2>Saved graphs</h2>
           </SidebarGroupLabel>
           <SidebarGroupContent className="min-h-0 flex-1 overflow-y-auto">
-            <nav aria-label="Saved graphs">
-              <SidebarMenu>{items}</SidebarMenu>
-            </nav>
+            <nav aria-label="Saved graphs">{graphList}</nav>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <WorkspaceCredits />
     </Sidebar>
+  );
+}
+
+function WorkspaceEmptyState() {
+  return (
+    <Empty className="p-4 md:p-4">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <FileX aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle className="text-sm">{EMPTY_GRAPHS.title}</EmptyTitle>
+        <EmptyDescription className="text-xs">{EMPTY_GRAPHS.description}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 
@@ -162,7 +181,7 @@ function WorkspaceCredits() {
 
   return (
     <SidebarFooter className="shrink-0 items-center gap-3 border-t border-sidebar-border px-2 pt-4 pb-6 text-center text-xs text-muted-foreground">
-      <p className="w-full px-2 text-left text-sm leading-5">
+      <p className="w-full px-6 text-left text-xs leading-5">
         <a
           href={REPOSITORY_URL}
           target="_blank"
