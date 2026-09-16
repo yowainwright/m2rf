@@ -64,8 +64,11 @@ jobs:
           sudo apt-get install -y shellcheck
 
       - name: Install structure linters
+        env:
+          HOMEBREW_DISABLE_DEBREW: '1'
         run: |
-          /home/linuxbrew/.linuxbrew/bin/brew install yowainwright/tap/fs-lint yowainwright/tap/src-lint
+          /home/linuxbrew/.linuxbrew/bin/brew config
+          /home/linuxbrew/.linuxbrew/bin/brew install --verbose --debug yowainwright/tap/fs-lint yowainwright/tap/src-lint
           echo /home/linuxbrew/.linuxbrew/bin >> "$GITHUB_PATH"
 
       - name: Type check
