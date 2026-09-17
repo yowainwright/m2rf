@@ -1,5 +1,5 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "$schema": "../node_modules/oxlint/configuration_schema.json",
   "jsPlugins": [
     {
       "name": "legibility",
@@ -64,7 +64,7 @@
   },
   "overrides": [
     {
-      "files": ["app/**/*.ts", "app/**/*.tsx", "tests/**/*.ts"],
+      "files": ["../app/**/*.ts", "../app/**/*.tsx", "../tests/**/*.ts"],
       "rules": {
         "require-await": "warn"
       }
