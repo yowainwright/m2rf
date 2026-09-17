@@ -82,27 +82,39 @@ See the [Pastoralist setup guide](https://github.com/yowainwright/pastoralist#ad
 
 ## Release version
 
-The sidebar reads its version from `package.json` at build time. Keep the current
-version until releasing; do not increment it for each build or deployment.
+The sidebar reads `package.json` at build time. The current version is `0.0.1`;
+the next merge to `main` releases `0.0.2` automatically. Each non-bot push to
+`main` (including a merge) queues a patch release using the existing release-it.
 
-On a clean `main` checkout, preview with `pnpm run release:dry`, then use
-`pnpm run release` to create the next patch release. The first release changes
-`0.0.0` to `0.0.1`, creates a release commit, and tags it `v0.0.1`. release-it runs
-the local lint, type, test, and security checks, and keeps Git hooks enabled.
-It does not push, publish to npm, create a GitHub release, or deploy the site.
+CI selects a `main` revision, runs security/lint/types/tests, then creates and
+atomically pushes the version commit and tag. Only the release job has
+`contents: write`; it uses the built-in `GITHUB_TOKEN`. The subsequent build
+checks out that exact release commit, tests the exported site, and deploys it
+within the same workflow. No npm publication or GitHub Release is created.
 
-Push the release commit and tag yourself, then dispatch the Pages workflow from
-the released `main` revision. The workflow builds and tests that version before
-deploying. Redeploying the same revision does not increment its version.
-See [release-it configuration](https://github.com/release-it/release-it/blob/main/docs/configuration.md).
+Release commits record the triggering SHA in a `Release-Source` trailer. Reruns
+reuse that release; superseded release retries stop rather than roll the site
+back. Manual dispatch only redeploys, without a version bump.
+Queued runs are serialized. If `main` advances during validation or before the
+release push, the run fails without overwriting newer commits; rerun it to check
+the current revision. A queued merge may therefore release the latest checked
+`main`, including later merges, but each triggering push receives one patch bump.
+
+Branch protection must permit the release bot's commit. Do not disable protection
+or add a personal token as a workaround. Local `release` commands remain manual
+recovery tools and do not push by default.
+See [release-it Git support](https://github.com/release-it/release-it/blob/main/docs/git.md)
+and [GitHub workflow token behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
 ## Deployment
 
 The site targets [https://jeffry.in/m2rf/](https://jeffry.in/m2rf/). Next.js exports
 the root application into `out/`, with `/m2rf` as its build-time base path.
 
-The **Deploy GitHub Pages** workflow is manual and restricted to `main`. It runs
-the reusable Test workflow and browser tests before uploading `out/` and deploying
+The **Deploy GitHub Pages** workflow runs on pushes to `main` and supports manual
+dispatch from `main`. Pushes create a patch release after the reusable Test
+workflow passes; manual dispatch preserves the version. Browser tests run before
+uploading `out/` and deploying
 through the `github-pages` environment. Configure repository Pages to use GitHub
 Actions; leave its custom domain unset to inherit the account's `jeffry.in` domain.
 Verify HTTPS enforcement and protect the environment before the first dispatch.

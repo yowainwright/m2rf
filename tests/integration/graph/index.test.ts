@@ -155,30 +155,39 @@ describe('graphRepository', () => {
     await deleteWorkspaces();
   });
 
-  it('shows the sidebar only when saved graphs exist, including after reload and deletion', async () => {
+  it('keeps the sidebar available before saving and after reload and deletion', async () => {
     const app = createWorkspaceControls();
     const ui = render(app);
     await waitFor(() =>
       expect(ui.getByRole('button', { name: 'Save' }).hasAttribute('disabled')).toBe(false),
     );
-    expect(ui.queryByRole('button', { name: 'Toggle Sidebar' })).toBeNull();
-    expect(ui.queryByRole('navigation', { name: 'Saved graphs' })).toBeNull();
+    expect(ui.getByRole('button', { name: 'Toggle Sidebar' })).toBeDefined();
+    expect(ui.getByRole('navigation', { name: 'Saved graphs' })).toBeDefined();
+    expect(ui.getByRole('list', { name: 'Open-source credits' })).toBeDefined();
+    expect(ui.getByText('No saved graphs yet')).toBeDefined();
+    expect(ui.getByText('Save a diagram to see it here.').tagName).toBe('P');
+    expect(await graphRepository.list()).toHaveLength(0);
     fireEvent.click(ui.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(ui.getByRole('navigation', { name: 'Saved graphs' })).toBeDefined());
+    await waitFor(() => expect(ui.getByRole('button', { name: 'Saved' })).toBeDefined());
+    expect(await graphRepository.list()).toHaveLength(1);
+    expect(ui.queryByText('No saved graphs yet')).toBeNull();
     expect(ui.getByRole('button', { name: 'Toggle Sidebar' })).toBeDefined();
     ui.unmount();
     const reloaded = render(app);
     await waitFor(() =>
-      expect(reloaded.getByRole('navigation', { name: 'Saved graphs' })).toBeDefined(),
+      expect(reloaded.getByRole('button', { name: 'Delete' }).hasAttribute('disabled')).toBe(false),
     );
     fireEvent.click(reloaded.getByRole('button', { name: 'Delete' }));
     await waitFor(() =>
-      expect(reloaded.queryByRole('navigation', { name: 'Saved graphs' })).toBeNull(),
+      expect(reloaded.getByRole('button', { name: 'Delete' }).hasAttribute('disabled')).toBe(true),
     );
-    expect(reloaded.queryByRole('button', { name: 'Toggle Sidebar' })).toBeNull();
+    expect(await graphRepository.list()).toHaveLength(0);
+    expect(reloaded.getByRole('navigation', { name: 'Saved graphs' })).toBeDefined();
+    expect(reloaded.getByRole('button', { name: 'Toggle Sidebar' })).toBeDefined();
+    expect(reloaded.getByText('No saved graphs yet')).toBeDefined();
   });
 
-  it('keeps the sidebar hidden after a failed save and shows it after a successful retry', async () => {
+  it('keeps the sidebar available after a failed save and a successful retry', async () => {
     const create = vi
       .spyOn(graphRepository, 'create')
       .mockRejectedValueOnce(new Error('Disk full'));
@@ -189,11 +198,13 @@ describe('graphRepository', () => {
     await waitFor(() => expect(create).toHaveBeenCalledOnce());
     await waitFor(() => expect(ui.getByRole('button', { name: 'Save' })).toBeDefined());
     expect(await graphRepository.list()).toHaveLength(0);
-    expect(ui.queryByRole('navigation', { name: 'Saved graphs' })).toBeNull();
-    expect(ui.queryByRole('button', { name: 'Toggle Sidebar' })).toBeNull();
+    expect(ui.getByText('No saved graphs yet')).toBeDefined();
+    expect(ui.getByRole('navigation', { name: 'Saved graphs' })).toBeDefined();
+    expect(ui.getByRole('button', { name: 'Toggle Sidebar' })).toBeDefined();
     fireEvent.click(ui.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(ui.getByRole('navigation', { name: 'Saved graphs' })).toBeDefined());
+    await waitFor(() => expect(ui.getByRole('button', { name: 'Saved' })).toBeDefined());
     expect(await graphRepository.list()).toHaveLength(1);
+    expect(ui.queryByText('No saved graphs yet')).toBeNull();
   });
 
   it('commits with embedded Save and discards a draft when focus leaves the title group', async () => {
