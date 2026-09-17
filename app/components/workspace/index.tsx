@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
 import {
   Dialog,
@@ -16,7 +15,7 @@ import {
   ResizablePanelGroup,
 } from '@/app/components/ui/resizable';
 import { SidebarInset, SidebarProvider } from '@/app/components/ui/sidebar';
-import { DESKTOP_MEDIA_QUERY } from '@/app/constants';
+import { useWorkspaceLayout } from '@/app/hooks/useWorkspaceLayout';
 import { AppContext } from '@/app';
 import { MermaidEditor } from './editor';
 import { WorkspaceHeader } from './header';
@@ -32,13 +31,7 @@ export function Workspace() {
   const panelMinimumSize = isDesktop ? '320px' : '520px';
   const handleSidebarUpdate = (open: boolean) => send({ type: 'sidebar.update', open });
 
-  useEffect(() => {
-    const viewport = window.matchMedia(DESKTOP_MEDIA_QUERY);
-    const updateLayout = () => send({ type: 'layout.update', isDesktop: viewport.matches });
-    updateLayout();
-    viewport.addEventListener('change', updateLayout);
-    return () => viewport.removeEventListener('change', updateLayout);
-  }, [send]);
+  useWorkspaceLayout();
 
   return (
     <SidebarProvider open={sidebarOpen} onOpenChange={handleSidebarUpdate}>

@@ -205,7 +205,7 @@ lint_shell() {
 	hooks_dir=${2:?hooks directory is required}
 	shfmt -d "$repo_root/scripts/setup.sh"
 	shellcheck -x -S warning "$repo_root/scripts/setup.sh" "$hooks_dir/pre-commit" "$hooks_dir/post-merge"
-	shellcheck-legibility check "$repo_root/scripts/setup.sh"
+	shellcheck-legibility check --config "$repo_root/scripts/.shellcheck-legibility.toml" "$repo_root/scripts/setup.sh"
 }
 
 run_setup() {

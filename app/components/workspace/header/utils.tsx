@@ -22,26 +22,22 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu';
 import { HEADER_LABELS } from './constants';
-import type { ExportMenuProps, WorkspaceTitleProps } from './types';
+import type {
+  ExportMenuProps,
+  TitleInteraction,
+  WorkspaceTitleEditorProps,
+  WorkspaceTitleLabelProps,
+  WorkspaceTitleProps,
+} from './types';
 
 export function WorkspaceTitle({ children }: WorkspaceTitleProps) {
   const actor = AppContext.useActorRef();
-  const workspace = AppContext.useSelector((state) => state.context.workspace);
-  const isSaved = AppContext.useSelector(
-    (state) => state.context.input.id !== APP_INITIAL_CONTEXT.input.id,
-  );
-  const draft = AppContext.useSelector((state) => state.context.titleDraft);
-  const error = AppContext.useSelector((state) => state.context.titleError);
   const editing = AppContext.useSelector((state) => state.matches({ title: 'editing' }));
   const saving = AppContext.useSelector((state) => state.matches({ title: 'saving' }));
-  const canEdit = AppContext.useSelector((state) => state.can({ type: 'title.edit' }));
   const input = useRef<HTMLInputElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const restoreFocus = useRef(false);
-  const fallback = isSaved ? workspace.id : UNTITLED_GRAPH_NAME;
-  const label = getWorkspaceLabel(workspace, fallback);
   const showInput = editing || saving;
-  const errorId = error ? GRAPH_NAME_ERROR_ID : undefined;
 
   useEffect(() => {
     if (editing) {
@@ -55,6 +51,18 @@ export function WorkspaceTitle({ children }: WorkspaceTitleProps) {
     }
   }, [editing, showInput]);
 
+  const handlers = getTitleHandlers({ actor, restoreFocus });
+  if (!showInput) {
+    return <WorkspaceTitleLabel button={button}>{children}</WorkspaceTitleLabel>;
+  }
+  return (
+    <WorkspaceTitleEditor input={input} {...handlers}>
+      {children}
+    </WorkspaceTitleEditor>
+  );
+}
+
+function getTitleHandlers({ actor, restoreFocus }: TitleInteraction) {
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.nativeEvent.isComposing) return;
     const isConfirm = event.key === 'Enter';
@@ -75,25 +83,43 @@ export function WorkspaceTitle({ children }: WorkspaceTitleProps) {
     actor.send({ type: 'title.cancel' });
   };
 
-  if (!showInput) {
-    return (
-      <InputGroup className="w-96 min-w-0 max-w-full" aria-label={HEADER_LABELS.graphNameAndSave}>
-        <Button
-          ref={button}
-          aria-label={RENAME_GRAPH_LABEL}
-          disabled={!canEdit}
-          title={label}
-          variant="ghost"
-          className="h-full min-w-0 flex-1 justify-start px-3 font-bold"
-          onClick={() => actor.send({ type: 'title.edit' })}
-        >
-          <span className="truncate">{label}</span>
-        </Button>
-        {children}
-      </InputGroup>
-    );
-  }
+  return { handleKeyDown, handleBlur };
+}
 
+function WorkspaceTitleLabel({ button, children }: WorkspaceTitleLabelProps) {
+  const actor = AppContext.useActorRef();
+  const workspace = AppContext.useSelector((state) => state.context.workspace);
+  const isSaved = AppContext.useSelector(
+    (state) => state.context.input.id !== APP_INITIAL_CONTEXT.input.id,
+  );
+  const canEdit = AppContext.useSelector((state) => state.can({ type: 'title.edit' }));
+  const fallback = isSaved ? workspace.id : UNTITLED_GRAPH_NAME;
+  const label = getWorkspaceLabel(workspace, fallback);
+  return (
+    <InputGroup className="w-96 min-w-0 max-w-full" aria-label={HEADER_LABELS.graphNameAndSave}>
+      <Button
+        ref={button}
+        aria-label={RENAME_GRAPH_LABEL}
+        disabled={!canEdit}
+        title={label}
+        variant="ghost"
+        className="h-full min-w-0 flex-1 justify-start px-3 font-bold"
+        onClick={() => actor.send({ type: 'title.edit' })}
+      >
+        <span className="truncate">{label}</span>
+      </Button>
+      {children}
+    </InputGroup>
+  );
+}
+
+function WorkspaceTitleEditor(props: WorkspaceTitleEditorProps) {
+  const { input, children, handleKeyDown, handleBlur } = props;
+  const actor = AppContext.useActorRef();
+  const draft = AppContext.useSelector((state) => state.context.titleDraft);
+  const error = AppContext.useSelector((state) => state.context.titleError);
+  const saving = AppContext.useSelector((state) => state.matches({ title: 'saving' }));
+  const errorId = error ? GRAPH_NAME_ERROR_ID : undefined;
   return (
     <div className="w-96 min-w-0 max-w-full">
       <InputGroup aria-label={HEADER_LABELS.graphNameAndSave} onBlur={handleBlur}>
@@ -124,25 +150,7 @@ export function WorkspaceTitle({ children }: WorkspaceTitleProps) {
 export function ExportMenu({ canExport, onExport }: ExportMenuProps) {
   return (
     <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex shrink-0">
-            <DropdownMenuTrigger asChild>
-              <Button
-                aria-label={HEADER_LABELS.download}
-                className="h-7 w-7"
-                disabled={!canExport}
-                size="icon"
-                type="button"
-                variant="ghost"
-              >
-                <Download aria-hidden="true" className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>{HEADER_LABELS.download}</TooltipContent>
-      </Tooltip>
+      <ExportMenuTrigger canExport={canExport} />
       <DropdownMenuContent align="end" className="min-w-0">
         <DropdownMenuItem className="text-xs" onSelect={() => onExport('svg', 'forever')}>
           SVG
@@ -159,5 +167,29 @@ export function ExportMenu({ canExport, onExport }: ExportMenuProps) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function ExportMenuTrigger({ canExport }: Pick<ExportMenuProps, 'canExport'>) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex shrink-0">
+          <DropdownMenuTrigger asChild>
+            <Button
+              aria-label={HEADER_LABELS.download}
+              className="h-7 w-7"
+              disabled={!canExport}
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              <Download aria-hidden="true" className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{HEADER_LABELS.download}</TooltipContent>
+    </Tooltip>
   );
 }

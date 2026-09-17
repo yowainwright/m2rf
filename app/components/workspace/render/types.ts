@@ -2,9 +2,18 @@ import type { ReactNode } from 'react';
 import type { Edge, EdgeChange, Node, NodeChange, Viewport } from 'reactflow';
 import type { ToolkitMetadataProps } from '@/app/components/toolkit/types';
 import type { AppEvent } from '@/app/types';
+import type { GraphCanvasSettings, GraphTranslation } from '@/app/graph';
+import type { createRenderActions, getPreviewSelection } from './utils';
 
 export type RenderSend = (event: AppEvent) => void;
 export type GraphPoint = { x: number; y: number };
+
+export type PreviewProps = {
+  actions: ReturnType<typeof createRenderActions>;
+  canvas: GraphCanvasSettings;
+  selection: ReturnType<typeof getPreviewSelection>;
+  translation: GraphTranslation;
+};
 
 export type GraphCanvasProps = {
   background: ReactNode;
