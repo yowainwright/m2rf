@@ -165,6 +165,7 @@ describe('graphRepository', () => {
     expect(ui.getByRole('navigation', { name: 'Saved graphs' })).toBeDefined();
     expect(ui.getByRole('list', { name: 'Open-source credits' })).toBeDefined();
     expect(ui.getByText('No saved graphs yet')).toBeDefined();
+    expect(ui.getByText('Save a diagram to see it here.').tagName).toBe('P');
     expect(await graphRepository.list()).toHaveLength(0);
     fireEvent.click(ui.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(ui.getByRole('button', { name: 'Saved' })).toBeDefined());
