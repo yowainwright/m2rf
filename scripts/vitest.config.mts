@@ -1,10 +1,13 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
+const root = resolve(import.meta.dirname, '..');
+
 export default defineConfig({
+  root,
   resolve: {
     alias: {
-      '@': resolve(import.meta.dirname),
+      '@': root,
     },
   },
   test: {
