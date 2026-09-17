@@ -1,7 +1,7 @@
 'use client';
 
 import type { ChangeEvent } from 'react';
-import type { GraphShaderSettings } from '@/app/graph';
+import type { GraphCanvasSettings, GraphShaderSettings } from '@/app/graph';
 import { Badge } from '@/app/components/ui/badge';
 import {
   Field,
@@ -32,44 +32,46 @@ import type {
   ToolkitMetadataProps,
 } from './types';
 
+function MetadataField({
+  emphasized,
+  label,
+  value,
+  hideLabel,
+}: MetadataFieldsProps['fields'][number]) {
+  const text = String(value);
+  const descriptionClassName = emphasized
+    ? 'min-w-0 max-w-full flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold leading-5 text-foreground'
+    : 'min-w-0 shrink-0 truncate text-xs leading-4 text-foreground';
+  const description = (
+    <FieldDescription className={descriptionClassName} title={emphasized ? undefined : text}>
+      {text}
+    </FieldDescription>
+  );
+  const needsTooltip = emphasized && text.length > TITLE_TOOLTIP_MAX_LENGTH;
+  const content = needsTooltip ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="block min-w-0 max-w-full flex-1">{description}</div>
+      </TooltipTrigger>
+      <TooltipContent>{text}</TooltipContent>
+    </Tooltip>
+  ) : (
+    description
+  );
+  const caption = hideLabel ? null : (
+    <FieldTitle className="shrink-0 text-xs font-normal text-muted-foreground">{label}</FieldTitle>
+  );
+  const fieldClassName = cn('w-auto min-w-0 max-w-full gap-1', emphasized ? 'flex-1' : 'shrink-0');
+  return (
+    <Field aria-label={label} className={fieldClassName} key={label} orientation="horizontal">
+      {caption}
+      {content}
+    </Field>
+  );
+}
+
 function MetadataFields({ className, fields }: MetadataFieldsProps) {
-  const items = fields.map(({ emphasized, label, value, hideLabel }) => {
-    const text = String(value);
-    const descriptionClassName = emphasized
-      ? 'min-w-0 max-w-full flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-base font-semibold leading-5 text-foreground'
-      : 'min-w-0 shrink-0 truncate text-xs leading-4 text-foreground';
-    const description = (
-      <FieldDescription className={descriptionClassName} title={emphasized ? undefined : text}>
-        {text}
-      </FieldDescription>
-    );
-    const needsTooltip = emphasized && text.length > TITLE_TOOLTIP_MAX_LENGTH;
-    const content = needsTooltip ? (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="block min-w-0 max-w-full flex-1">{description}</div>
-        </TooltipTrigger>
-        <TooltipContent>{text}</TooltipContent>
-      </Tooltip>
-    ) : (
-      description
-    );
-    const caption = hideLabel ? null : (
-      <FieldTitle className="shrink-0 text-xs font-normal text-muted-foreground">
-        {label}
-      </FieldTitle>
-    );
-    const fieldClassName = cn(
-      'w-auto min-w-0 max-w-full gap-1',
-      emphasized ? 'flex-1' : 'shrink-0',
-    );
-    return (
-      <Field aria-label={label} className={fieldClassName} key={label} orientation="horizontal">
-        {caption}
-        {content}
-      </Field>
-    );
-  });
+  const items = fields.map((field) => <MetadataField key={field.label} {...field} />);
   return (
     <FieldGroup className={cn('flex-row flex-wrap gap-x-3 gap-y-0.5', className)}>
       {items}
@@ -159,6 +161,9 @@ export const getPatternPreviewStyle = (value: string, preview: string) => {
   if (value.startsWith('pattern-')) return { background: preview, backgroundSize: '8px 8px' };
   return { background: preview };
 };
+
+export const isPatternBackground = (background: GraphCanvasSettings['background']) =>
+  background === 'grid' || background === 'dot-pattern' || background.startsWith('pattern-');
 
 const updateShaderColor = (
   shader: GraphShaderSettings,

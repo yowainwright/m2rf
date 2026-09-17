@@ -497,29 +497,15 @@ const getNodeAppearanceStyle = (node: Node | undefined) => {
   return overrides;
 };
 
-const createNodeStyleUpdate = (node: Node, settings: Partial<TranslationSettings>) => {
-  const nodeAppearanceStyle = getNodeAppearanceStyle(node);
-  const style = Object.assign({}, nodeAppearanceStyle) as CSSProperties & Record<string, unknown>;
-  const currentColor = getColorValue(
-    style[NODE_COLOR_VARIABLE],
-    getColorValue(style.backgroundColor, DEFAULT_SETTINGS.primaryColor),
-  );
+const getNodeSurfaceUpdate = (
+  nodeAppearanceStyle: CSSProperties | undefined,
+  settings: Partial<TranslationSettings>,
+) => {
+  const style: CSSProperties & Record<string, unknown> = {};
   const currentSurface = getNodeSurface(nodeAppearanceStyle, DEFAULT_SETTINGS.nodeSurface);
   const currentGradient = getNodeGradient(nodeAppearanceStyle, DEFAULT_SETTINGS.nodeGradient);
-  const currentShape = getNodeShape(nodeAppearanceStyle, DEFAULT_SETTINGS.nodeShape);
   const nextSurface = settings.nodeSurface || currentSurface;
   const nextGradient = settings.nodeGradient || currentGradient;
-  if (settings.primaryColor !== undefined) {
-    style.backgroundColor = settings.primaryColor;
-    style.borderColor = settings.primaryColor;
-    style[NODE_COLOR_VARIABLE] = settings.primaryColor;
-  }
-  if (settings.nodeBorder !== undefined) {
-    style.borderStyle = settings.nodeBorder;
-    style.borderWidth = settings.nodeBorder === 'none' ? 0 : 2;
-    style.borderColor = style.borderColor || currentColor;
-  }
-  if (settings.nodeShadow !== undefined) style.boxShadow = getNodeShadow(settings.nodeShadow);
   if (settings.nodeSurface !== undefined) {
     style.backgroundImage = getNodeSurfaceImage(settings.nodeSurface, nextGradient);
     style.backgroundSize = getNodeBackgroundSize(settings.nodeSurface);
@@ -533,6 +519,29 @@ const createNodeStyleUpdate = (node: Node, settings: Partial<TranslationSettings
     style[NODE_GRADIENT_DIRECTION_VARIABLE] = nextGradient.direction;
     style[NODE_GRADIENT_SPLIT_VARIABLE] = nextGradient.split;
   }
+  return style;
+};
+
+const createNodeStyleUpdate = (node: Node, settings: Partial<TranslationSettings>) => {
+  const nodeAppearanceStyle = getNodeAppearanceStyle(node);
+  const style = Object.assign({}, nodeAppearanceStyle) as CSSProperties & Record<string, unknown>;
+  const currentColor = getColorValue(
+    style[NODE_COLOR_VARIABLE],
+    getColorValue(style.backgroundColor, DEFAULT_SETTINGS.primaryColor),
+  );
+  const currentShape = getNodeShape(nodeAppearanceStyle, DEFAULT_SETTINGS.nodeShape);
+  if (settings.primaryColor !== undefined) {
+    style.backgroundColor = settings.primaryColor;
+    style.borderColor = settings.primaryColor;
+    style[NODE_COLOR_VARIABLE] = settings.primaryColor;
+  }
+  if (settings.nodeBorder !== undefined) {
+    style.borderStyle = settings.nodeBorder;
+    style.borderWidth = settings.nodeBorder === 'none' ? 0 : 2;
+    style.borderColor = style.borderColor || currentColor;
+  }
+  if (settings.nodeShadow !== undefined) style.boxShadow = getNodeShadow(settings.nodeShadow);
+  Object.assign(style, getNodeSurfaceUpdate(nodeAppearanceStyle, settings));
   if (settings.nodeShape !== undefined) {
     clearNodeShapeStyles(style);
     Object.assign(style, getNodeShapeStyles(settings.nodeShape));
@@ -571,10 +580,12 @@ const updateEdgeMarker = (
   return createEdgeMarker(value, color);
 };
 
-const createEdgeUpdate = (edge: Edge, settings: Partial<TranslationSettings>) => {
-  const edgeSettings = getSettings(settings);
+const getEdgeAppearanceUpdate = (
+  edge: Edge,
+  settings: Partial<TranslationSettings>,
+  edgeSettings: TranslationSettings,
+) => {
   const isSequenceMessage = edge.data?.kind === SEQUENCE_MESSAGE_KIND;
-  const isSequenceSourceSegment = isSequenceMessage && edge.data?.segment === 'source';
   const keepsAnimation = settings.edgeAnimation === undefined;
   const keepsType = settings.edgeType === undefined;
   const currentType = getEdgeTypeValue(edge, DEFAULT_SETTINGS);
@@ -588,7 +599,6 @@ const createEdgeUpdate = (edge: Edge, settings: Partial<TranslationSettings>) =>
   let type: string = edgeType;
   if (isSequenceMessage) type = SEQUENCE_MESSAGE_EDGE_TYPE;
   if (isSurge) type = SURGE_EDGE_TYPE;
-  const style = Object.assign({}, edge.style);
   const data = Object.assign({}, edge.data);
   const storesEdgeType = isSequenceMessage || isSurge;
 
@@ -597,6 +607,15 @@ const createEdgeUpdate = (edge: Edge, settings: Partial<TranslationSettings>) =>
   } else {
     delete data.edgeType;
   }
+  return { animated, className, type, data };
+};
+
+const createEdgeUpdate = (edge: Edge, settings: Partial<TranslationSettings>) => {
+  const edgeSettings = getSettings(settings);
+  const appearance = getEdgeAppearanceUpdate(edge, settings, edgeSettings);
+  const isSequenceMessage = edge.data?.kind === SEQUENCE_MESSAGE_KIND;
+  const isSequenceSourceSegment = isSequenceMessage && edge.data?.segment === 'source';
+  const style = Object.assign({}, edge.style);
 
   if (settings.edgeColor) {
     style.stroke = settings.edgeColor;
@@ -613,14 +632,10 @@ const createEdgeUpdate = (edge: Edge, settings: Partial<TranslationSettings>) =>
     ? updateEdgeMarker(edge, 'markerStart', settings.edgeMarker, color)
     : undefined;
 
-  return Object.assign({}, edge, {
-    animated,
-    className,
+  return Object.assign({}, edge, appearance, {
     markerEnd,
     markerStart,
     style,
-    type,
-    data,
   });
 };
 
@@ -1507,6 +1522,27 @@ const getActionHandleId = (type: 'source' | 'target', side: string) => {
   return `${side}-${type}`;
 };
 
+const createSequenceMessageData = (
+  message: SequenceMessageRecord,
+  segment: SequenceMessageData['segment'],
+): SequenceMessageData => {
+  const isSourceSegment = segment === 'source';
+  const hasMermaidMarker = message.markerStart || message.markerEnd;
+  const hasEndMarker = !hasMermaidMarker || message.markerEnd;
+  const markerEnd = !isSourceSegment && hasEndMarker;
+  const markerStart = isSourceSegment && message.markerStart;
+  return {
+    dashed: message.dashed,
+    kind: 'sequence-message',
+    markerEnd,
+    markerStart,
+    messageY: message.point.y,
+    segment,
+    selfMessage: message.source.id === message.target.id,
+    sequenceNumber: isSourceSegment ? message.sequenceNumber : undefined,
+  };
+};
+
 const createSequenceMessageEdge = (
   message: SequenceMessageRecord,
   segment: SequenceMessageData['segment'],
@@ -1517,20 +1553,8 @@ const createSequenceMessageEdge = (
   const actionCenter = getActionCenter(message);
   const participantSide = getParticipantHandleSide(participant, actionCenter);
   const actionSide = getActionHandleSide(participant, actionCenter);
-  const hasMermaidMarker = message.markerStart || message.markerEnd;
-  const hasEndMarker = !hasMermaidMarker || message.markerEnd;
-  const markerEnd = !isSourceSegment && hasEndMarker;
-  const markerStart = isSourceSegment && message.markerStart;
-  const data: SequenceMessageData = {
-    dashed: message.dashed,
-    kind: 'sequence-message',
-    markerEnd,
-    markerStart,
-    messageY: message.point.y,
-    segment,
-    selfMessage: message.source.id === message.target.id,
-    sequenceNumber: isSourceSegment ? message.sequenceNumber : undefined,
-  };
+  const data = createSequenceMessageData(message, segment);
+  const { markerEnd, markerStart } = data;
   return {
     data,
     id: `${message.id}-${segment}`,

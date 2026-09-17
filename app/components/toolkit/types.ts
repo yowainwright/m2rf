@@ -36,10 +36,16 @@ export type GradientToolsProps = {
   idPrefix: string;
   onUpdate: (gradient: GraphGradientSettings) => void;
 };
+export type GradientFieldsProps = Pick<GradientToolsProps, 'gradient' | 'idPrefix'> & {
+  updateGradient: (update: Partial<GraphGradientSettings>) => void;
+};
 export type PatternToolsProps = {
   idPrefix: string;
   onUpdate: (pattern: GraphPatternSettings) => void;
   pattern: GraphPatternSettings;
+};
+export type PatternFieldsProps = Pick<PatternToolsProps, 'pattern' | 'idPrefix'> & {
+  updatePattern: (update: Partial<GraphPatternSettings>) => void;
 };
 export type ShaderToolsProps = {
   background: CanvasBackground;

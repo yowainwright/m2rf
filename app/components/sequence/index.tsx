@@ -20,18 +20,12 @@ import type {
 } from '@/app/graph/types';
 import { getFrameStyle, getHeaderStyle, getMessagePath } from './utils';
 
-export function SequenceParticipantNode({ data, id }: NodeProps<SequenceParticipantData>) {
-  const updateNodeInternals = useUpdateNodeInternals();
-  useEffect(() => updateNodeInternals(id), [data.handles, id, updateNodeInternals]);
-  const headerStyle = getHeaderStyle(data.style);
-  const lifelineStyle = { borderColor: data.style.borderColor };
-  const handleStyle = SEQUENCE_HANDLE_STYLE;
-  const rightHandleStyle = SEQUENCE_RIGHT_HANDLE_STYLE;
+function ParticipantActivations({ data }: Pick<NodeProps<SequenceParticipantData>, 'data'>) {
   const activationStyle = {
     backgroundColor: data.style.backgroundColor,
     borderColor: data.style.borderColor,
   };
-  const activations = (data.activations || []).map((activation, index) => (
+  return (data.activations || []).map((activation, index) => (
     <div
       aria-hidden="true"
       className="pointer-events-none absolute z-0 border border-gray-400 bg-gray-100"
@@ -44,15 +38,12 @@ export function SequenceParticipantNode({ data, id }: NodeProps<SequenceParticip
       })}
     />
   ));
-  const header = (
-    <div
-      className="flex h-16 w-full items-center justify-center rounded-sm border border-gray-200 bg-gray-100 px-3 text-center text-base font-medium text-gray-900"
-      style={headerStyle}
-    >
-      {data.label}
-    </div>
-  );
-  const handles = (data.handles || []).flatMap((handle) => [
+}
+
+function ParticipantHandles({ data }: Pick<NodeProps<SequenceParticipantData>, 'data'>) {
+  const handleStyle = SEQUENCE_HANDLE_STYLE;
+  const rightHandleStyle = SEQUENCE_RIGHT_HANDLE_STYLE;
+  return (data.handles || []).flatMap((handle) => [
     <Handle
       id={`${handle.id}-source-left`}
       key={`${handle.id}-source-left`}
@@ -82,10 +73,24 @@ export function SequenceParticipantNode({ data, id }: NodeProps<SequenceParticip
       type="target"
     />,
   ]);
+}
 
+export function SequenceParticipantNode({ data, id }: NodeProps<SequenceParticipantData>) {
+  const updateNodeInternals = useUpdateNodeInternals();
+  useEffect(() => updateNodeInternals(id), [data.handles, id, updateNodeInternals]);
+  const headerStyle = getHeaderStyle(data.style);
+  const lifelineStyle = { borderColor: data.style.borderColor };
+  const header = (
+    <div
+      className="flex h-16 w-full items-center justify-center rounded-sm border border-gray-200 bg-gray-100 px-3 text-center text-base font-medium text-gray-900"
+      style={headerStyle}
+    >
+      {data.label}
+    </div>
+  );
   return (
     <div className="relative h-full w-full">
-      {activations}
+      <ParticipantActivations data={data} />
       <div className="relative z-10">{header}</div>
       <div
         aria-hidden="true"
@@ -93,7 +98,7 @@ export function SequenceParticipantNode({ data, id }: NodeProps<SequenceParticip
         style={lifelineStyle}
       />
       <div className="absolute bottom-0 left-0 z-10 w-full">{header}</div>
-      {handles}
+      <ParticipantHandles data={data} />
     </div>
   );
 }
@@ -117,19 +122,6 @@ export function SequenceMessageEdge({
     data?.selfMessage === true && data.segment === 'target',
   );
   const edgeStyle = data?.dashed ? Object.assign({}, style, { strokeDasharray: '6 4' }) : style;
-  const showSequenceNumber = data?.segment === 'source' && Boolean(data.sequenceNumber);
-  const sequenceNumber = showSequenceNumber ? (
-    <EdgeLabelRenderer>
-      <div
-        className="nodrag nopan pointer-events-none absolute"
-        style={{ transform: `translate(-50%, -50%) translate(${sourceX}px, ${sourceY}px)` }}
-      >
-        <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-gray-700 px-1 text-xs font-semibold text-white">
-          {data.sequenceNumber}
-        </span>
-      </div>
-    </EdgeLabelRenderer>
-  ) : null;
 
   return (
     <>
@@ -140,8 +132,29 @@ export function SequenceMessageEdge({
         path={path}
         style={edgeStyle}
       />
-      {sequenceNumber}
+      <MessageSequenceNumber data={data} sourceX={sourceX} sourceY={sourceY} />
     </>
+  );
+}
+
+function MessageSequenceNumber({
+  data,
+  sourceX,
+  sourceY,
+}: Pick<EdgeProps<SequenceMessageData>, 'data' | 'sourceX' | 'sourceY'>) {
+  const showSequenceNumber = data?.segment === 'source' && Boolean(data.sequenceNumber);
+  if (!showSequenceNumber) return null;
+  return (
+    <EdgeLabelRenderer>
+      <div
+        className="nodrag nopan pointer-events-none absolute"
+        style={{ transform: `translate(-50%, -50%) translate(${sourceX}px, ${sourceY}px)` }}
+      >
+        <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-gray-700 px-1 text-xs font-semibold text-white">
+          {data.sequenceNumber}
+        </span>
+      </div>
+    </EdgeLabelRenderer>
   );
 }
 

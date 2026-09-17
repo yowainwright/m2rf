@@ -11,17 +11,40 @@ import {
   Controls,
   useStore,
   useStoreApi,
+  Background,
 } from 'reactflow';
 import type { EdgeChange, NodeChange, Viewport } from 'reactflow';
 import { AppContext } from '@/app';
 import type { ReactFlowErrorGateProps } from '@/app/types';
-import { clampEdgeWidth } from '@/app/graph';
+import {
+  clampEdgeWidth,
+  getSelectedNodes,
+  getSelectedEdges,
+  getElementIds,
+  getSelectedNode,
+  getSelectedEdge,
+  getNodeFillValue,
+  getNodeTextValue,
+  getEdgeColorValue,
+  getEdgeWidthValue,
+  getEdgeMarkerValue,
+  getEdgeTypeValue,
+  getEdgeAnimationValue,
+  getEdgeAnchor,
+  getNodeBorderValue,
+  getNodeGradientValue,
+  getNodeShadowValueForNode,
+  getNodeShapeValue,
+  getNodeSurfaceValue,
+} from '@/app/graph';
+import { CanvasBackground } from '@/app/components/canvas';
 import type {
   GraphCanvasSettings,
   GraphGradientSettings,
   GraphPatternSettings,
   GraphShaderSettings,
   TranslationSettings,
+  GraphElements,
 } from '@/app/graph';
 import {
   CANVAS_GRID,
@@ -40,33 +63,93 @@ import { Button } from '@/app/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover';
 import { Separator } from '@/app/components/ui/separator';
 import { EDGE_ANCHOR_STYLE } from '@/app/constants';
-import { handleReactFlowError } from '@/app/utils';
+import { getSelectionLabel, handleReactFlowError } from '@/app/utils';
 import {
   RENDER_EDGE_TYPES,
   RENDER_NODE_TYPES,
   RENDER_LABELS,
   RENDER_PRO_OPTIONS,
 } from './constants';
-import type { GraphCanvasProps, RenderSend, RenderToolkitProps } from './types';
+import type { GraphCanvasProps, PreviewProps, RenderSend, RenderToolkitProps } from './types';
 
-export function GraphCanvas({
-  background,
-  backgroundGrid,
-  canEditCanvas,
-  canvasDeleteKey,
-  canvasRevision,
-  edges,
-  nodes,
-  onEdgesChange,
-  onMoveEnd,
-  onNodesChange,
-  savedViewport,
-  selectedEdgeAnchor,
-  selectedNodeId,
-  shouldFitView,
-  snapToGrid,
-}: GraphCanvasProps) {
-  const selectedNodeIndicator = selectedNodeId ? (
+export function getPreviewSelection(elements: GraphElements) {
+  const selectedEdgeIds = getElementIds(getSelectedEdges(elements.edges));
+  const selectedNodeIds = getElementIds(getSelectedNodes(elements.nodes));
+  const selectedEdge = getSelectedEdge(elements.edges, selectedEdgeIds);
+  const selectedNode = getSelectedNode(elements.nodes, selectedNodeIds);
+  const selectedEdgeAnchor = selectedEdge ? getEdgeAnchor(selectedEdge, elements.nodes) : null;
+  const hasSelectedEdge = selectedEdge !== undefined;
+  const hasSelectedNode = selectedNode !== undefined;
+  const showNodeTools = hasSelectedNode || !hasSelectedEdge;
+  const showEdgeTools = hasSelectedEdge || !hasSelectedNode;
+  const toolkitScope = getSelectionLabel(selectedNodeIds.length, selectedEdgeIds.length);
+  return {
+    selectedEdgeIds,
+    selectedNodeIds,
+    selectedEdge,
+    selectedNode,
+    selectedEdgeAnchor,
+    showNodeTools,
+    showEdgeTools,
+    toolkitScope,
+  };
+}
+
+export function getNodeToolProps({ actions, selection, translation }: PreviewProps) {
+  const { selectedNode } = selection;
+  const settings = translation.settings;
+  return {
+    borderValue: getNodeBorderValue(selectedNode, settings),
+    fillValue: getNodeFillValue(selectedNode, settings),
+    gradient: getNodeGradientValue(selectedNode, settings),
+    onBorderUpdate: actions.handleNodeBorder,
+    onFillUpdate: actions.handleNodeColor,
+    onGradientUpdate: actions.handleNodeGradient,
+    onShapeUpdate: actions.handleNodeShape,
+    onShadowUpdate: actions.handleNodeShadow,
+    onSurfaceUpdate: actions.handleNodeSurface,
+    onTextUpdate: actions.handleNodeText,
+    shadowValue: getNodeShadowValueForNode(selectedNode, settings),
+    shapeValue: getNodeShapeValue(selectedNode, settings),
+    surfaceValue: getNodeSurfaceValue(selectedNode, settings),
+    textValue: getNodeTextValue(selectedNode, settings),
+  };
+}
+
+export function getEdgeToolProps({ actions, selection, translation }: PreviewProps) {
+  const { selectedEdge } = selection;
+  const settings = translation.settings;
+  return {
+    animationValue: getEdgeAnimationValue(selectedEdge, settings),
+    colorValue: getEdgeColorValue(selectedEdge, settings),
+    markerValue: getEdgeMarkerValue(selectedEdge, settings),
+    onAnimationUpdate: actions.handleEdgeAnimation,
+    onColorUpdate: actions.handleEdgeColor,
+    onMarkerUpdate: actions.handleEdgeMarker,
+    onTypeUpdate: actions.handleEdgeType,
+    onWidthUpdate: actions.handleEdgeWidth,
+    typeValue: getEdgeTypeValue(selectedEdge, settings),
+    widthValue: getEdgeWidthValue(selectedEdge, settings),
+  };
+}
+
+export function getCanvasLayers(canvas: GraphCanvasSettings) {
+  const canvasBackground = (
+    <CanvasBackground
+      gradient={canvas.gradient}
+      pattern={canvas.pattern}
+      preset={canvas.background}
+      shader={canvas.shader}
+    />
+  );
+  const shouldShowFlowGrid = canvas.gridVisible && canvas.background !== 'grid';
+  const backgroundGrid = shouldShowFlowGrid ? <Background gap={CANVAS_GRID[0]} /> : null;
+  return { canvasBackground, backgroundGrid };
+}
+
+function SelectedNodeIndicator({ selectedNodeId }: Pick<GraphCanvasProps, 'selectedNodeId'>) {
+  if (!selectedNodeId) return null;
+  return (
     <NodeToolbar
       className="nodrag nopan"
       isVisible
@@ -81,14 +164,20 @@ export function GraphCanvas({
         {RENDER_LABELS.nodeSelected}
       </div>
     </NodeToolbar>
-  ) : null;
+  );
+}
+
+function SelectedEdgeIndicator({
+  selectedEdgeAnchor,
+}: Pick<GraphCanvasProps, 'selectedEdgeAnchor'>) {
   const selectedEdgeTransform = selectedEdgeAnchor
     ? `translate(-50%, -50%) translate(${selectedEdgeAnchor.x}px, ${selectedEdgeAnchor.y}px)`
     : '';
   const selectedEdgeStyle = Object.assign({}, EDGE_ANCHOR_STYLE, {
     transform: selectedEdgeTransform,
   });
-  const selectedEdgeIndicator = selectedEdgeAnchor ? (
+  if (!selectedEdgeAnchor) return null;
+  return (
     <EdgeLabelRenderer>
       <div className="nodrag nopan absolute" style={selectedEdgeStyle}>
         <div
@@ -99,44 +188,51 @@ export function GraphCanvas({
         </div>
       </div>
     </EdgeLabelRenderer>
-  ) : null;
-  const flowContent = (
-    <ReactFlowProvider key={canvasRevision}>
+  );
+}
+
+function GraphFlowContent(props: GraphCanvasProps) {
+  return (
+    <ReactFlow
+      defaultViewport={props.savedViewport}
+      deleteKeyCode={props.canvasDeleteKey}
+      edges={props.edges}
+      edgeTypes={RENDER_EDGE_TYPES}
+      edgesFocusable={props.canEditCanvas}
+      edgesUpdatable={props.canEditCanvas}
+      elementsSelectable={props.canEditCanvas}
+      fitView={props.shouldFitView}
+      nodes={props.nodes}
+      nodeTypes={RENDER_NODE_TYPES}
+      nodesConnectable={props.canEditCanvas}
+      nodesDraggable={props.canEditCanvas}
+      nodesFocusable={props.canEditCanvas}
+      onEdgesChange={props.onEdgesChange}
+      onError={handleReactFlowError}
+      onMoveEnd={props.onMoveEnd}
+      onNodesChange={props.onNodesChange}
+      proOptions={RENDER_PRO_OPTIONS}
+      snapGrid={CANVAS_GRID}
+      snapToGrid={props.snapToGrid}
+    >
+      <InitialViewportSync />
+      <SelectedNodeIndicator selectedNodeId={props.selectedNodeId} />
+      <SelectedEdgeIndicator selectedEdgeAnchor={props.selectedEdgeAnchor} />
+      {props.background}
+      {props.backgroundGrid}
+      <Controls showInteractive={false} />
+    </ReactFlow>
+  );
+}
+
+export function GraphCanvas(props: GraphCanvasProps) {
+  return (
+    <ReactFlowProvider key={props.canvasRevision}>
       <ReactFlowErrorGate onError={handleReactFlowError}>
-        <ReactFlow
-          defaultViewport={savedViewport}
-          deleteKeyCode={canvasDeleteKey}
-          edges={edges}
-          edgeTypes={RENDER_EDGE_TYPES}
-          edgesFocusable={canEditCanvas}
-          edgesUpdatable={canEditCanvas}
-          elementsSelectable={canEditCanvas}
-          fitView={shouldFitView}
-          nodes={nodes}
-          nodeTypes={RENDER_NODE_TYPES}
-          nodesConnectable={canEditCanvas}
-          nodesDraggable={canEditCanvas}
-          nodesFocusable={canEditCanvas}
-          onEdgesChange={onEdgesChange}
-          onError={handleReactFlowError}
-          onMoveEnd={onMoveEnd}
-          onNodesChange={onNodesChange}
-          proOptions={RENDER_PRO_OPTIONS}
-          snapGrid={CANVAS_GRID}
-          snapToGrid={snapToGrid}
-        >
-          <InitialViewportSync />
-          {selectedNodeIndicator}
-          {selectedEdgeIndicator}
-          {background}
-          {backgroundGrid}
-          <Controls showInteractive={false} />
-        </ReactFlow>
+        <GraphFlowContent {...props} />
       </ReactFlowErrorGate>
     </ReactFlowProvider>
   );
-
-  return flowContent;
 }
 
 export function ReactFlowErrorGate({ children, onError }: ReactFlowErrorGateProps) {

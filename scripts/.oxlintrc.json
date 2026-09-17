@@ -64,7 +64,20 @@
   },
   "overrides": [
     {
-      "files": ["../app/**/*.ts", "../app/**/*.tsx", "../tests/**/*.ts"],
+      "files": ["**/app/**/*.ts", "**/app/**/*.tsx"],
+      "rules": {
+        "max-lines-per-function": [
+          "error",
+          { "max": 40, "skipBlankLines": true, "skipComments": true, "IIFEs": true }
+        ]
+      }
+    },
+    {
+      "files": ["**/app/components/ui/**"],
+      "rules": { "max-lines-per-function": "off" }
+    },
+    {
+      "files": ["**/app/**/*.ts", "**/app/**/*.tsx", "**/tests/**/*.ts"],
       "rules": {
         "require-await": "warn"
       }

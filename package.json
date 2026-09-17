@@ -41,7 +41,7 @@
     "lint/session": "pnpm run lint:fs && pnpm run lint:src && pnpm run format:check && pnpm run lint:oxlint:strict && pnpm run lint:shell",
     "lint/session/all": "pnpm run lint/session",
     "lint/setup": "sh scripts/setup.sh --hooks-only",
-    "lint:shell": "shfmt -d scripts/setup.sh && pnpm run lint:shell:ci && shellcheck-legibility check scripts/setup.sh",
+    "lint:shell": "shfmt -d scripts/setup.sh && pnpm run lint:shell:ci && shellcheck-legibility check --config scripts/.shellcheck-legibility.toml scripts/setup.sh",
     "lint:shell:ci": "shellcheck -x -S warning scripts/setup.sh",
     "mcp:generate": "node scripts/mcp/index.ts",
     "mcp:check": "node \"$HOME/.agents/lib/mcp/client.js\" --config .agents/mcp/shadcn.json shadcn get_item_examples_from_registries '{\"registries\":[\"@shadcn\"],\"query\":\"resizable-demo\"}'",
