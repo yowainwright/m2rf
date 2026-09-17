@@ -19,7 +19,7 @@
     }
   },
   "scripts": {
-    "dev": "next dev --port ${M2RF_APP_PORT:-54783}",
+    "dev": "printf '\\n  App: http://localhost:%s/m2rf/\\n\\n' \"${M2RF_APP_PORT:-54783}\" && next dev --port ${M2RF_APP_PORT:-54783}",
     "build": "next build --webpack",
     "preview": "mkdir -p .next/cache/pages && ln -sfn ../../../out .next/cache/pages/m2rf && python3 -m http.server ${M2RF_PREVIEW_PORT:-54784} --bind 127.0.0.1 --directory .next/cache/pages",
     "release": "release-it patch",
