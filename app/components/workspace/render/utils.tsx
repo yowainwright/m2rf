@@ -15,6 +15,7 @@ import {
 } from 'reactflow';
 import type { EdgeChange, NodeChange, Viewport } from 'reactflow';
 import { AppContext } from '@/app';
+import { STATE_SYMBOLS } from '@/app/graph/state/constants';
 import type { ReactFlowErrorGateProps } from '@/app/types';
 import {
   clampEdgeWidth,
@@ -98,7 +99,11 @@ export function getPreviewSelection(elements: GraphElements) {
 export function getNodeToolProps({ actions, selection, translation }: PreviewProps) {
   const { selectedNode } = selection;
   const settings = translation.settings;
+  const nodes = getSelectedNodes(translation.elements.nodes);
+  const fillOnly = nodes.length > 0 && nodes.every((node) => STATE_SYMBOLS.has(node.data?.shape));
   return {
+    fillOnly,
+    preserveSemantics: translation.diagramType === 'stateDiagram',
     borderValue: getNodeBorderValue(selectedNode, settings),
     fillValue: getNodeFillValue(selectedNode, settings),
     gradient: getNodeGradientValue(selectedNode, settings),
@@ -120,6 +125,7 @@ export function getEdgeToolProps({ actions, selection, translation }: PreviewPro
   const { selectedEdge } = selection;
   const settings = translation.settings;
   return {
+    preserveSemantics: translation.diagramType === 'stateDiagram',
     animationValue: getEdgeAnimationValue(selectedEdge, settings),
     colorValue: getEdgeColorValue(selectedEdge, settings),
     markerValue: getEdgeMarkerValue(selectedEdge, settings),

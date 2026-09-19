@@ -25,6 +25,11 @@ const updateEditor = async (page: Page, content = source) => {
   await page.keyboard.insertText(content);
 };
 
+const createNewGraph = async (page: Page) => {
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Sequence', exact: true }).click();
+};
+
 const setColorInput = async (locator: Locator, value: string) => {
   await locator.evaluate((element, color) => {
     const input = element as HTMLInputElement;
@@ -141,7 +146,7 @@ const createScrollableGraphList = async (page: Page) => {
   await names.reduce(async (previous, name, index) => {
     await previous;
     const needsNewGraph = index > 0;
-    if (needsNewGraph) await page.getByRole('button', { name: 'New', exact: true }).click();
+    if (needsNewGraph) await createNewGraph(page);
     await saveNamedGraph(page, name);
   }, Promise.resolve());
 };
@@ -188,7 +193,7 @@ const createScrollableGraphList = async (page: Page) => {
       ).toBeVisible();
       await sidebar.getByRole('button', { name: 'Close sidebar' }).click();
       await expect(navigation).not.toBeInViewport();
-      await page.getByRole('button', { name: 'New', exact: true }).click();
+      await createNewGraph(page);
       await expect(toggle).toBeVisible();
       await openSavedGraphs(page);
       await navigation.getByRole('button', { name: 'Saved sidebar graph', exact: true }).click();
@@ -303,7 +308,7 @@ test('shows minimal navigation with tooltips and OSS credits', async ({ page }, 
   );
   await expect(
     footer.getByText(
-      'm2rf currently supports flow diagrams and sequence diagrams; more soon! made with:',
+      'm2rf currently supports flow diagrams, sequence diagrams, and state diagrams; more soon! made with:',
       { exact: true },
     ),
   ).toBeVisible();
@@ -444,7 +449,7 @@ test('restores the last confirmed title on blur without adding a diagram version
   await expect(history.getByRole('button')).toHaveCount(1);
   await title.click();
   await page.getByRole('textbox', { name: 'Graph name', exact: true }).fill('Final road map');
-  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await createNewGraph(page);
   await expect(title).toHaveText('Untitled graph');
   await expect(navigation.getByRole('button', { name: 'Final road map', exact: true })).toHaveCount(
     0,
@@ -571,7 +576,7 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
   await renameGraph(page, 'Release plan');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(navigation.getByRole('button', { name: 'Release plan' })).toBeVisible();
-  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await createNewGraph(page);
   await expect(graphName).toHaveText('Untitled graph');
   await renameGraph(page, 'API dependencies');
   await updateEditor(page);
@@ -596,7 +601,7 @@ test('lists, renames, switches, and deletes saved graphs in the sidebar', async 
 
   await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
   await expect(navigation).not.toBeInViewport();
-  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await createNewGraph(page);
   await expect(navigation).not.toBeInViewport();
   await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
   await expect(navigation).toBeInViewport();
@@ -771,9 +776,7 @@ test('renders sequence diagrams as React Flow elements', async ({ page }) => {
   await expect(firstMessage).toHaveCSS('stroke-dasharray', '6px, 4px');
 });
 
-test('shows render errors in a dismissible dialog and keeps the editor usable', async ({
-  page,
-}) => {
+test('opens render error details on request and keeps the editor usable', async ({ page }) => {
   await page.goto('./');
   await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
   await updateEditor(
@@ -784,11 +787,17 @@ test('shows render errors in a dismissible dialog and keeps the editor usable', 
 `,
   );
 
-  const dialog = page.getByRole('dialog', { name: 'Unable to update the graph' });
+  const viewError = page.getByRole('button', { name: 'View error', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'Mermaid error' });
+  await expect(viewError).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+  await viewError.click();
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('alert')).toContainText('not supported in the React Flow view yet');
   await expect(page.locator('.cm-content')).toContainText('pie title Pets');
   await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await viewError.click();
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Dismiss', exact: true }).click();
   await expect(dialog).toHaveCount(0);
@@ -805,7 +814,7 @@ test('starts new diagrams with default styles and canvas settings', async ({ pag
   await setColorInput(page.getByLabel('Fill'), '#ef4444');
   await page.getByRole('combobox', { name: 'Background', exact: true }).click();
   await page.getByRole('option', { name: 'Diagonal v3', exact: true }).click();
-  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await createNewGraph(page);
   await expect(page.locator('.react-flow__node-sequenceParticipant')).toHaveCount(5);
   await updateEditor(page);
   await expect(page.locator('.react-flow__node')).toHaveCount(3);
@@ -846,7 +855,7 @@ test('opens the saved graph drawer and closes it after selection on mobile', asy
   await renameGraph(page, 'Mobile graph');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await createNewGraph(page);
   await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
 
   const drawer = page.getByRole('dialog', { name: 'Sidebar', exact: true });
@@ -905,7 +914,7 @@ test('resizes the editor and canvas with pointer and keyboard', async ({ page },
   await page.getByRole('button', { name: 'fit view', exact: true }).click();
   await page.screenshot({ path: testInfo.outputPath('desktop-resizable.png') });
 
-  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await createNewGraph(page);
   await expect(page.locator('#workspace-panels')).toHaveCSS('flex-direction', 'row');
 });
 

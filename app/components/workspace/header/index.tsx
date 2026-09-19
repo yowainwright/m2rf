@@ -3,6 +3,14 @@
 import { useCallback } from 'react';
 import Image from 'next/image';
 import { Plus, Trash2 } from 'lucide-react';
+import { GRAPH_SAMPLES } from '@/app/constants';
+import type { GraphDiagramType } from '@/app/graph';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu';
 import { Button } from '@/app/components/ui/button';
 import { InputGroupAddon, InputGroupButton } from '@/app/components/ui/input-group';
 import { SidebarTrigger } from '@/app/components/ui/sidebar';
@@ -160,28 +168,39 @@ function HeaderBrand() {
 function CreateControl() {
   const { send } = AppContext.useActorRef();
   const canNavigate = AppContext.useSelector((state) => state.can({ type: 'workspace.create' }));
-  const handleCreate = () => {
+  const handleCreate = (sample: GraphDiagramType) => {
     logAppEvent('workspace.create');
-    send({ type: 'workspace.create' });
+    send({ type: 'workspace.create', sample });
   };
+  const items = Object.entries(GRAPH_SAMPLES).map(([key, sample]) => (
+    <DropdownMenuItem
+      key={key}
+      className="text-xs"
+      onSelect={() => handleCreate(sample.diagramType)}
+    >
+      {sample.label}
+    </DropdownMenuItem>
+  ));
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex shrink-0">
-          <Button
-            aria-label={HEADER_LABELS.create}
-            className="h-7 w-7"
-            disabled={!canNavigate}
-            size="icon"
-            type="button"
-            variant="ghost"
-            onClick={handleCreate}
-          >
-            <Plus aria-hidden="true" className="size-4" />
-          </Button>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{HEADER_LABELS.create}</TooltipContent>
-    </Tooltip>
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              aria-label={HEADER_LABELS.create}
+              className="h-7 w-7"
+              disabled={!canNavigate}
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              <Plus aria-hidden="true" className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{HEADER_LABELS.create}</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="start">{items}</DropdownMenuContent>
+    </DropdownMenu>
   );
 }

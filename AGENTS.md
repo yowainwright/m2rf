@@ -4,6 +4,7 @@ This tool aims to provide a precise way to convert Mermaid to React Flow in a ma
 
 - Do not create files or directories before checking whether they already exist.
 - Do not stage, commit, push, deploy, or publish unless explicitly asked.
+- Do not write tests for new features until a human has reviewed and approved the feature, unless explicitly using TDD.
 - Keep architecture notes in `tmp/*.md` aligned before commit-ready work.
 - No snowflakes. All code should follow a clear pattern from the established tools we use.
 

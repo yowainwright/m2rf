@@ -93,6 +93,7 @@ const layoutSetup = actorSetup.extend({
       operationError: null,
       exportError: null,
     }),
+    showError: assign({ errorDialogDismissed: false }),
   },
 });
 
@@ -137,10 +138,11 @@ const documentSetup = layoutSetup.extend({
     reportRenderError: assign(({ context }, cause: unknown) => {
       const error = toErrorMessage(cause);
       const update = updateTranslation(context, { error });
+      const errorDialogDismissed = !context.operationError && !context.exportError;
       return Object.assign({}, update, {
         needsRender: false,
         resetLayout: false,
-        errorDialogDismissed: false,
+        errorDialogDismissed,
       });
     }),
     updateInput: assign(({ context, event }) => {
@@ -174,7 +176,10 @@ const documentSetup = layoutSetup.extend({
       const view = Object.assign({}, context.translation.view, { viewport: event.viewport });
       return updateTranslation(context, { view });
     }),
-    resetWorkspace: assign(({ context }) => resetWorkspace(context)),
+    resetWorkspace: assign(({ context, event }) => {
+      assertEvent(event, 'workspace.create');
+      return resetWorkspace(context, event.sample);
+    }),
     clearOperationError: assign({ operationError: null }),
     requestWorkspace: assign(({ event }) => {
       assertEvent(event, 'workspace.load');

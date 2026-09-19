@@ -45,6 +45,33 @@ export const DEFAULT_SOURCE = `sequenceDiagram
 `;
 
 export const INITIAL_UPDATED_AT = '1970-01-01T00:00:00.000Z';
+export const FLOWCHART_SOURCE = `flowchart LR
+    Source[Write Mermaid] --> Render[Build graph]
+    Render --> Preview[React Flow preview]
+`;
+export const STATE_SOURCE = `stateDiagram-v2
+    [*] --> booting
+    booting --> rendering: initialize / render needed or error
+    booting --> ready: initialize / saved layout available
+    state active {
+        [*] --> ready
+        ready --> rendering: input.update
+        rendering --> ready: render done or error
+        ready --> saving: workspace.save
+        saving --> saved: save done / current draft
+        saving --> recover: save done / draft changed
+        saving --> rendering: save error / render needed
+        saving --> ready: save error / no render needed
+        saved --> ready: savedFeedback
+        recover --> rendering: render needed
+        recover --> ready: no render needed
+    }
+`;
+export const GRAPH_SAMPLES = {
+  sequence: { label: 'Sequence', source: DEFAULT_SOURCE, diagramType: 'sequence' },
+  flowchart: { label: 'Flowchart', source: FLOWCHART_SOURCE, diagramType: 'flowchart' },
+  stateDiagram: { label: 'State diagram', source: STATE_SOURCE, diagramType: 'stateDiagram' },
+} as const;
 export const LOCAL_WORKSPACE_ID = 'workspace-local';
 export const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';
 

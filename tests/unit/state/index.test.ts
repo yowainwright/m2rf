@@ -2,8 +2,8 @@ import 'fake-indexeddb/auto';
 import { createActor, fromPromise, type ActorRefFrom } from 'xstate';
 import { afterEach, expect, it, vi } from 'vitest';
 import { appMachine } from '@/app';
-import { APP_INITIAL_CONTEXT } from '@/app/constants';
-import type { GraphRecords, GraphRenderResult } from '@/app/graph';
+import { APP_INITIAL_CONTEXT, GRAPH_SAMPLES } from '@/app/constants';
+import type { GraphRecords, GraphRenderResult, GraphWorkspace } from '@/app/graph';
 import type { GraphExportResult } from '@/app/export';
 import type { AppContext, LoadedWorkspace } from '@/app/types';
 import type { SavedWorkspace } from '@/app/state/types';
@@ -56,6 +56,58 @@ const waitUntilReady = (actor: ActorRefFrom<typeof appMachine>) =>
     expect(actor.getSnapshot().matches({ document: { active: 'ready' } })).toBe(true),
   );
 
+it.each(Object.values(GRAPH_SAMPLES))(
+  'creates a fresh $label sample without changing saved workspaces',
+  async (sample) => {
+    const render = fromPromise<GraphRenderResult, AppContext>(({ input }) =>
+      Promise.resolve({
+        diagramType: input.translation.diagramType || 'sequence',
+        elements: rendered.elements,
+      }),
+    );
+    const actor = startActor({ render });
+    await waitUntilReady(actor);
+    const previous = actor.getSnapshot().context.workspace.id;
+    actor.send({ type: 'workspace.create', sample: sample.diagramType });
+    await waitUntilReady(actor);
+    const context = actor.getSnapshot().context;
+    expect(context.input.source).toBe(sample.source);
+    expect(context.translation.diagramType).toBe(sample.diagramType);
+    expect(context.workspace.id).not.toBe(previous);
+    expect(context.versions).toEqual([]);
+    expect(context.workspaces).toEqual([]);
+  },
+);
+
+it('defaults omitted sample selection to sequence', async () => {
+  const actor = startActor();
+  await waitUntilReady(actor);
+  actor.send({ type: 'workspace.create' });
+  expect(actor.getSnapshot().context.input.source).toBe(GRAPH_SAMPLES.sequence.source);
+});
+
+it('preserves sample selection queued during a saved title rename', async () => {
+  const pending = Promise.withResolvers<GraphWorkspace>();
+  const actor = startActor({
+    initialize: fromPromise<LoadedWorkspace>(() =>
+      Promise.resolve({ records, workspaces: [records.workspace] }),
+    ),
+    rename: fromPromise(() => pending.promise),
+  });
+  await waitUntilReady(actor);
+  actor.send({ type: 'title.edit' });
+  actor.send({ type: 'workspace.rename', name: 'Renamed' });
+  actor.send({ type: 'title.confirm' });
+  expect(actor.getSnapshot().matches({ title: 'saving' })).toBe(true);
+  actor.send({ type: 'workspace.create', sample: 'stateDiagram' });
+  pending.resolve(Object.assign({}, records.workspace, { name: 'Renamed' }));
+  await vi.waitFor(() =>
+    expect(actor.getSnapshot().context.input.source).toBe(GRAPH_SAMPLES.stateDiagram.source),
+  );
+  expect(actor.getSnapshot().context.workspace.id).not.toBe('saved');
+  expect(actor.getSnapshot().context.workspaces[0].name).toBe('Renamed');
+});
+
 it('keeps edits made during saving and renders the newer draft after saving completes', async () => {
   const pending = Promise.withResolvers<SavedWorkspace>();
   const save = vi.fn<(args: { input: AppContext }) => Promise<SavedWorkspace>>();
@@ -99,7 +151,7 @@ it('renders the initial draft and reports initialization failures', async () => 
   expect(actor.getSnapshot().context.translation.elements.nodes).toHaveLength(1);
 });
 
-it('reports render failures without remaining in the rendering state', async () => {
+it('keeps render errors inline until their details are requested', async () => {
   const render = fromPromise<GraphRenderResult, AppContext>(() =>
     Promise.reject(new Error('bad source')),
   );
@@ -109,7 +161,12 @@ it('reports render failures without remaining in the rendering state', async () 
   expect(context.translation.error).toBe('bad source');
   expect(context.needsRender).toBe(false);
   expect(context.resetLayout).toBe(false);
-  expect(context.errorDialogDismissed).toBe(false);
+  expect(context.errorDialogDismissed).toBe(true);
+  actor.send({ type: 'error.view' });
+  expect(actor.getSnapshot().context.errorDialogDismissed).toBe(false);
+  actor.send({ type: 'error.dismiss' });
+  expect(actor.getSnapshot().context.errorDialogDismissed).toBe(true);
+  expect(actor.getSnapshot().context.translation.error).toBe('bad source');
 });
 
 it('reports export failures and returns the export branch to idle', async () => {

@@ -6,7 +6,7 @@ export const APP_LICENSE = license;
 export const REPOSITORY_URL = repository.url;
 export const CURRENT_YEAR = new Date().getFullYear();
 export const FOOTER_SUPPORTED_DIAGRAMS =
-  'currently supports flow diagrams and sequence diagrams; more soon! made with:';
+  'currently supports flow diagrams, sequence diagrams, and state diagrams; more soon! made with:';
 
 export const EMPTY_GRAPHS = {
   title: 'No saved graphs yet',
