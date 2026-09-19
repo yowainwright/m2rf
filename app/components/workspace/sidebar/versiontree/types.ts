@@ -13,4 +13,5 @@ export type VersionTreeProps = {
 
 export type VersionRowProps = Pick<VersionTreeProps, 'activeId' | 'disabled' | 'onSelect'> & {
   version: VersionTreeItem;
+  showRetentionNotice: boolean;
 };

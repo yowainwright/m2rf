@@ -386,6 +386,8 @@ const NodeSurface = (props: NodeToolProps) => {
 };
 
 export const NodeTools = (props: NodeToolProps) => {
+  const showDetails = !props.fillOnly;
+  const showGradient = showDetails && props.surfaceValue === 'gradient';
   return (
     <FieldSet className="gap-2">
       <FieldLegend className="mb-1 font-semibold" variant="label">
@@ -393,12 +395,12 @@ export const NodeTools = (props: NodeToolProps) => {
       </FieldLegend>
       <FieldGroup className="grid grid-cols-12 gap-x-3 gap-y-3">
         <NodeFill {...props} />
-        <NodeText {...props} />
-        <NodeBorder {...props} />
-        <NodeShadow {...props} />
-        <NodeShape {...props} />
-        <NodeSurface {...props} />
-        {props.surfaceValue === 'gradient' ? (
+        {showDetails && <NodeText {...props} />}
+        {showDetails && <NodeBorder {...props} />}
+        {showDetails && <NodeShadow {...props} />}
+        {!props.preserveSemantics && <NodeShape {...props} />}
+        {showDetails && <NodeSurface {...props} />}
+        {showGradient ? (
           <GradientTools
             gradient={props.gradient}
             idPrefix="node"
@@ -526,9 +528,9 @@ export const EdgeTools = (props: EdgeToolProps) => {
         {TOOLKIT_LABELS.edges}
       </FieldLegend>
       <FieldGroup className="@container-normal grid grid-cols-12 gap-x-3 gap-y-3">
-        <EdgeType {...props} />
-        <EdgeMarker {...props} />
-        <EdgeAnimation {...props} />
+        {!props.preserveSemantics && <EdgeType {...props} />}
+        {!props.preserveSemantics && <EdgeMarker {...props} />}
+        {!props.preserveSemantics && <EdgeAnimation {...props} />}
         <EdgeColor {...props} />
         <EdgeWidth {...props} />
       </FieldGroup>

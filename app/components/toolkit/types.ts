@@ -61,6 +61,8 @@ export type ShaderColorFieldProps = {
 };
 
 export type NodeToolProps = {
+  fillOnly?: boolean;
+  preserveSemantics?: boolean;
   borderValue: GraphTranslationSettings['nodeBorder'];
   fillValue: string;
   gradient: GraphGradientSettings;
@@ -77,6 +79,7 @@ export type NodeToolProps = {
   textValue: string;
 };
 export type EdgeToolProps = {
+  preserveSemantics?: boolean;
   animationValue: GraphTranslationSettings['edgeAnimation'];
   colorValue: string;
   markerValue: GraphTranslationSettings['edgeMarker'];

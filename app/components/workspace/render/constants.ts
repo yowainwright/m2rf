@@ -1,4 +1,6 @@
 import { SURGE_EDGE_TYPES } from '@/app/components/edges';
+import { StateDiagramNode, StateTransitionEdge } from '@/app/components/state-diagram';
+import { STATE_EDGE_TYPE, STATE_NODE_TYPE } from '@/app/graph/state/constants';
 import {
   SequenceActionNode,
   SequenceFrameNode,
@@ -23,9 +25,11 @@ export const RENDER_LABELS = {
 export const RENDER_PRO_OPTIONS = { hideAttribution: true };
 
 export const RENDER_EDGE_TYPES = Object.assign({}, SURGE_EDGE_TYPES, {
+  [STATE_EDGE_TYPE]: StateTransitionEdge,
   [SEQUENCE_MESSAGE_EDGE_TYPE]: SequenceMessageEdge,
 });
 export const RENDER_NODE_TYPES = {
+  [STATE_NODE_TYPE]: StateDiagramNode,
   [SEQUENCE_ACTION_NODE_TYPE]: SequenceActionNode,
   [SEQUENCE_FRAME_NODE_TYPE]: SequenceFrameNode,
   [SEQUENCE_NOTE_NODE_TYPE]: SequenceNoteNode,

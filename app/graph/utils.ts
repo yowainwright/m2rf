@@ -2,6 +2,7 @@ import Dexie from 'dexie';
 import { Array as EffectArray, Number as EffectNumber } from 'effect';
 import type { CSSProperties } from 'react';
 import { MarkerType, Position, type Edge, type EdgeMarker, type Node } from 'reactflow';
+import { STATE_EDGE_TYPE } from './state/constants';
 import {
   DEFAULT_SETTINGS,
   EDGE_ID_PATTERN,
@@ -486,6 +487,7 @@ const createSequenceStyle = (settings: TranslationSettings) =>
 
 const getNodeAppearanceStyle = (node: Node | undefined) => {
   if (!node) return undefined;
+  if (node.data?.kind === 'state-node') return node.data.style;
   if (!SEQUENCE_NODE_KINDS.has(node.data?.kind)) return node.style;
   const savedStyle = node.data.style || {};
   if (node.data.styleVersion === 1) return savedStyle;
@@ -556,6 +558,10 @@ const createNodeStyleUpdate = (node: Node, settings: Partial<TranslationSettings
 };
 
 const applyNodeStyle = (node: Node, style: CSSProperties | undefined) => {
+  if (node.data?.kind === 'state-node') {
+    const data = Object.assign({}, node.data, { style: style || {} });
+    return Object.assign({}, node, { data });
+  }
   const isSequenceElement = SEQUENCE_NODE_KINDS.has(node.data?.kind);
   if (!isSequenceElement) return Object.assign({}, node, { style });
   const appearanceStyle = style || getNodeAppearanceStyle(node) || {};
@@ -626,6 +632,10 @@ const createEdgeUpdate = (edge: Edge, settings: Partial<TranslationSettings>) =>
   }
 
   const color = getColorValue(style.stroke, edgeSettings.edgeColor);
+  if (edge.data?.kind === 'state-transition') {
+    const markerEnd = edge.data.arrow ? createEdgeMarker('arrowclosed', color) : undefined;
+    return Object.assign({}, edge, { style, markerEnd, type: STATE_EDGE_TYPE });
+  }
   const updatedMarkerEnd = updateEdgeMarker(edge, 'markerEnd', settings.edgeMarker, color);
   const markerEnd = isSequenceSourceSegment ? undefined : updatedMarkerEnd;
   const markerStart = isSequenceSourceSegment
@@ -958,6 +968,11 @@ const restoreEdgeAppearance = (edge: Edge, savedEdges: Map<string, Edge>) => {
   if (!saved) return edge;
   const sameEndpoints = saved.source === edge.source && saved.target === edge.target;
   if (!sameEndpoints) return edge;
+  if (edge.data?.kind === 'state-transition') {
+    const color = getColorValue(saved.style?.stroke, DEFAULT_SETTINGS.edgeColor);
+    const markerEnd = edge.data.arrow ? createEdgeMarker('arrowclosed', color) : undefined;
+    return Object.assign({}, edge, { markerEnd, style: saved.style, selected: saved.selected });
+  }
   const data = restoreEdgeData(edge, saved);
   const markerEnd = restoreEdgeMarker(edge, saved, 'markerEnd');
   const markerStart = restoreEdgeMarker(edge, saved, 'markerStart');
@@ -989,7 +1004,11 @@ export const applySavedAppearance = (
     const style = getNodeAppearanceStyle(saved);
     const isLegacySequence =
       SEQUENCE_NODE_KINDS.has(saved.data?.kind) && saved.data.styleVersion !== 1;
-    const useFreshLayout = resetLayout || isLegacySequence;
+    const changedStateShape =
+      node.data?.kind === 'state-node' && node.data.shape !== saved.data?.shape;
+    if (changedStateShape) return node;
+    const changedParent = node.parentId !== saved.parentId;
+    const useFreshLayout = resetLayout || isLegacySequence || changedParent;
     const position = useFreshLayout ? node.position : saved.position;
     return applyNodeStyle(Object.assign({}, node, { position, selected }), style);
   });

@@ -1,14 +1,5 @@
 'use client';
 
-import { Button } from '@/app/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/app/components/ui/dialog';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -22,6 +13,7 @@ import { WorkspaceHeader } from './header';
 import { GraphPreview } from './render';
 import { WorkspaceSidebar } from './sidebar';
 import type { WorkspacePanelsProps } from './types';
+import { WorkspaceErrors } from './utils';
 
 export function Workspace() {
   const { send } = AppContext.useActorRef();
@@ -71,45 +63,5 @@ function WorkspacePanels({ isDesktop, panelMinimumSize, panelOrientation }: Work
         </ResizablePanel>
       </ResizablePanelGroup>
     </section>
-  );
-}
-
-function WorkspaceErrors() {
-  const { send } = AppContext.useActorRef();
-  const operationError = AppContext.useSelector((state) => state.context.operationError);
-  const exportError = AppContext.useSelector((state) => state.context.exportError);
-  const translationError = AppContext.useSelector((state) => state.context.translation.error);
-  const errorDialogDismissed = AppContext.useSelector(
-    (state) => state.context.errorDialogDismissed,
-  );
-  const error = operationError || exportError || translationError;
-  const shouldShowError = Boolean(error) && !errorDialogDismissed;
-  if (!shouldShowError) return null;
-  const dismiss = () => send({ type: 'error.dismiss' });
-  const handleOpenChange = (open: boolean) => {
-    if (!open) dismiss();
-  };
-
-  return (
-    <Dialog open onOpenChange={handleOpenChange}>
-      <DialogContent
-        aria-describedby="workspace-error-description"
-        aria-labelledby="workspace-error-title"
-        onEscapeKeyDown={(event) => event.preventDefault()}
-        onPointerDownOutside={(event) => event.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle id="workspace-error-title">Unable to update the graph</DialogTitle>
-          <DialogDescription id="workspace-error-description" role="alert">
-            {error}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button type="button" onClick={dismiss}>
-            Dismiss
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

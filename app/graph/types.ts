@@ -4,7 +4,7 @@ import type Dexie from 'dexie';
 import type { EntityTable } from 'dexie';
 
 export type GraphInputFormat = 'mermaid';
-export type GraphDiagramType = 'flowchart' | 'sequence';
+export type GraphDiagramType = 'flowchart' | 'sequence' | 'stateDiagram';
 
 export type GraphRenderErrorKind = 'invalid' | 'unsupported';
 

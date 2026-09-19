@@ -3,6 +3,7 @@ import type { EdgeChange, NodeChange, Viewport } from 'reactflow';
 import type { GifExportRepeat } from '@/app/export';
 import type {
   GraphCanvasSettings,
+  GraphDiagramType,
   GraphInput,
   GraphRecords,
   GraphTranslation,
@@ -13,7 +14,7 @@ import type {
 
 export type WorkspaceRequest = { workspaceId: string; versionId?: string };
 export type WorkspaceOperation =
-  | { type: 'workspace.create' }
+  | { type: 'workspace.create'; sample?: GraphDiagramType }
   | { type: 'workspace.save' }
   | { type: 'workspace.load'; request: WorkspaceRequest }
   | { type: 'workspace.delete' };
@@ -60,6 +61,7 @@ export type AppEvent =
   | { type: 'viewport.update'; viewport: Viewport }
   | { type: 'layout.reset' }
   | { type: 'error.dismiss' }
+  | { type: 'error.view' }
   | { type: 'export.start'; request: ExportRequest };
 
 export type LoadedWorkspace = {

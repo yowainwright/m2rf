@@ -242,6 +242,7 @@ export const APP_MACHINE_CONFIG = {
     'version-history.update': { actions: 'updateVersionHistory' },
     'toolkit.update': { actions: 'updateToolkit' },
     'error.dismiss': { actions: 'clearErrors' },
+    'error.view': { actions: 'showError' },
   },
   states: { document: DOCUMENT, title: TITLE, exporting: EXPORTING },
 } satisfies Parameters<typeof appSetup.createMachine>[0];

@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 import mermaid from 'mermaid';
+import { renderStateDiagram } from '@/app/graph/state';
 import { applyEdgeChanges, applyNodeChanges } from 'reactflow';
 import {
   applySavedAppearance,
@@ -30,7 +31,7 @@ import {
 } from '@/app/graph/constants';
 import { exportGif, exportPng, exportSvg, getSvgExportElement } from '@/app/export';
 import { createBrowserLogger } from '@/app/lib/observability';
-import { APP_INITIAL_CONTEXT } from './constants';
+import { APP_INITIAL_CONTEXT, GRAPH_SAMPLES } from './constants';
 import type { AppContext, AppEvent, LoadedWorkspace, WorkspaceRequest } from './types';
 
 mermaid.initialize({
@@ -47,6 +48,7 @@ mermaid.initialize({
   themeVariables: { rectBkgColor: 'transparent' },
 });
 const browserLogger = createBrowserLogger();
+const renderSemaphore = Effect.unsafeMakeSemaphore(1);
 
 export const getUpdatedAt = () => new Date().toISOString();
 
@@ -143,6 +145,16 @@ export const renderWorkspace = (context: AppContext) =>
   Effect.tryPromise({
     try: async () => {
       const id = `m2rf-${crypto.randomUUID()}`;
+      const parsed = await mermaid.parse(context.input.source);
+      const detectedType = getSupportedDiagramType(parsed.diagramType);
+      if (detectedType === 'stateDiagram') {
+        const elements = await renderStateDiagram(
+          id,
+          context.input.source,
+          context.translation.settings,
+        );
+        return { diagramType: detectedType, elements } satisfies GraphRenderResult;
+      }
       const result = await mermaid.render(id, context.input.source);
       const diagramType = getSupportedDiagramType(result.diagramType);
       const elements = parseMermaidSvg(result.svg, context.translation.settings, diagramType);
@@ -152,7 +164,7 @@ export const renderWorkspace = (context: AppContext) =>
       if (cause instanceof GraphRenderError) return cause;
       return new GraphRenderError('invalid', `Mermaid: ${toErrorMessage(cause)}`);
     },
-  });
+  }).pipe(Effect.uninterruptible, renderSemaphore.withPermits(1));
 
 const hasLegacySequenceElements = (records: GraphRecords) => {
   const translation = records.translation;
@@ -191,11 +203,13 @@ export const exportWorkspace = (context: AppContext) =>
     catch: (cause) => new Error(`Export: ${toErrorMessage(cause)}`, { cause }),
   });
 
-export const resetWorkspace = (context: AppContext) => {
+export const resetWorkspace = (context: AppContext, sample: GraphDiagramType = 'sequence') => {
   const workspaceId = crypto.randomUUID();
-  const input = Object.assign({}, APP_INITIAL_CONTEXT.input, { workspaceId });
+  const { source, diagramType } = GRAPH_SAMPLES[sample];
+  const input = Object.assign({}, APP_INITIAL_CONTEXT.input, { workspaceId, source });
   const workspace = Object.assign({}, APP_INITIAL_CONTEXT.workspace, { id: workspaceId });
   const translation = Object.assign({}, APP_INITIAL_CONTEXT.translation, {
+    diagramType,
     elements: { nodes: [], edges: [] },
     error: null,
     settings: createDefaultTranslationSettings(),
@@ -273,7 +287,9 @@ export const acceptRenderedElements = (context: AppContext, rendered: GraphRende
   });
   const elements = applySavedAppearance(
     defaults,
-    context.translation.elements,
+    diagramType === context.translation.diagramType
+      ? context.translation.elements
+      : { nodes: [], edges: [] },
     context.resetLayout,
   );
   const update = updateTranslation(context, { diagramType, elements, error: null });
