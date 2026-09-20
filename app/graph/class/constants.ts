@@ -1,0 +1,52 @@
+import { Schema } from 'effect';
+import { StatePointSchema } from '../state/constants';
+
+export const CLASS_NODE_TYPE = 'classNode';
+export const CLASS_EDGE_TYPE = 'classRelation';
+export const CLASS_COMPATIBILITY_ERROR =
+  'Mermaid class diagram data is incompatible with this version of m2rf.';
+export const CLASS_MARKERS = [
+  'none',
+  'aggregation',
+  'composition',
+  'extension',
+  'dependency',
+  'lollipop',
+] as const;
+const MemberSchema = Schema.Struct({ text: Schema.String, classifier: Schema.String });
+export const ClassNodeSchema = Schema.Struct({
+  id: Schema.String,
+  domId: Schema.optional(Schema.String),
+  parentId: Schema.optional(Schema.String),
+  label: Schema.String,
+  shape: Schema.Literal('classBox', 'rect', 'note'),
+  isGroup: Schema.Boolean,
+  members: Schema.optional(Schema.Array(MemberSchema)),
+  methods: Schema.optional(Schema.Array(MemberSchema)),
+  annotations: Schema.optional(Schema.Array(Schema.String)),
+});
+export const ClassEdgeSchema = Schema.Struct({
+  id: Schema.String,
+  start: Schema.String,
+  end: Schema.String,
+  label: Schema.optional(Schema.String),
+  arrowTypeStart: Schema.Literal(...CLASS_MARKERS),
+  arrowTypeEnd: Schema.Literal(...CLASS_MARKERS),
+  startLabelRight: Schema.optional(Schema.String),
+  endLabelLeft: Schema.optional(Schema.String),
+  pattern: Schema.Literal('solid', 'dashed', 'dotted'),
+});
+export const ClassMetadataSchema = Schema.Struct({
+  nodes: Schema.Array(ClassNodeSchema),
+  edges: Schema.Array(ClassEdgeSchema),
+});
+export const ClassPointsSchema = Schema.Array(StatePointSchema).pipe(Schema.minItems(2));
+
+// Mermaid UML geometry rendered with React Flow's native custom-marker API.
+// https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/rendering-util/rendering-elements/markers.js
+export const CLASS_MARKER_PATHS = {
+  aggregation: 'M 18,7 L9,13 L1,7 L9,1 Z',
+  composition: 'M 18,7 L9,13 L1,7 L9,1 Z',
+  extension: 'M 1,1 V13 L18,7 Z',
+  dependency: 'M 9,1 L18,7 L9,13',
+};

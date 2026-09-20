@@ -3,6 +3,7 @@ import { Array as EffectArray, Number as EffectNumber } from 'effect';
 import type { CSSProperties } from 'react';
 import { MarkerType, Position, type Edge, type EdgeMarker, type Node } from 'reactflow';
 import { STATE_EDGE_TYPE } from './state/constants';
+import { CLASS_EDGE_TYPE } from './class/constants';
 import {
   DEFAULT_SETTINGS,
   EDGE_ID_PATTERN,
@@ -482,12 +483,13 @@ const getSequenceStyleOverrides = (style: CSSProperties): CSSProperties => {
   return Object.fromEntries(entries);
 };
 
-const createSequenceStyle = (settings: TranslationSettings) =>
+export const createSequenceStyle = (settings: TranslationSettings) =>
   getSequenceStyleOverrides(createNodeStyle(settings));
 
 const getNodeAppearanceStyle = (node: Node | undefined) => {
   if (!node) return undefined;
   if (node.data?.kind === 'state-node') return node.data.style;
+  if (node.data?.kind === 'class-node') return node.data.style;
   if (!SEQUENCE_NODE_KINDS.has(node.data?.kind)) return node.style;
   const savedStyle = node.data.style || {};
   if (node.data.styleVersion === 1) return savedStyle;
@@ -558,7 +560,8 @@ const createNodeStyleUpdate = (node: Node, settings: Partial<TranslationSettings
 };
 
 const applyNodeStyle = (node: Node, style: CSSProperties | undefined) => {
-  if (node.data?.kind === 'state-node') {
+  const hasNativeSurface = node.data?.kind === 'state-node' || node.data?.kind === 'class-node';
+  if (hasNativeSurface) {
     const data = Object.assign({}, node.data, { style: style || {} });
     return Object.assign({}, node, { data });
   }
@@ -632,6 +635,9 @@ const createEdgeUpdate = (edge: Edge, settings: Partial<TranslationSettings>) =>
   }
 
   const color = getColorValue(style.stroke, edgeSettings.edgeColor);
+  if (edge.data?.kind === 'class-relation') {
+    return Object.assign({}, edge, { style, type: CLASS_EDGE_TYPE });
+  }
   if (edge.data?.kind === 'state-transition') {
     const markerEnd = edge.data.arrow ? createEdgeMarker('arrowclosed', color) : undefined;
     return Object.assign({}, edge, { style, markerEnd, type: STATE_EDGE_TYPE });
@@ -718,13 +724,15 @@ const getSequenceNodeDefaults = (node: Node | undefined) => {
 export const getNodeFillValue = (node: Node | undefined, settings: TranslationSettings) => {
   const style = getNodeAppearanceStyle(node);
   const defaultFill = getSequenceNodeDefaults(node)?.fill || settings.primaryColor;
-  const sourceFill = node?.data?.fill || defaultFill;
+  const sourceFill = node?.data?.sourceStyle?.backgroundColor || node?.data?.fill || defaultFill;
   return getColorValue(style?.backgroundColor, sourceFill);
 };
 
 export const getNodeTextValue = (node: Node | undefined, settings: TranslationSettings) => {
   const style = getNodeAppearanceStyle(node);
-  const defaultText = getSequenceNodeDefaults(node) ? '#111827' : settings.inverseColor;
+  const defaultText =
+    node?.data?.sourceStyle?.color ||
+    (getSequenceNodeDefaults(node) ? '#111827' : settings.inverseColor);
   return getColorValue(style?.color, defaultText);
 };
 
@@ -878,8 +886,9 @@ const hydrateElementSettings = (
   settings: TranslationSettings,
 ): GraphElements => {
   const nodes = elements.nodes.map((node) => {
-    const isSequence = SEQUENCE_NODE_KINDS.has(node.data?.kind);
-    const defaults = isSequence ? {} : createNodeStyle(settings);
+    const hasSourceStyle =
+      SEQUENCE_NODE_KINDS.has(node.data?.kind) || node.data?.kind === 'class-node';
+    const defaults = hasSourceStyle ? {} : createNodeStyle(settings);
     const combinedStyle = Object.assign({}, defaults, getNodeAppearanceStyle(node));
     const style = normalizeNodeStyle(combinedStyle, settings);
 
@@ -968,6 +977,9 @@ const restoreEdgeAppearance = (edge: Edge, savedEdges: Map<string, Edge>) => {
   if (!saved) return edge;
   const sameEndpoints = saved.source === edge.source && saved.target === edge.target;
   if (!sameEndpoints) return edge;
+  if (edge.data?.kind === 'class-relation') {
+    return Object.assign({}, edge, { style: saved.style, selected: saved.selected });
+  }
   if (edge.data?.kind === 'state-transition') {
     const color = getColorValue(saved.style?.stroke, DEFAULT_SETTINGS.edgeColor);
     const markerEnd = edge.data.arrow ? createEdgeMarker('arrowclosed', color) : undefined;

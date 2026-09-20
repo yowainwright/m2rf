@@ -70,6 +70,7 @@ import {
   RENDER_NODE_TYPES,
   RENDER_LABELS,
   RENDER_PRO_OPTIONS,
+  RENDER_MIN_ZOOM,
 } from './constants';
 import type { GraphCanvasProps, PreviewProps, RenderSend, RenderToolkitProps } from './types';
 
@@ -103,7 +104,7 @@ export function getNodeToolProps({ actions, selection, translation }: PreviewPro
   const fillOnly = nodes.length > 0 && nodes.every((node) => STATE_SYMBOLS.has(node.data?.shape));
   return {
     fillOnly,
-    preserveSemantics: translation.diagramType === 'stateDiagram',
+    preserveSemantics: ['stateDiagram', 'classDiagram'].includes(translation.diagramType || ''),
     borderValue: getNodeBorderValue(selectedNode, settings),
     fillValue: getNodeFillValue(selectedNode, settings),
     gradient: getNodeGradientValue(selectedNode, settings),
@@ -125,7 +126,7 @@ export function getEdgeToolProps({ actions, selection, translation }: PreviewPro
   const { selectedEdge } = selection;
   const settings = translation.settings;
   return {
-    preserveSemantics: translation.diagramType === 'stateDiagram',
+    preserveSemantics: ['stateDiagram', 'classDiagram'].includes(translation.diagramType || ''),
     animationValue: getEdgeAnimationValue(selectedEdge, settings),
     colorValue: getEdgeColorValue(selectedEdge, settings),
     markerValue: getEdgeMarkerValue(selectedEdge, settings),
@@ -208,6 +209,7 @@ function GraphFlowContent(props: GraphCanvasProps) {
       edgesUpdatable={props.canEditCanvas}
       elementsSelectable={props.canEditCanvas}
       fitView={props.shouldFitView}
+      minZoom={RENDER_MIN_ZOOM}
       nodes={props.nodes}
       nodeTypes={RENDER_NODE_TYPES}
       nodesConnectable={props.canEditCanvas}

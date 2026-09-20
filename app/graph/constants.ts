@@ -20,7 +20,12 @@ export const LEGACY_UNTITLED_GRAPH_NAME = 'Untitled Graph';
 export const EMPTY_GRAPH_NAME_ERROR = 'Enter a graph name.';
 export const MISSING_GRAPH_ERROR = 'This saved graph no longer exists.';
 export const GRAPH_INPUT_FORMAT: GraphInputFormat = 'mermaid';
-export const GRAPH_DIAGRAM_TYPES = ['flowchart', 'sequence', 'stateDiagram'] as const;
+export const GRAPH_DIAGRAM_TYPES = [
+  'flowchart',
+  'sequence',
+  'stateDiagram',
+  'classDiagram',
+] as const;
 export const SEQUENCE_PARTICIPANT_NODE_TYPE = 'sequenceParticipant';
 export const SEQUENCE_ACTION_NODE_TYPE = 'sequenceAction';
 export const SEQUENCE_NOTE_NODE_TYPE = 'sequenceNote';
