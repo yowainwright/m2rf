@@ -28,10 +28,12 @@ export function ErDiagramNode({ id, data }: NodeProps<ErNodeData>) {
   const rows = data.rows.map((row, index) => {
     const backgroundColor = data.style.backgroundColor ?? row.backgroundColor;
     const backgroundImage = data.style.backgroundImage ?? row.backgroundImage;
+    const backgroundSize = data.style.backgroundSize ?? row.backgroundSize;
     const { borderColor, borderStyle, borderWidth } = style;
     const rowStyle = Object.assign({}, row, {
       backgroundColor,
       backgroundImage,
+      backgroundSize,
       borderColor,
       borderStyle,
       borderWidth,
