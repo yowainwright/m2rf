@@ -77,7 +77,7 @@ function ErrorDetails({ error, source }: ErrorDetailsProps) {
   const showSource = source !== null && line !== null;
   const detailStart = message.startsWith('Parse error on line') ? 3 : 1;
   const details = unknownType
-    ? 'Start with flowchart, sequenceDiagram, stateDiagram-v2, or classDiagram.'
+    ? 'Start with flowchart, sequenceDiagram, stateDiagram-v2, classDiagram, or erDiagram.'
     : message.split('\n').slice(detailStart).join('\n');
   return (
     <div className="min-h-0 space-y-5 overflow-y-auto p-6">

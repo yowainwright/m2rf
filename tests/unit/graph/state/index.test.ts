@@ -3,7 +3,7 @@ import { createStateElements, readStateLayout } from '@/app/graph/state';
 import { STATE_SHAPES } from '@/app/graph/state/constants';
 import { DEFAULT_SETTINGS } from '@/app/graph/constants';
 import { applySavedAppearance, applySettings } from '@/app/graph';
-import { getStateSurface } from '@/app/components/state-diagram';
+import { getStateSurface } from '@/app/components/diagrams/state';
 
 const parent = {
   id: 'Active',

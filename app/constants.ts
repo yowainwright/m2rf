@@ -84,11 +84,30 @@ export const CLASS_SOURCE = `classDiagram
     DoublyLinkedList "1" *-- "0..*" ListNode : owns
     ListNode "0..1" --> "0..1" ListNode : prev / next
 `;
+export const ER_SOURCE = `erDiagram
+    direction LR
+    CUSTOMER ||..o{ ORDER : places
+    ORDER ||--|{ ORDER_ITEM : contains
+    CUSTOMER {
+        int id PK
+        string email UK
+    }
+    ORDER {
+        int id PK
+        int customer_id FK
+    }
+    ORDER_ITEM {
+        int order_id PK, FK
+        int line_number PK
+        string description "Purchased item"
+    }`;
+
 export const GRAPH_SAMPLES = {
   sequence: { label: 'Sequence', source: DEFAULT_SOURCE, diagramType: 'sequence' },
   flowchart: { label: 'Flowchart', source: FLOWCHART_SOURCE, diagramType: 'flowchart' },
   stateDiagram: { label: 'State diagram', source: STATE_SOURCE, diagramType: 'stateDiagram' },
   classDiagram: { label: 'Class diagram', source: CLASS_SOURCE, diagramType: 'classDiagram' },
+  er: { label: 'ER diagram', source: ER_SOURCE, diagramType: 'er' },
 } as const;
 export const LOCAL_WORKSPACE_ID = 'workspace-local';
 export const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';

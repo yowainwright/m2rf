@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { getStateEdgePath } from '@/app/components/state-diagram';
+import { getStateEdgePath } from '@/app/components/diagrams/state';
 import { Position } from 'reactflow';
 
 const points = [

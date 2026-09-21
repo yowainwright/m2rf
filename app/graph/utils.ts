@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import { MarkerType, type Edge, type EdgeMarker, type Node } from 'reactflow';
 import { STATE_EDGE_TYPE } from './state/constants';
 import { CLASS_EDGE_TYPE } from './class/constants';
+import { ER_EDGE_TYPE } from './er/constants';
 import {
   DEFAULT_SETTINGS,
   EDGE_MARKER_OPTIONS,
@@ -317,6 +318,7 @@ const getNodeAppearanceStyle = (node: Node | undefined) => {
   if (!node) return undefined;
   if (node.data?.kind === 'state-node') return node.data.style;
   if (node.data?.kind === 'class-node') return node.data.style;
+  if (node.data?.kind === 'er-node') return node.data.style;
   if (!SEQUENCE_NODE_KINDS.has(node.data?.kind)) return node.style;
   const savedStyle = node.data.style || {};
   if (node.data.styleVersion === 1) return savedStyle;
@@ -387,7 +389,7 @@ const createNodeStyleUpdate = (node: Node, settings: Partial<TranslationSettings
 };
 
 const applyNodeStyle = (node: Node, style: CSSProperties | undefined) => {
-  const hasNativeSurface = node.data?.kind === 'state-node' || node.data?.kind === 'class-node';
+  const hasNativeSurface = ['state-node', 'class-node', 'er-node'].includes(node.data?.kind);
   if (hasNativeSurface) {
     const data = Object.assign({}, node.data, { style: style || {} });
     return Object.assign({}, node, { data });
@@ -461,6 +463,9 @@ const createEdgeUpdate = (edge: Edge, settings: Partial<TranslationSettings>) =>
   const color = getColorValue(style.stroke, edgeSettings.edgeColor);
   if (edge.data?.kind === 'class-relation') {
     return Object.assign({}, edge, { style, type: CLASS_EDGE_TYPE });
+  }
+  if (edge.data?.kind === 'er-relation') {
+    return Object.assign({}, edge, { style, type: ER_EDGE_TYPE });
   }
   if (edge.data?.kind === 'state-transition') {
     const markerEnd = edge.data.arrow ? createEdgeMarker('arrowclosed', color) : undefined;
@@ -714,7 +719,8 @@ const hydrateElementSettings = (
 ): GraphElements => {
   const nodes = elements.nodes.map((node) => {
     const hasSourceStyle =
-      SEQUENCE_NODE_KINDS.has(node.data?.kind) || node.data?.kind === 'class-node';
+      SEQUENCE_NODE_KINDS.has(node.data?.kind) ||
+      ['class-node', 'er-node'].includes(node.data?.kind);
     const defaults = hasSourceStyle ? {} : createNodeStyle(settings);
     const combinedStyle = Object.assign({}, defaults, getNodeAppearanceStyle(node));
     const style = normalizeNodeStyle(combinedStyle, settings);
@@ -804,7 +810,8 @@ const restoreEdgeAppearance = (edge: Edge, savedEdges: Map<string, Edge>) => {
   if (!saved) return edge;
   const sameEndpoints = saved.source === edge.source && saved.target === edge.target;
   if (!sameEndpoints) return edge;
-  if (edge.data?.kind === 'class-relation') {
+  const hasSemanticMarkers = ['class-relation', 'er-relation'].includes(edge.data?.kind);
+  if (hasSemanticMarkers) {
     return Object.assign({}, edge, { style: saved.style, selected: saved.selected });
   }
   if (edge.data?.kind === 'state-transition') {
