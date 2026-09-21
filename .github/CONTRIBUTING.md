@@ -22,6 +22,12 @@ Thanks for your interest in contributing to m2rf.
 - End-to-end tests: `pnpm run test:e2e`
 - All checks: `pnpm run validate`
 
+Mirror source paths in unit tests: `app/graph/er/index.ts` maps to
+`tests/unit/graph/er/index.test.ts`; component `index.tsx` maps to `index.test.tsx`.
+Script tests retain the `scripts/` prefix. Group tests by the source module they
+exercise. Use integration tests for workflows spanning systems and `.spec.ts`
+files in `tests/e2e/` for browser journeys.
+
 ## Code Style
 
 - TypeScript strict mode enabled
