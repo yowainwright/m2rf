@@ -242,6 +242,73 @@ test('honors nested and compact namespaces and direction with fresh source geome
   expect((await bottom.boundingBox())!.y).toBeGreaterThan((await top.boundingBox())!.y);
 });
 
+test('keeps parallel relation appearance attached to its meaning after insertion and reordering', async ({
+  page,
+}) => {
+  await page.goto('./');
+  const owns = 'A "1" *-- "many" B : owns';
+  const shares = 'A o-- B : shares';
+  await updateSource(page, `classDiagram\n${owns}\n${shares}`);
+  const edges = page.locator('.react-flow__edge-classRelation');
+  const owned = edges.filter({ hasText: 'owns' });
+  await expect(edges).toHaveCount(2);
+  const originalId = await owned.getAttribute('data-testid');
+  await owned.focus();
+  await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Toolkit: 1 edge', exact: true }).click();
+  await page.getByLabel('Color', { exact: true }).fill('#ef4444');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(owned.locator('.react-flow__edge-path')).toHaveCSS('stroke', 'rgb(239, 68, 68)');
+  await updateSource(page, `classDiagram\nA ..> B : uses\n${shares}\n${owns}\n${shares}`);
+  await expect(edges).toHaveCount(4);
+  await expect(owned).toHaveAttribute('data-testid', originalId!);
+  await expect(owned.locator('.react-flow__edge-path')).toHaveCSS('stroke', 'rgb(239, 68, 68)');
+  const others = edges.filter({ hasNotText: 'owns' }).locator('.react-flow__edge-path');
+  await expect(others.nth(0)).not.toHaveCSS('stroke', 'rgb(239, 68, 68)');
+  await expect(others.nth(1)).not.toHaveCSS('stroke', 'rgb(239, 68, 68)');
+  await expect(others.nth(2)).not.toHaveCSS('stroke', 'rgb(239, 68, 68)');
+  const ids = await edges.evaluateAll((items) =>
+    items.map((item) => item.getAttribute('data-testid')),
+  );
+  expect(new Set(ids).size).toBe(4);
+  await updateSource(page, `classDiagram\n${owns}\n${shares}`);
+  await expect(edges).toHaveCount(2);
+  await expect(owned).toHaveAttribute('data-testid', originalId!);
+  await expect(owned.locator('.react-flow__edge-path')).toHaveCSS('stroke', 'rgb(239, 68, 68)');
+});
+
+test('preserves computed SVG class styles without mistaking none for a dashed border', async ({
+  page,
+}) => {
+  await page.goto('./');
+  await page.addStyleTag({
+    content: `[aria-hidden="true"] svg .label-container path {
+      stroke: rgb(12, 34, 56);
+      stroke-width: 4px;
+      stroke-dasharray: 6px 3px;
+      color: rgb(65, 43, 21);
+    }`,
+  });
+  await updateSource(page, 'classDiagram\nclass Styled');
+  const surface = page.locator('[data-class-shape="classBox"]');
+  await expect(surface).toHaveText('Styled');
+  await expect(surface).toHaveCSS('border-top-color', 'rgb(12, 34, 56)');
+  await expect(surface).toHaveCSS('border-top-width', '4px');
+  await expect(surface).toHaveCSS('border-top-style', 'dashed');
+  await expect(surface).toHaveCSS('color', 'rgb(65, 43, 21)');
+  await page.addStyleTag({
+    content:
+      '[aria-hidden="true"] svg .label-container path { stroke-dasharray: none; stroke-width: 0px; }',
+  });
+  await updateSource(page, 'classDiagram\nclass Solid');
+  await expect(surface).toHaveText('Solid');
+  await expect(surface).toHaveCSS('border-top-style', 'solid');
+  await expect(surface).toHaveCSS('border-top-width', '0px');
+});
+
 test('exports native class compartments, markers, and cardinalities', async ({ page }) => {
   await page.goto('./');
   await chooseClass(page);

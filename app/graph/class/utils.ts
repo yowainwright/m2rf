@@ -6,6 +6,7 @@ import type {
   ClassFrame,
   ClassGeometry,
   ClassGraphics,
+  ClassMetadataEdge,
   ClassMetadataNode,
   ClassRow,
 } from './types';
@@ -64,6 +65,18 @@ export const decodeClassLabel = (text = '') => {
   return readClassText(element);
 };
 
+export const classRelationKey = (edge: ClassMetadataEdge) =>
+  JSON.stringify([
+    edge.start,
+    edge.end,
+    decodeClassLabel(edge.label),
+    edge.arrowTypeStart,
+    edge.arrowTypeEnd,
+    decodeClassLabel(edge.startLabelRight),
+    decodeClassLabel(edge.endLabelLeft),
+    edge.pattern,
+  ]);
+
 const readRow = (element: SVGGraphicsElement, frame: ClassFrame): ClassRow => {
   const bounds = getBounds(element);
   const text = readClassText(element);
@@ -117,10 +130,15 @@ const readSourceStyle = (element: SVGGraphicsElement): CSSProperties => {
   if (!shape) throw classCompatibilityError();
   const computed = getComputedStyle(shape);
   const backgroundColor = shape.style.fill || shape.getAttribute('fill') || computed.fill;
-  const borderColor = shape.style.stroke || '#888';
-  const color = shape.style.color || '#111827';
-  const borderStyle = shape.style.strokeDasharray ? 'dashed' : 'solid';
-  const borderWidth = Number.parseFloat(shape.style.strokeWidth) || 1;
+  const stroke = shape.style.stroke || computed.stroke;
+  const hasStroke = stroke && stroke !== 'none';
+  const borderColor = hasStroke ? stroke : '#888';
+  const color = shape.style.color || computed.color || '#111827';
+  const dash = shape.style.strokeDasharray || computed.strokeDasharray;
+  const hasDash = dash && dash !== 'none';
+  const borderStyle = hasDash ? 'dashed' : 'solid';
+  const width = Number.parseFloat(shape.style.strokeWidth || computed.strokeWidth);
+  const borderWidth = Number.isFinite(width) ? width : 1;
   const fontFamily = getComputedStyle(element).fontFamily;
   return { backgroundColor, color, borderColor, borderStyle, borderWidth, fontFamily };
 };

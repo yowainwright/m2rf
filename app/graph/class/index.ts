@@ -9,6 +9,7 @@ import { createEdgeStyle, createSequenceStyle } from '../utils';
 import { CLASS_EDGE_TYPE, CLASS_NODE_TYPE } from './constants';
 import {
   classCompatibilityError,
+  classRelationKey,
   decodeClassLabel,
   readClassGeometry,
   readClassMetadata,
@@ -29,12 +30,11 @@ const classId = (id: string) => `class:${encodeURIComponent(id)}`;
 const createClassEdge = (
   edge: ClassMetadataEdge,
   points: ClassEdgeData['points'],
-  ordinal: number,
+  id: string,
   settings: TranslationSettings,
 ): Edge<ClassEdgeData> => {
   const source = classId(edge.start);
   const target = classId(edge.end);
-  const id = `class-edge:${encodeURIComponent(JSON.stringify([source, target, ordinal]))}`;
   const label = decodeClassLabel(edge.label);
   const startLabel = decodeClassLabel(edge.startLabelRight);
   const endLabel = decodeClassLabel(edge.endLabelLeft);
@@ -71,11 +71,13 @@ const createClassEdges = (
   const occurrences = new Map<string, number>();
   const edges = new Map<string, Edge<ClassEdgeData>>();
   metadata.edges.forEach((edge) => {
-    const key = JSON.stringify([edge.start, edge.end]);
+    // Mermaid's edge IDs contain a global counter, not a persistent relation identity.
+    const key = classRelationKey(edge);
     const ordinal = occurrences.get(key) || 0;
     occurrences.set(key, ordinal + 1);
     const points = readClassPoints(graphics, `${id}-${edge.id}`);
-    const converted = createClassEdge(edge, points, ordinal, settings);
+    const edgeId = `class-edge:${encodeURIComponent(JSON.stringify([key, ordinal]))}`;
+    const converted = createClassEdge(edge, points, edgeId, settings);
     edges.set(converted.id, converted);
   });
   return Array.from(edges.values());
