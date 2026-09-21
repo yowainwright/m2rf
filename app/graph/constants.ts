@@ -270,3 +270,6 @@ export const EDGE_SELECTOR = '.edgePath, .flowchart-link';
 export const NODE_ID_PATTERN = /(?:^|-)flowchart-(.+)-\d+$/;
 export const EDGE_ID_PATTERN = /^L-(.+)-(.+)-\d+$/;
 export const NODE_PATTERN_SIZE = 8;
+
+export const SURGE_EDGE_TYPE = 'surge';
+export const SEQUENCE_FRAME_TYPES = new Set(['alt', 'opt', 'rect']);
