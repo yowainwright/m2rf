@@ -89,7 +89,9 @@ const getStateKey = (
   return ['node', node.id];
 };
 
-const getTopLeft = (node: StateLayoutNode): StatePoint => {
+export const getTopLeft = (
+  node: Pick<StateLayoutNode, 'x' | 'y' | 'width' | 'height'>,
+): StatePoint => {
   const x = node.x - node.width / 2;
   const y = node.y - node.height / 2;
   return { x, y };
@@ -102,11 +104,11 @@ const readLabel = (label: StateLayoutNode['label']) => {
   return container.textContent || '';
 };
 
-const createHandle = (
+export const createHandle = (
   id: string,
   type: StateHandle['type'],
   point: StatePoint,
-  node: StateLayoutNode,
+  node: Pick<StateLayoutNode, 'x' | 'y' | 'width' | 'height'>,
 ): StateHandle => {
   const origin = getTopLeft(node);
   const x = point.x - origin.x;
@@ -251,7 +253,7 @@ export const createStateElements = (
   return { nodes: orderStateNodes(nodes), edges };
 };
 
-const createLayoutHost = (id: string, fontFamily: string) => {
+export const createLayoutHost = (id: string, fontFamily: string) => {
   const host = document.createElement('div');
   host.setAttribute('aria-hidden', 'true');
   Object.assign(host.style, {

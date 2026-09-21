@@ -308,7 +308,7 @@ test('shows minimal navigation with tooltips and OSS credits', async ({ page }, 
   );
   await expect(
     footer.getByText(
-      'm2rf currently supports flow diagrams, sequence diagrams, and state diagrams; more soon! made with:',
+      'm2rf currently supports flow, sequence, state, and class diagrams; more soon! made with:',
       { exact: true },
     ),
   ).toBeVisible();

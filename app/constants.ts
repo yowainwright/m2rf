@@ -67,10 +67,28 @@ export const STATE_SOURCE = `stateDiagram-v2
         recover --> ready: no render needed
     }
 `;
+export const CLASS_SOURCE = `classDiagram
+    direction LR
+    class DoublyLinkedList~T~ {
+        -ListNode~T~ head
+        -ListNode~T~ tail
+        +append(T value) void
+        +prepend(T value) void
+        +remove(ListNode~T~ node) void
+    }
+    class ListNode~T~ {
+        +T value
+        +ListNode~T~ prev
+        +ListNode~T~ next
+    }
+    DoublyLinkedList "1" *-- "0..*" ListNode : owns
+    ListNode "0..1" --> "0..1" ListNode : prev / next
+`;
 export const GRAPH_SAMPLES = {
   sequence: { label: 'Sequence', source: DEFAULT_SOURCE, diagramType: 'sequence' },
   flowchart: { label: 'Flowchart', source: FLOWCHART_SOURCE, diagramType: 'flowchart' },
   stateDiagram: { label: 'State diagram', source: STATE_SOURCE, diagramType: 'stateDiagram' },
+  classDiagram: { label: 'Class diagram', source: CLASS_SOURCE, diagramType: 'classDiagram' },
 } as const;
 export const LOCAL_WORKSPACE_ID = 'workspace-local';
 export const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';

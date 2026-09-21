@@ -13,7 +13,7 @@ import { Separator } from '@/app/components/ui/separator';
 import { STATE_GROUPS, STATE_HANDLE_STYLE, STATE_SYMBOLS } from '@/app/graph/state/constants';
 import type { StateEdgeData, StateNodeData, StatePoint } from '@/app/graph/state/types';
 
-function StateHandles({ data }: Pick<NodeProps<StateNodeData>, 'data'>) {
+export function StateHandles({ data }: { data: Pick<StateNodeData, 'handles'> }) {
   return data.handles.map((handle) => {
     const style = Object.assign({}, STATE_HANDLE_STYLE, {
       left: handle.x,
@@ -162,7 +162,7 @@ const offsetPoint = (
   point: StatePoint,
   index: number,
   points: readonly StatePoint[],
-  props: EdgeProps<StateEdgeData>,
+  props: EdgeProps<Pick<StateEdgeData, 'points'>>,
 ) => {
   const fraction = index / (points.length - 1);
   const first = points[0];
@@ -178,12 +178,16 @@ const offsetPoint = (
   return { x, y };
 };
 
-export const getStateEdgePath = (props: EdgeProps<StateEdgeData>) => {
+export const getRoutedPoints = (props: EdgeProps<Pick<StateEdgeData, 'points'>>) => {
   const original = props.data?.points || [
     { x: props.sourceX, y: props.sourceY },
     { x: props.targetX, y: props.targetY },
   ];
-  const points = original.map((point, index) => offsetPoint(point, index, original, props));
+  return original.map((point, index) => offsetPoint(point, index, original, props));
+};
+
+export const getStateEdgePath = <T extends Pick<StateEdgeData, 'points'>>(props: EdgeProps<T>) => {
+  const points = getRoutedPoints(props);
   const path = points
     .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`)
     .join(' ');

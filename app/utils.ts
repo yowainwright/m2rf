@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 import mermaid from 'mermaid';
 import { renderStateDiagram } from '@/app/graph/state';
+import { renderClassDiagram } from '@/app/graph/class';
 import { applyEdgeChanges, applyNodeChanges } from 'reactflow';
 import {
   applySavedAppearance,
@@ -147,8 +148,10 @@ export const renderWorkspace = (context: AppContext) =>
       const id = `m2rf-${crypto.randomUUID()}`;
       const parsed = await mermaid.parse(context.input.source);
       const detectedType = getSupportedDiagramType(parsed.diagramType);
-      if (detectedType === 'stateDiagram') {
-        const elements = await renderStateDiagram(
+      const nativeRenderer = { stateDiagram: renderStateDiagram, classDiagram: renderClassDiagram };
+      const isNative = detectedType === 'stateDiagram' || detectedType === 'classDiagram';
+      if (isNative) {
+        const elements = await nativeRenderer[detectedType](
           id,
           context.input.source,
           context.translation.settings,
@@ -279,11 +282,13 @@ export const updateTranslation = (context: AppContext, update: Partial<GraphTran
 
 export const acceptRenderedElements = (context: AppContext, rendered: GraphRenderResult) => {
   const { diagramType, elements: renderedElements } = rendered;
-  const isSequence = diagramType === 'sequence';
-  const styleTargets = isSequence ? { nodes: [], edges: renderedElements.edges } : renderedElements;
+  const hasSourceAppearance = diagramType === 'sequence' || diagramType === 'classDiagram';
+  const styleTargets = hasSourceAppearance
+    ? { nodes: [], edges: renderedElements.edges }
+    : renderedElements;
   const styled = applySettings(styleTargets, context.translation.settings);
   const defaults = Object.assign({}, styled, {
-    nodes: isSequence ? renderedElements.nodes : styled.nodes,
+    nodes: hasSourceAppearance ? renderedElements.nodes : styled.nodes,
   });
   const elements = applySavedAppearance(
     defaults,
