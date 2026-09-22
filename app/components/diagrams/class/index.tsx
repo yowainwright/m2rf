@@ -10,7 +10,7 @@ import {
 } from 'reactflow';
 import { Card } from '@/app/components/ui/card';
 import { Separator } from '@/app/components/ui/separator';
-import { StateHandles, getRoutedPoints, getStateEdgePath } from '@/app/components/state-diagram';
+import { StateHandles, getRoutedPoints, getStateEdgePath } from '@/app/components/diagrams/state';
 import { CLASS_MARKER_PATHS } from '@/app/graph/class/constants';
 import type { ClassEdgeData, ClassMarker, ClassNodeData } from '@/app/graph/class/types';
 import type { StatePoint } from '@/app/graph/state/types';

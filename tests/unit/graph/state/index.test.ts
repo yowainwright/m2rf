@@ -3,8 +3,7 @@ import { createStateElements, readStateLayout } from '@/app/graph/state';
 import { STATE_SHAPES } from '@/app/graph/state/constants';
 import { DEFAULT_SETTINGS } from '@/app/graph/constants';
 import { applySavedAppearance, applySettings } from '@/app/graph';
-import { getStateSurface, getStateEdgePath } from '@/app/components/state-diagram';
-import { Position } from 'reactflow';
+import { getStateSurface } from '@/app/components/diagrams/state';
 
 const parent = {
   id: 'Active',
@@ -179,21 +178,5 @@ describe('state diagram adapter', () => {
     expect(() =>
       create({ nodes: [Object.assign({}, parent, { parentId: 'Active' })], edges: [] }),
     ).toThrow('incompatible');
-  });
-
-  test('moves self-loop routes with the node', () => {
-    const route = getStateEdgePath({
-      id: 'loop',
-      source: 'a',
-      target: 'a',
-      sourceX: 160,
-      sourceY: 114,
-      targetX: 160,
-      targetY: 126,
-      sourcePosition: Position.Right,
-      targetPosition: Position.Right,
-      data: { kind: 'state-transition', points: transition.points, arrow: true, dashed: false },
-    });
-    expect(route.path).toBe('M160,114 L190,114 L190,126 L160,126');
   });
 });

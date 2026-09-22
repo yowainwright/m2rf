@@ -1,5 +1,4 @@
 export {
-  parseMermaidSvg,
   clampEdgeWidth,
   createDiagonalPatternImage,
   createGradientImage,
@@ -33,9 +32,9 @@ export {
   applySettings,
   getTranslation,
   applySavedAppearance,
-  getWorkspaceLabel,
 } from './utils';
-export { graphRepository } from './utils';
+export { graphRepository, getWorkspaceLabel } from './repository';
+export { parseMermaidSvg } from './svg';
 export type {
   CreateGraphRecordsInput,
   GraphCanvasSettings,

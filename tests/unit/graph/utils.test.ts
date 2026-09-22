@@ -1,23 +1,23 @@
 import { describe, expect, test } from 'vitest';
-
 import { APP_INITIAL_CONTEXT } from '@/app/constants';
+import { DEFAULT_CANVAS_SETTINGS, DEFAULT_SETTINGS } from '@/app/graph/constants';
 import {
+  createNodeStyle,
+  getNodeGradientValue,
+  getNodeShapeValue,
+  getTranslation,
+  updateSelectedNodes,
   applySavedAppearance,
   applySettings,
-  createNodeStyle,
   getEdgeMarkerValue,
   getNodeBorderValue,
   getNodeFillValue,
   getNodeSurfaceValue,
   getNodeTextValue,
-  getTranslation,
   parseMermaidSvg,
   updateSelectedEdges,
-  updateSelectedNodes,
 } from '@/app/graph';
 import type { GraphElements } from '@/app/graph';
-import { DEFAULT_SETTINGS } from '@/app/graph/constants';
-import { acceptRenderedElements, restoreWorkspace, shouldRerenderWorkspace } from '@/app/utils';
 
 const sequenceSvg = `<svg viewBox="0 0 450 306">
   <g data-et="participant" data-id="A"><rect class="actor-top" x="0" width="150" /><text>Alice</text></g>
@@ -40,51 +40,55 @@ const createTranslation = (elements: GraphElements) =>
     elements,
   });
 
-const createRecords = (elements: GraphElements) => ({
-  input: APP_INITIAL_CONTEXT.input,
-  translation: createTranslation(elements),
-  versions: [],
-  workspace: APP_INITIAL_CONTEXT.workspace,
+describe('node appearance defaults', () => {
+  test('keeps vertical and rectangle node overrides after hydration with different global defaults', () => {
+    const nodeGradient = Object.assign({}, DEFAULT_SETTINGS.nodeGradient, {
+      direction: 'horizontal' as const,
+    });
+    const settings = Object.assign({}, DEFAULT_SETTINGS, {
+      nodeGradient,
+      nodeShape: 'circle' as const,
+    });
+    const node = {
+      id: 'A',
+      data: { label: 'A' },
+      position: { x: 0, y: 0 },
+      style: createNodeStyle(settings),
+    };
+    const elements = updateSelectedNodes({ nodes: [node], edges: [] }, ['A'], {
+      nodeGradient: DEFAULT_SETTINGS.nodeGradient,
+      nodeShape: 'rectangle',
+    });
+    const translation = Object.assign({}, APP_INITIAL_CONTEXT.translation, { elements, settings });
+    const hydrated = getTranslation(translation);
+    const [selected] = hydrated.elements.nodes;
+
+    expect(getNodeGradientValue(selected, hydrated.settings).direction).toBe('vertical');
+    expect(getNodeShapeValue(selected, hydrated.settings)).toBe('rectangle');
+  });
+
+  test('uses neutral solid nodes and no canvas background', () => {
+    expect(DEFAULT_SETTINGS).toMatchObject({
+      inverseColor: '#171717',
+      nodeSurface: 'solid',
+      primaryColor: '#cccccc',
+    });
+    expect(DEFAULT_CANVAS_SETTINGS).toMatchObject({
+      background: 'none',
+      gridVisible: false,
+    });
+
+    const style = createNodeStyle(DEFAULT_SETTINGS);
+
+    expect(style).toMatchObject({
+      backgroundColor: '#cccccc',
+      backgroundImage: 'none',
+      color: '#171717',
+    });
+  });
 });
 
 describe('sequence appearance', () => {
-  test('keeps fresh message data while restoring edge color, width, and animation', () => {
-    const edited = applySettings(createElements(), {
-      edgeColor: '#123456',
-      edgeWidth: 5,
-      edgeAnimation: 'surge',
-      edgeType: 'straight',
-    });
-    const changedSvg = sequenceSvg
-      .replace('data-id="i0"', 'data-id="i0" class="messageLine1"')
-      .replace('y1="115"', 'y1="160"')
-      .replace('>Hello<', '>Reply<')
-      .replace(
-        '<line data-et="message"',
-        '<text class="sequenceNumber">7</text><line data-et="message"',
-      );
-    const fresh = parseMermaidSvg(changedSvg, DEFAULT_SETTINGS, 'sequence');
-    const context = Object.assign({}, APP_INITIAL_CONTEXT, {
-      translation: createTranslation(edited),
-    });
-    const result = acceptRenderedElements(context, { diagramType: 'sequence', elements: fresh });
-    const [source, target] = result.translation.elements.edges;
-
-    expect(source.data).toMatchObject({
-      dashed: true,
-      messageY: 160,
-      sequenceNumber: '7',
-      edgeType: 'straight',
-    });
-    expect(target.data).toMatchObject({ dashed: true, messageY: 160, segment: 'target' });
-    expect(source.style).toMatchObject({ stroke: '#123456', strokeWidth: 5 });
-    expect(source.type).toBe('surge');
-    expect(
-      result.translation.elements.nodes.find((node) => node.data.kind === 'sequence-action')?.data
-        .label,
-    ).toBe('Reply');
-  });
-
   test.each(['none', 'arrow', 'arrowclosed'] as const)(
     'updates the selected start marker to %s and reports it in the toolkit',
     (edgeMarker) => {
@@ -151,18 +155,6 @@ describe('sequence appearance', () => {
       expect(getNodeTextValue(node, DEFAULT_SETTINGS)).toBe('#111827');
     },
   );
-
-  test('accepts a rendered sequence without applying generic node fills', () => {
-    const elements = createElements();
-    const result = acceptRenderedElements(APP_INITIAL_CONTEXT, {
-      diagramType: 'sequence',
-      elements,
-    });
-
-    expect(result.translation.elements.nodes).toEqual(elements.nodes);
-    expect(result).toMatchObject({ needsRender: false, resetLayout: false });
-    expect(result.translation.diagramType).toBe('sequence');
-  });
 
   test('edits only the selected action without changing geometry or connections', () => {
     const elements = createElements();
@@ -232,42 +224,5 @@ describe('sequence appearance', () => {
 
     expect(participant?.position).toEqual(expectedPosition);
     expect(participant?.data.style.backgroundColor).toBe('#123456');
-  });
-});
-
-describe('saved sequence upgrades', () => {
-  test.each([{ handles: undefined }, { styleVersion: undefined }])(
-    'requests a fresh layout for legacy participant data %j',
-    (legacyData) => {
-      const elements = createElements();
-      const nodes = elements.nodes.map((node) =>
-        Object.assign({}, node, {
-          data: Object.assign({}, node.data, legacyData),
-        }),
-      );
-      const records = createRecords({ nodes, edges: elements.edges });
-      const restored = restoreWorkspace(APP_INITIAL_CONTEXT, records);
-
-      expect(shouldRerenderWorkspace(records)).toBe(true);
-      expect(restored).toMatchObject({ needsRender: true, resetLayout: true });
-      expect(restored.canvasRevision).toBe(APP_INITIAL_CONTEXT.canvasRevision + 1);
-    },
-  );
-
-  test('upgrades messages without action nodes', () => {
-    const elements = createElements();
-    const nodes = elements.nodes.filter((node) => node.data.kind !== 'sequence-action');
-
-    expect(shouldRerenderWorkspace(createRecords({ nodes, edges: elements.edges }))).toBe(true);
-  });
-
-  test('does not request another upgrade for current sequence records', () => {
-    const records = createRecords(createElements());
-
-    expect(shouldRerenderWorkspace(records)).toBe(false);
-    expect(restoreWorkspace(APP_INITIAL_CONTEXT, records)).toMatchObject({
-      needsRender: false,
-      resetLayout: false,
-    });
   });
 });

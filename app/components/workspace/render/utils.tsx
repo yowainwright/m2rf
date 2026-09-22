@@ -104,7 +104,9 @@ export function getNodeToolProps({ actions, selection, translation }: PreviewPro
   const fillOnly = nodes.length > 0 && nodes.every((node) => STATE_SYMBOLS.has(node.data?.shape));
   return {
     fillOnly,
-    preserveSemantics: ['stateDiagram', 'classDiagram'].includes(translation.diagramType || ''),
+    preserveSemantics: ['stateDiagram', 'classDiagram', 'er'].includes(
+      translation.diagramType || '',
+    ),
     borderValue: getNodeBorderValue(selectedNode, settings),
     fillValue: getNodeFillValue(selectedNode, settings),
     gradient: getNodeGradientValue(selectedNode, settings),
@@ -126,7 +128,9 @@ export function getEdgeToolProps({ actions, selection, translation }: PreviewPro
   const { selectedEdge } = selection;
   const settings = translation.settings;
   return {
-    preserveSemantics: ['stateDiagram', 'classDiagram'].includes(translation.diagramType || ''),
+    preserveSemantics: ['stateDiagram', 'classDiagram', 'er'].includes(
+      translation.diagramType || '',
+    ),
     animationValue: getEdgeAnimationValue(selectedEdge, settings),
     colorValue: getEdgeColorValue(selectedEdge, settings),
     markerValue: getEdgeMarkerValue(selectedEdge, settings),

@@ -124,23 +124,33 @@ const readClassRows = (element: SVGGraphicsElement, node: ClassMetadataNode, fra
   return labels.map((label) => readRow(label, frame));
 };
 
+const readSourceBorder = (container: SVGElement): CSSProperties => {
+  const styles = Array.from(container.querySelectorAll('path'), (path) => getComputedStyle(path));
+  const outline = styles.find((style) => {
+    const hasStroke = style.stroke && style.stroke !== 'none';
+    return hasStroke;
+  });
+  const computed = outline || styles[0] || getComputedStyle(container);
+  const { stroke, strokeDasharray: dash } = computed;
+  const borderColor = stroke === 'none' ? 'transparent' : stroke;
+  const hasDash = dash.split(/[,\s]+/).some((value) => Number.parseFloat(value) > 0);
+  const visibleBorderStyle = hasDash ? 'dashed' : 'solid';
+  const borderStyle = stroke === 'none' ? 'none' : visibleBorderStyle;
+  const width = Number.parseFloat(computed.strokeWidth);
+  const borderWidth = Number.isFinite(width) ? width : 1;
+  return { borderColor, borderStyle, borderWidth };
+};
+
 const readSourceStyle = (element: SVGGraphicsElement): CSSProperties => {
   const container = element.querySelector<SVGElement>('.label-container, :scope > rect');
-  const shape = container?.querySelector<SVGElement>('path') || container;
-  if (!shape) throw classCompatibilityError();
+  if (!container) throw classCompatibilityError();
+  const shape = container.querySelector<SVGElement>('path') || container;
   const computed = getComputedStyle(shape);
   const backgroundColor = shape.style.fill || shape.getAttribute('fill') || computed.fill;
-  const stroke = shape.style.stroke || computed.stroke;
-  const hasStroke = stroke && stroke !== 'none';
-  const borderColor = hasStroke ? stroke : '#888';
   const color = shape.style.color || computed.color || '#111827';
-  const dash = shape.style.strokeDasharray || computed.strokeDasharray;
-  const hasDash = dash && dash !== 'none';
-  const borderStyle = hasDash ? 'dashed' : 'solid';
-  const width = Number.parseFloat(shape.style.strokeWidth || computed.strokeWidth);
-  const borderWidth = Number.isFinite(width) ? width : 1;
   const fontFamily = getComputedStyle(element).fontFamily;
-  return { backgroundColor, color, borderColor, borderStyle, borderWidth, fontFamily };
+  const border = readSourceBorder(container);
+  return Object.assign({ backgroundColor, color, fontFamily }, border);
 };
 
 export const readClassGeometry = (

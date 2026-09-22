@@ -25,6 +25,7 @@ export const GRAPH_DIAGRAM_TYPES = [
   'sequence',
   'stateDiagram',
   'classDiagram',
+  'er',
 ] as const;
 export const SEQUENCE_PARTICIPANT_NODE_TYPE = 'sequenceParticipant';
 export const SEQUENCE_ACTION_NODE_TYPE = 'sequenceAction';
@@ -270,3 +271,6 @@ export const EDGE_SELECTOR = '.edgePath, .flowchart-link';
 export const NODE_ID_PATTERN = /(?:^|-)flowchart-(.+)-\d+$/;
 export const EDGE_ID_PATTERN = /^L-(.+)-(.+)-\d+$/;
 export const NODE_PATTERN_SIZE = 8;
+
+export const SURGE_EDGE_TYPE = 'surge';
+export const SEQUENCE_FRAME_TYPES = new Set(['alt', 'opt', 'rect']);

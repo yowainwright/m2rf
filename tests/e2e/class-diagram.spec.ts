@@ -309,6 +309,25 @@ test('preserves computed SVG class styles without mistaking none for a dashed bo
   await expect(surface).toHaveCSS('border-top-width', '0px');
 });
 
+test('preserves an explicitly disabled class border through save and reload', async ({ page }) => {
+  await page.goto('./');
+  await updateSource(page, 'classDiagram\nclass Bordered');
+  const surface = page.locator('[data-class-shape="classBox"]');
+  await expect(surface).toHaveText('Bordered');
+  await expect(surface).toHaveCSS('border-top-style', 'solid');
+  await expect(surface).not.toHaveCSS('border-top-width', '0px');
+  await updateSource(page, 'classDiagram\nclass Borderless\nstyle Borderless stroke:none');
+  await expect(surface).toHaveText('Borderless');
+  await expect(surface).toHaveCSS('border-top-style', 'none');
+  await expect(surface).toHaveCSS('border-top-width', '0px');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(surface).toHaveText('Borderless');
+  await expect(surface).toHaveCSS('border-top-style', 'none');
+  await expect(surface).toHaveCSS('border-top-width', '0px');
+});
+
 test('exports native class compartments, markers, and cardinalities', async ({ page }) => {
   await page.goto('./');
   await chooseClass(page);
