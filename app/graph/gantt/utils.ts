@@ -1,7 +1,7 @@
 import { Schema } from 'effect';
 import type { CSSProperties } from 'react';
 import { GraphRenderError } from '../types';
-import { GANTT_GENERATED_ID, GanttTasksSchema } from './constants';
+import { GanttTasksSchema } from './constants';
 import type { GanttBounds, GanttGraphic, GanttPart, GanttTask } from './types';
 
 export const ganttCompatibilityError = () =>
@@ -22,10 +22,12 @@ export const readGanttTasks = (value: unknown) => {
   return tasks;
 };
 
-// Mermaid generates positional taskN IDs. Use semantic names for these; ambiguous
-// duplicates must not inherit another task's saved appearance after a source edit.
+// Mermaid's parseData retains raw.data: optional tags, then [id,] start, end.
+// Match the explicit ID field; its spelling cannot distinguish it from taskN IDs.
 export const ganttTaskKey = (task: GanttTask) => {
-  if (!GANTT_GENERATED_ID.test(task.id)) return `id:${task.id}`;
+  const fields = task.raw.data.replace(/^:/, '').split(',');
+  const explicit = fields.length >= 3 && fields.at(-3)?.trim() === task.id;
+  if (explicit) return `id:${task.id}`;
   return JSON.stringify([task.section, task.task.trim()]);
 };
 

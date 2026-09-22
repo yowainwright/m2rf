@@ -91,6 +91,37 @@ test('refreshes schedule geometry but keeps styling through edits, history, and 
   await expect(task.locator('[data-gantt-bar]')).toHaveCSS('background-color', 'rgb(239, 68, 68)');
 });
 
+test('retains explicit taskN identity and appearance across rename, section edits, and reload', async ({
+  page,
+}) => {
+  await chooseGantt(page);
+  const source =
+    'gantt\n dateFormat YYYY-MM-DD\n todayMarker off\n section Original\n Work :done, task1, 2026-09-21, 2d';
+  await updateSource(page, source);
+  const original = page.locator('[data-gantt-task="Work"]');
+  await expect(original).toBeVisible();
+  await selectFill(page, 'Work');
+  const id = await original.locator('..').getAttribute('data-id');
+  const changed = source.replace('Original', 'Moved').replace('Work', 'Renamed');
+  await updateSource(page, changed);
+  const renamed = page.locator('[data-gantt-task="Renamed"]');
+  await expect(renamed).toBeVisible();
+  await expect(renamed.locator('..')).toHaveAttribute('data-id', id!);
+  await expect(renamed.locator('..')).toHaveClass(/selected/);
+  await expect(renamed.locator('[data-gantt-bar]')).toHaveCSS(
+    'background-color',
+    'rgb(239, 68, 68)',
+  );
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(renamed.locator('..')).toHaveAttribute('data-id', id!);
+  await expect(renamed.locator('[data-gantt-bar]')).toHaveCSS(
+    'background-color',
+    'rgb(239, 68, 68)',
+  );
+});
+
 test('retains anonymous task identity after insertion and avoids ambiguous style transfer', async ({
   page,
 }) => {
