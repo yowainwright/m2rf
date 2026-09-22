@@ -5,6 +5,8 @@ import { ClassDiagramNode, ClassRelationEdge } from '@/app/components/diagrams/c
 import { CLASS_EDGE_TYPE, CLASS_NODE_TYPE } from '@/app/graph/class/constants';
 import { ErDiagramNode, ErRelationEdge } from '@/app/components/diagrams/er';
 import { ER_EDGE_TYPE, ER_NODE_TYPE } from '@/app/graph/er/constants';
+import { GanttDiagramNode } from '@/app/components/diagrams/gantt';
+import { GANTT_FRAME_TYPE, GANTT_TASK_TYPE } from '@/app/graph/gantt/constants';
 import {
   SequenceActionNode,
   SequenceFrameNode,
@@ -36,6 +38,8 @@ export const RENDER_EDGE_TYPES = Object.assign({}, SURGE_EDGE_TYPES, {
   [SEQUENCE_MESSAGE_EDGE_TYPE]: SequenceMessageEdge,
 });
 export const RENDER_NODE_TYPES = {
+  [GANTT_FRAME_TYPE]: GanttDiagramNode,
+  [GANTT_TASK_TYPE]: GanttDiagramNode,
   [ER_NODE_TYPE]: ErDiagramNode,
   [CLASS_NODE_TYPE]: ClassDiagramNode,
   [STATE_NODE_TYPE]: StateDiagramNode,

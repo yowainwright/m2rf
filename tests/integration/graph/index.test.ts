@@ -25,6 +25,7 @@ import { AppContext, appMachine } from '@/app';
 import { SidebarProvider } from '@/app/components/ui/sidebar';
 import { WorkspaceHeader } from '@/app/components/workspace/header';
 import { WorkspaceSidebar } from '@/app/components/workspace/sidebar';
+import { GANTT_SOURCE } from '@/app/constants';
 
 const settings = {
   edgeAnimation: 'none',
@@ -153,6 +154,52 @@ describe('graphRepository', () => {
     vi.restoreAllMocks();
     vi.useRealTimers();
     await deleteWorkspaces();
+  });
+
+  it('round-trips Gantt geometry, appearance, and fixed interaction flags across versions', async () => {
+    const task = {
+      id: 'gantt:build',
+      type: 'ganttTask',
+      position: { x: 75, y: 50 },
+      style: { width: 350, height: 20 },
+      draggable: false,
+      connectable: false,
+      deletable: false,
+      data: {
+        kind: 'gantt-task',
+        label: 'Build',
+        status: 'done',
+        start: '2026-09-21',
+        end: '2026-09-24',
+        parts: [{ kind: 'rect', style: { width: 350, height: 20 } }],
+        style: { backgroundColor: '#123456' },
+        sourceStyle: {},
+      },
+    };
+    const translation = Object.assign({}, input.translation, {
+      diagramType: 'gantt' as const,
+      elements: { nodes: [task], edges: [] },
+    });
+    const draft = Object.assign({}, input, {
+      input: { format: 'mermaid' as const, source: GANTT_SOURCE },
+      translation,
+    });
+    const first = await graphRepository.create(draft);
+    const nextTask = Object.assign({}, task, { style: { width: 400, height: 20 } });
+    const nextTranslation = Object.assign({}, translation, {
+      elements: { nodes: [nextTask], edges: [] },
+    });
+    await graphRepository.update({
+      input: { source: GANTT_SOURCE.replace('3d', '4d') },
+      translation: nextTranslation,
+      workspace: { id: first.workspace.id, name: 'Gantt history' },
+    });
+    const current = await graphRepository.read(first.workspace.id);
+    const previous = await graphRepository.read(first.workspace.id, first.input.id);
+    expect(current?.translation.elements.nodes).toEqual([nextTask]);
+    expect(previous?.translation.elements.nodes).toEqual([task]);
+    expect(previous?.translation.diagramType).toBe('gantt');
+    expect(previous?.input.source).toBe(GANTT_SOURCE);
   });
 
   it('keeps the sidebar available before saving and after reload and deletion', async () => {

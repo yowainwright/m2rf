@@ -319,6 +319,8 @@ const getNodeAppearanceStyle = (node: Node | undefined) => {
   if (node.data?.kind === 'state-node') return node.data.style;
   if (node.data?.kind === 'class-node') return node.data.style;
   if (node.data?.kind === 'er-node') return node.data.style;
+  if (node.data?.kind === 'gantt-task') return node.data.style;
+  if (node.data?.kind === 'gantt-frame') return node.data.style;
   if (!SEQUENCE_NODE_KINDS.has(node.data?.kind)) return node.style;
   const savedStyle = node.data.style || {};
   if (node.data.styleVersion === 1) return savedStyle;
@@ -389,7 +391,10 @@ const createNodeStyleUpdate = (node: Node, settings: Partial<TranslationSettings
 };
 
 const applyNodeStyle = (node: Node, style: CSSProperties | undefined) => {
-  const hasNativeSurface = ['state-node', 'class-node', 'er-node'].includes(node.data?.kind);
+  if (node.data?.kind === 'gantt-frame') return node;
+  const hasNativeSurface = ['state-node', 'class-node', 'er-node', 'gantt-task'].includes(
+    node.data?.kind,
+  );
   if (hasNativeSurface) {
     const data = Object.assign({}, node.data, { style: style || {} });
     return Object.assign({}, node, { data });
@@ -720,7 +725,7 @@ const hydrateElementSettings = (
   const nodes = elements.nodes.map((node) => {
     const hasSourceStyle =
       SEQUENCE_NODE_KINDS.has(node.data?.kind) ||
-      ['class-node', 'er-node'].includes(node.data?.kind);
+      ['class-node', 'er-node', 'gantt-task', 'gantt-frame'].includes(node.data?.kind);
     const defaults = hasSourceStyle ? {} : createNodeStyle(settings);
     const combinedStyle = Object.assign({}, defaults, getNodeAppearanceStyle(node));
     const style = normalizeNodeStyle(combinedStyle, settings);
@@ -846,6 +851,15 @@ export const applySavedAppearance = (
   const nodes = elements.nodes.map((node) => {
     const saved = savedNodes.get(node.id);
     if (!saved) return node;
+    if (node.data?.kind === 'gantt-frame') return node;
+    if (node.data?.kind === 'gantt-task') {
+      const ambiguous = node.data.ambiguousIdentity || saved.data?.ambiguousIdentity;
+      const changedStatus = node.data.status !== saved.data?.status;
+      const resetAppearance = ambiguous || changedStatus;
+      if (resetAppearance) return node;
+      const selected = saved.selected;
+      return applyNodeStyle(Object.assign({}, node, { selected }), getNodeAppearanceStyle(saved));
+    }
     const { selected } = saved;
     const style = getNodeAppearanceStyle(saved);
     const isLegacySequence =

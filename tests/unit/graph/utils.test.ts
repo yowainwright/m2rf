@@ -40,6 +40,64 @@ const createTranslation = (elements: GraphElements) =>
     elements,
   });
 
+const ganttNode = {
+  id: 'gantt:build',
+  type: 'ganttTask',
+  position: { x: 100, y: 50 },
+  style: { width: 150, height: 20 },
+  data: { kind: 'gantt-task', status: 'done', style: {}, parts: [{ text: 'Build' }] },
+};
+
+test.each([false, true])('Gantt keeps fresh dates and geometry with resetLayout=%s', (reset) => {
+  const saved = Object.assign({}, ganttNode, {
+    selected: true,
+    position: { x: 999, y: 999 },
+    style: { width: 999, height: 999 },
+    data: Object.assign({}, ganttNode.data, { style: { backgroundColor: '#123456' }, parts: [] }),
+  });
+  const restored = applySavedAppearance(
+    { nodes: [ganttNode], edges: [] },
+    { nodes: [saved], edges: [] },
+    reset,
+  ).nodes[0];
+  expect(restored.position).toEqual(ganttNode.position);
+  expect(restored.style).toEqual(ganttNode.style);
+  expect(restored.data.parts).toEqual(ganttNode.data.parts);
+  expect(restored.data.style.backgroundColor).toBe('#123456');
+  expect(restored.selected).toBe(true);
+});
+
+test.each([{ ambiguousIdentity: true }, { status: 'crit' }])(
+  'does not transfer stale appearance across ambiguous identity or status changes %j',
+  (data) => {
+    const changed = Object.assign({}, ganttNode, { data: Object.assign({}, ganttNode.data, data) });
+    const saved = updateSelectedNodes({ nodes: [ganttNode], edges: [] }, [ganttNode.id], {
+      primaryColor: '#123456',
+    });
+    const restored = applySavedAppearance({ nodes: [changed], edges: [] }, saved);
+    expect(restored.nodes[0].data.style).toEqual({});
+  },
+);
+
+test('hydrates Gantt appearance without adding default fills to decorations', () => {
+  const frame = Object.assign({}, ganttNode, {
+    id: 'gantt:frame',
+    data: { kind: 'gantt-frame', style: {} },
+  });
+  const elements = applySettings(
+    { nodes: [frame, ganttNode], edges: [] },
+    { primaryColor: '#123456' },
+  );
+  const translation = Object.assign({}, APP_INITIAL_CONTEXT.translation, {
+    diagramType: 'gantt' as const,
+    elements,
+  });
+  const hydrated = getTranslation(translation);
+  expect(hydrated.elements.nodes[0].data.style).toEqual({});
+  expect(hydrated.elements.nodes[1].data.style.backgroundColor).toBe('#123456');
+  expect(hydrated.elements.nodes[1].style).toEqual(ganttNode.style);
+});
+
 describe('node appearance defaults', () => {
   test('keeps vertical and rectangle node overrides after hydration with different global defaults', () => {
     const nodeGradient = Object.assign({}, DEFAULT_SETTINGS.nodeGradient, {

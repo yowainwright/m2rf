@@ -7,6 +7,8 @@ import {
   acceptRenderedElements,
   restoreWorkspace,
   shouldRerenderWorkspace,
+  updateNodeChanges,
+  updateEdgeChanges,
 } from '@/app/utils';
 import { applySettings, parseMermaidSvg } from '@/app/graph';
 import type { GraphElements } from '@/app/graph';
@@ -37,6 +39,41 @@ const createRecords = (elements: GraphElements) => ({
   translation: createTranslation(elements),
   versions: [],
   workspace: APP_INITIAL_CONTEXT.workspace,
+});
+
+test('allows Gantt selection and measurements while rejecting schedule mutations', () => {
+  const task = { id: 'task', data: { kind: 'gantt-task' }, position: { x: 50, y: 20 } };
+  const frame = { id: 'frame', data: { kind: 'gantt-frame' }, position: { x: 0, y: 0 } };
+  const elements = { nodes: [frame, task], edges: [] };
+  const translation = Object.assign({}, APP_INITIAL_CONTEXT.translation, {
+    diagramType: 'gantt' as const,
+    elements,
+  });
+  const context = Object.assign({}, APP_INITIAL_CONTEXT, { translation });
+  const changed = updateNodeChanges(context, {
+    type: 'nodes.update',
+    changes: [
+      { type: 'position', id: 'task', position: { x: 999, y: 999 } },
+      { type: 'remove', id: 'task' },
+      { type: 'add', item: { id: 'extra', data: {}, position: { x: 0, y: 0 } } },
+      { type: 'select', id: 'frame', selected: true },
+      { type: 'select', id: 'task', selected: true },
+      { type: 'dimensions', id: 'task', dimensions: { width: 100, height: 20 } },
+    ],
+  });
+  expect(changed.translation.elements.nodes).toHaveLength(2);
+  expect(changed.translation.elements.nodes[0]).toEqual(frame);
+  expect(changed.translation.elements.nodes[1]).toMatchObject({
+    position: task.position,
+    selected: true,
+    width: 100,
+    height: 20,
+  });
+  const edges = updateEdgeChanges(context, {
+    type: 'edges.update',
+    changes: [{ type: 'add', item: { id: 'edge', source: 'task', target: 'frame' } }],
+  });
+  expect(edges.translation.elements.edges).toEqual([]);
 });
 
 describe('workspace defaults', () => {
