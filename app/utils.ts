@@ -3,6 +3,7 @@ import mermaid from 'mermaid';
 import { renderStateDiagram } from '@/app/graph/state';
 import { renderClassDiagram } from '@/app/graph/class';
 import { renderErDiagram } from '@/app/graph/er';
+import { renderGanttDiagram } from '@/app/graph/gantt';
 import { applyEdgeChanges, applyNodeChanges } from 'reactflow';
 import {
   applySavedAppearance,
@@ -153,6 +154,7 @@ export const renderWorkspace = (context: AppContext) =>
         stateDiagram: renderStateDiagram,
         classDiagram: renderClassDiagram,
         er: renderErDiagram,
+        gantt: renderGanttDiagram,
       };
       const isNative = detectedType !== 'flowchart' && detectedType !== 'sequence';
       if (isNative) {
@@ -287,7 +289,7 @@ export const updateTranslation = (context: AppContext, update: Partial<GraphTran
 
 export const acceptRenderedElements = (context: AppContext, rendered: GraphRenderResult) => {
   const { diagramType, elements: renderedElements } = rendered;
-  const hasSourceAppearance = ['sequence', 'classDiagram', 'er'].includes(diagramType);
+  const hasSourceAppearance = ['sequence', 'classDiagram', 'er', 'gantt'].includes(diagramType);
   const styleTargets = hasSourceAppearance
     ? { nodes: [], edges: renderedElements.edges }
     : renderedElements;
@@ -310,7 +312,19 @@ export const updateNodeChanges = (
   context: AppContext,
   event: Extract<AppEvent, { type: 'nodes.update' }>,
 ) => {
-  const nodes = applyNodeChanges(event.changes, context.translation.elements.nodes);
+  const current = context.translation.elements.nodes;
+  const isGantt = context.translation.diagramType === 'gantt';
+  const taskIds = new Set(
+    current.filter((node) => node.data?.kind === 'gantt-task').map((node) => node.id),
+  );
+  const changes = isGantt
+    ? event.changes.filter((change) => {
+        if (change.type === 'dimensions') return true;
+        const selectTask = change.type === 'select' && taskIds.has(change.id);
+        return selectTask;
+      })
+    : event.changes;
+  const nodes = applyNodeChanges(changes, current);
   const remainingIds = new Set(getElementIds(nodes));
   const edges = context.translation.elements.edges.filter((edge) => {
     return remainingIds.has(edge.source) && remainingIds.has(edge.target);
@@ -322,6 +336,9 @@ export const updateEdgeChanges = (
   context: AppContext,
   event: Extract<AppEvent, { type: 'edges.update' }>,
 ) => {
+  if (context.translation.diagramType === 'gantt') {
+    return updateTranslation(context, { elements: context.translation.elements });
+  }
   const edges = applyEdgeChanges(event.changes, context.translation.elements.edges);
   const elements = Object.assign({}, context.translation.elements, { edges });
   return updateTranslation(context, { elements });

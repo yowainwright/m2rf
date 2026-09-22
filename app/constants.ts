@@ -102,12 +102,25 @@ export const ER_SOURCE = `erDiagram
         string description "Purchased item"
     }`;
 
+export const GANTT_SOURCE = `gantt
+    title Release schedule
+    dateFormat YYYY-MM-DD
+    excludes weekends
+    todayMarker off
+    section Delivery
+    Build :done, build, 2026-09-21, 3d
+    Review :active, crit, review, after build, 2d
+    Ship :milestone, ship, after review, 0d
+    section Follow-up
+    Documentation :docs, after ship, 2d`;
+
 export const GRAPH_SAMPLES = {
   sequence: { label: 'Sequence', source: DEFAULT_SOURCE, diagramType: 'sequence' },
   flowchart: { label: 'Flowchart', source: FLOWCHART_SOURCE, diagramType: 'flowchart' },
   stateDiagram: { label: 'State diagram', source: STATE_SOURCE, diagramType: 'stateDiagram' },
   classDiagram: { label: 'Class diagram', source: CLASS_SOURCE, diagramType: 'classDiagram' },
   er: { label: 'ER diagram', source: ER_SOURCE, diagramType: 'er' },
+  gantt: { label: 'Gantt chart', source: GANTT_SOURCE, diagramType: 'gantt' },
 } as const;
 export const LOCAL_WORKSPACE_ID = 'workspace-local';
 export const DESKTOP_MEDIA_QUERY = '(min-width: 1024px)';

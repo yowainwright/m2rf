@@ -26,6 +26,7 @@ export const GRAPH_DIAGRAM_TYPES = [
   'stateDiagram',
   'classDiagram',
   'er',
+  'gantt',
 ] as const;
 export const SEQUENCE_PARTICIPANT_NODE_TYPE = 'sequenceParticipant';
 export const SEQUENCE_ACTION_NODE_TYPE = 'sequenceAction';

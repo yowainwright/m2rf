@@ -83,7 +83,8 @@ export function getPreviewSelection(elements: GraphElements) {
   const hasSelectedEdge = selectedEdge !== undefined;
   const hasSelectedNode = selectedNode !== undefined;
   const showNodeTools = hasSelectedNode || !hasSelectedEdge;
-  const showEdgeTools = hasSelectedEdge || !hasSelectedNode;
+  const isGantt = elements.nodes.some((node) => node.data?.kind === 'gantt-frame');
+  const showEdgeTools = !isGantt && (hasSelectedEdge || !hasSelectedNode);
   const toolkitScope = getSelectionLabel(selectedNodeIds.length, selectedEdgeIds.length);
   return {
     selectedEdgeIds,
@@ -104,7 +105,7 @@ export function getNodeToolProps({ actions, selection, translation }: PreviewPro
   const fillOnly = nodes.length > 0 && nodes.every((node) => STATE_SYMBOLS.has(node.data?.shape));
   return {
     fillOnly,
-    preserveSemantics: ['stateDiagram', 'classDiagram', 'er'].includes(
+    preserveSemantics: ['stateDiagram', 'classDiagram', 'er', 'gantt'].includes(
       translation.diagramType || '',
     ),
     borderValue: getNodeBorderValue(selectedNode, settings),
