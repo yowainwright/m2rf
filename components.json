@@ -19,6 +19,7 @@
   "iconLibrary": "lucide",
   "registries": {
     "@react-flow": "https://ui.reactflow.dev/{name}",
-    "@approvals-ui": "https://approvals-ui.vercel.app/r/{name}.json"
+    "@approvals-ui": "https://approvals-ui.vercel.app/r/{name}.json",
+    "@termcn": "https://termcn.dev/r/{name}.json"
   }
 }
