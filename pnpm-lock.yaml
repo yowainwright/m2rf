@@ -193,6 +193,9 @@ importers:
       ink:
         specifier: ^7.1.1
         version: 7.1.1(@types/react@19.3.0)(react@19.3.0)
+      jsdom:
+        specifier: ^30.0.1
+        version: 30.0.1
       lucide-react:
         specifier: ^1.46.0
         version: 1.46.0(react@19.3.0)
@@ -226,6 +229,9 @@ importers:
       string-width:
         specifier: 8.2.2
         version: 8.2.2
+      svgdom:
+        specifier: 0.1.29
+        version: 0.1.29
       tailwind-merge:
         specifier: ^3.7.0
         version: 3.7.0
@@ -272,9 +278,6 @@ importers:
       happy-dom:
         specifier: ^20.14.5
         version: 20.14.5
-      jsdom:
-        specifier: ^30.0.1
-        version: 30.0.1
       oxfmt:
         specifier: 0.67.0
         version: 0.67.0
@@ -299,9 +302,6 @@ importers:
       shadcn:
         specifier: 4.21.0
         version: 4.21.0(typescript@7.0.2)
-      svgdom:
-        specifier: 0.1.29
-        version: 0.1.29
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3

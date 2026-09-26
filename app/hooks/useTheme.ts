@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { defaultTheme } from '@/app/lib/cli/terminal-themes/constants';
+import { defaultTheme } from '@/app/lib/cli/themes/constants';
 import type { Theme, ThemeContextValue } from '@/app/components/ui/types';
 
 export const ThemeContext = React.createContext<ThemeContextValue>({

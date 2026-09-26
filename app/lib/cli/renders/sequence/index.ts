@@ -116,7 +116,8 @@ const rowDimensions = (
   const labelHeight = textHeight(row.label, slot.width);
   const self = row.message && row.message.from === row.message.to;
   const arrowHeight = self ? 3 : 1;
-  const height = row.label ? labelHeight + arrowHeight + 1 : 1;
+  const gap = row.label ? 1 : 0;
+  const height = labelHeight + arrowHeight + gap;
   return Object.assign({}, slot, { labelHeight, height, containerLeft, containerWidth });
 };
 
@@ -351,8 +352,15 @@ const sequenceWidth = (graph: SequenceGraph, requested: number) => {
   return Math.max(requested, minimum);
 };
 
+const checkHeaderSize = (graph: SequenceGraph, width: number) => {
+  const heights = graph.participants.map((participant) => participant.label.split('\n').length + 2);
+  const height = Math.max(...heights);
+  if (height * width > MAX_RENDER_CELLS) throw new Error('Sequence is too large to render.');
+};
+
 const drawSequence = (graph: SequenceGraph, options: CliOptions) => {
   const width = sequenceWidth(graph, options.width);
+  checkHeaderSize(graph, width);
   const layoutOptions = Object.assign({}, options, { width });
   const layout = layoutSequence(graph, layoutOptions);
   const children = sequenceElements(layout, options.ascii);
