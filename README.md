@@ -11,6 +11,18 @@ pnpm run dev
 
 Open [http://localhost:54783/m2rf/](http://localhost:54783/m2rf/). Set `M2RF_APP_PORT` to use another port.
 
+## Terminal preview
+
+```sh
+pnpm run cli:build
+node tmp/cli/m2rf-cli.mjs diagram.mmd
+cat diagram.mmd | node tmp/cli/m2rf-cli.mjs
+```
+
+Flowchart, sequence, and state previews open an interactive viewer. Use arrow keys or `h/j/k/l` to scroll, Page Up/Down to page, and `q` or Ctrl+C to quit. Resizing changes the visible area without rearranging the diagram. File input and piped input both require an interactive terminal.
+
+`--width` sets the initial layout width hint; larger drawings remain scrollable. `--ascii`, `--color`, and `--no-color` control presentation. Parsing and unsupported-syntax errors exit nonzero. Class, ER, and Gantt support remains unfinished.
+
 ## Site structure
 
 The repository root is the Next.js application.
