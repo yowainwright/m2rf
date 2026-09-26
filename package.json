@@ -20,7 +20,7 @@
   },
   "scripts": {
     "cli": "node tmp/cli/m2rf-cli.mjs",
-    "cli:build": "rolldown app/lib/cli/bin.ts --dir tmp/cli --entryFileNames m2rf-cli.mjs --chunkFileNames '[name]-[hash].mjs' --platform node --format esm -e ink -e react -e react/jsx-runtime -e effect -e mermaid -e svgdom -e jsdom -e dompurify -e elkjs/lib/elk.bundled.js -e string-width",
+    "cli:build": "rolldown app/lib/cli/bin.ts --dir tmp/cli --entryFileNames m2rf-cli.mjs --chunkFileNames '[name]-[hash].mjs' --platform node --format esm -e ink -e react -e react/jsx-runtime -e effect -e mermaid -e svgdom -e jsdom -e dompurify -e elkjs/lib/elk.bundled.js -e string-width -e xstate -e @xstate/react",
     "cli:typecheck": "tsc --project tsconfig.cli.json",
     "dev": "printf '\\n  App: http://localhost:%s/m2rf/\\n\\n' \"${M2RF_APP_PORT:-54783}\" && next dev --port ${M2RF_APP_PORT:-54783}",
     "build": "next build --webpack",

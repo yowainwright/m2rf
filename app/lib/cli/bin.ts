@@ -41,7 +41,6 @@ const main = async () => {
     process.exitCode = 1;
     return;
   }
-  process.stdout.write(`${result.right}\n`);
 };
 
 main().catch(async (cause: unknown) => {

@@ -7,6 +7,7 @@ import { cleanText, readInput, renderMermaid } from './utils';
 import { renderFlowchart } from './renders/flowchart';
 import { renderSequence } from './renders/sequence';
 import { renderState } from './renders/state';
+import { showViewer } from './viewer';
 import type { CliOptions } from './types';
 
 export const renderDiagram = (source: string, options: CliOptions) =>
@@ -19,7 +20,10 @@ export const renderDiagram = (source: string, options: CliOptions) =>
   );
 
 export const runCli = (path: string | undefined, options: CliOptions) =>
-  readInput(path).pipe(Effect.flatMap((source) => renderDiagram(source, options)));
+  readInput(path).pipe(
+    Effect.flatMap((source) => renderDiagram(source, options)),
+    Effect.flatMap((diagram) => showViewer(diagram, options.ascii)),
+  );
 
 export const formatError = (message: string) => {
   const width = Math.max(MIN_WIDTH, Math.min(process.stderr.columns || DEFAULT_WIDTH, MAX_WIDTH));

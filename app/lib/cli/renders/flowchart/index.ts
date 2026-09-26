@@ -190,14 +190,10 @@ const drawFlowchart = (layout: TerminalLayout, graph: FlowGraph, options: CliOpt
   const canvas = createElement(Box, { position: 'relative', width, height }, children, junctions);
   const value = { unicode: !options.ascii };
   const tree = createElement(UnicodeContext.Provider, { value }, canvas);
-  return renderToString(tree, { columns: options.width });
+  return renderToString(tree, { columns: width });
 };
 
-const validateLayout = (layout: TerminalLayout, width: number) => {
-  if (layout.width > width)
-    throw new Error(
-      `This chart needs ${Math.ceil(layout.width)} columns. Try --width ${Math.ceil(layout.width)}; adaptive legends are still being implemented.`,
-    );
+const validateLayout = (layout: TerminalLayout) => {
   const finite = Number.isFinite(layout.width) && Number.isFinite(layout.height);
   const area = layout.width * layout.height;
   const valid = finite && area > 0 && area <= MAX_RENDER_CELLS;
@@ -263,7 +259,7 @@ const layoutFlowchart = async (graph: FlowGraph, options: CliOptions) => {
   const elk = new ELK();
   const result = await elk.layout(input);
   const layout = readLayout(result, graph);
-  validateLayout(layout, options.width);
+  validateLayout(layout);
   return drawFlowchart(layout, graph, options);
 };
 

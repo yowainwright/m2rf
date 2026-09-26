@@ -3,29 +3,29 @@ import type { Theme } from '@/app/components/ui/types';
 export const defaultTheme: Theme = {
   border: {
     color: '#4B5563',
-    focusColor: '#8B5CF6',
+    focusColor: 'cyan',
     style: 'round',
   },
   colors: {
-    accent: '#8B5CF6',
+    accent: 'cyan',
     accentForeground: '#FFFFFF',
     background: '#000000',
     border: '#4B5563',
     error: '#EF4444',
     errorForeground: '#FFFFFF',
 
-    focusRing: '#8B5CF6',
+    focusRing: 'cyan',
     foreground: '#FFFFFF',
     info: '#3B82F6',
     infoForeground: '#FFFFFF',
     muted: '#374151',
     mutedForeground: '#9CA3AF',
-    primary: '#7C3AED',
+    primary: 'cyan',
     primaryForeground: '#FFFFFF',
 
     secondary: '#6B7280',
     secondaryForeground: '#FFFFFF',
-    selection: '#7C3AED',
+    selection: 'cyan',
     selectionForeground: '#FFFFFF',
     success: '#10B981',
 

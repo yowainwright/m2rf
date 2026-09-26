@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from 'react';
 import { Box, Text, renderToString } from 'ink';
 import { Array as EffectArray, Effect } from 'effect';
+import stringWidth from 'string-width';
 import { Panel } from '@/app/components/ui/panel';
 import { UnicodeContext } from '@/app/hooks/useUnicode';
 import { MAX_RENDER_CELLS } from '../../constants';
@@ -342,17 +343,27 @@ const sequenceElements = (layout: SequenceLayout, ascii: boolean) => {
   return panels.concat(lines, headings, junctions, labels, arrows, dividers);
 };
 
+const sequenceWidth = (graph: SequenceGraph, requested: number) => {
+  const labels = graph.participants.flatMap((participant) => participant.label.split('\n'));
+  const widths = labels.map((label) => stringWidth(label) + SEQUENCE_MARGIN * 2);
+  const lane = Math.max(MIN_COLUMN_WIDTH, ...widths);
+  const minimum = graph.participants.length * lane + SEQUENCE_MARGIN * 2;
+  return Math.max(requested, minimum);
+};
+
 const drawSequence = (graph: SequenceGraph, options: CliOptions) => {
-  const layout = layoutSequence(graph, options);
+  const width = sequenceWidth(graph, options.width);
+  const layoutOptions = Object.assign({}, options, { width });
+  const layout = layoutSequence(graph, layoutOptions);
   const children = sequenceElements(layout, options.ascii);
   const canvas = createElement(
     Box,
-    { position: 'relative', width: options.width, height: layout.height },
+    { position: 'relative', width, height: layout.height },
     children,
   );
   const value = { unicode: !options.ascii };
   const tree = createElement(UnicodeContext.Provider, { value }, canvas);
-  return renderToString(tree, { columns: options.width });
+  return renderToString(tree, { columns: width });
 };
 
 export const renderSequence = (diagram: RenderedMermaid, options: CliOptions) =>

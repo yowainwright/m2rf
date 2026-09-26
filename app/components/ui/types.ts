@@ -1,5 +1,23 @@
 import type { ReactNode } from 'react';
 
+export interface ScrollViewProps {
+  width: number;
+  height: number;
+  contentWidth: number;
+  contentHeight: number;
+  scrollLeft: number;
+  scrollTop: number;
+  children: ReactNode;
+  'aria-label'?: string;
+}
+
+export interface ScrollbarProps {
+  length: number;
+  contentLength: number;
+  offset: number;
+  vertical?: boolean;
+}
+
 export type BorderStyle =
   | 'single'
   | 'double'

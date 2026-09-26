@@ -8,6 +8,11 @@ export const CLI_HELP = `Usage: m2rf [file.mmd] [--width columns] [--ascii] [--c
   cat chart.mmd | m2rf
   m2rf chart.mmd --width 60
 
+Opens an interactive viewer. An interactive terminal is required.
+Arrow keys or h/j/k/l scroll; Page Up/Down page vertically; Home/End jump; q or Ctrl+C quit.
+Resize changes the visible area without rearranging the diagram.
+--width sets the initial layout width hint, not a limit on the scrollable drawing.
+
 Flowchart preview: horizontal graphs are arranged top-to-bottom.
 Node shapes are shown as boxes; decision boxes have an accented border.
 Solid flowchart edges are supported; subgraphs are still being implemented.
