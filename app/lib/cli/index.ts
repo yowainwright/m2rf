@@ -6,12 +6,14 @@ import { DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH } from './constants';
 import { cleanText, readInput, renderMermaid } from './utils';
 import { renderFlowchart } from './renders/flowchart';
 import { renderSequence } from './renders/sequence';
+import { renderState } from './renders/state';
 import type { CliOptions } from './types';
 
 export const renderDiagram = (source: string, options: CliOptions) =>
   renderMermaid(source).pipe(
     Effect.flatMap((diagram) => {
       if (diagram.family === 'sequence') return renderSequence(diagram, options);
+      if (diagram.family === 'state') return renderState(diagram, options);
       return renderFlowchart(diagram, options);
     }),
   );

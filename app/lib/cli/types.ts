@@ -4,7 +4,7 @@ export interface CliOptions {
 }
 
 export interface RenderedMermaid {
-  family: 'flowchart' | 'sequence';
+  family: 'flowchart' | 'sequence' | 'state';
   svg: Document;
   data: unknown;
 }

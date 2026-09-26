@@ -13,4 +13,6 @@ Node shapes are shown as boxes; decision boxes have an accented border.
 Solid flowchart edges are supported; subgraphs are still being implemented.
 Sequence preview: participant boxes, solid/dashed messages, self messages, and branch frames.
 Sequence notes, activations, and participant groups are not supported yet.
+State preview: nested frames, labeled transitions, start/end boxes, and choice/fork/join labels.
+State notes and concurrent regions are not supported yet.
 Other chart families are still being implemented.`;

@@ -4,6 +4,9 @@ export interface FlowNode {
   id: string;
   label: string;
   decision: boolean;
+  parentId?: string;
+  frame?: boolean;
+  role?: 'start' | 'end';
 }
 
 export interface FlowEdge {
@@ -24,6 +27,8 @@ export interface PanelNode extends ElkNode {
   decision: boolean;
   width: number;
   height: number;
+  frame?: boolean;
+  parentId?: string;
 }
 
 export interface TerminalLayout extends ElkNode {

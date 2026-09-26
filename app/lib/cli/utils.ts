@@ -5,6 +5,7 @@ import createDOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 import { createHTMLWindow } from 'svgdom';
 import mermaid from 'mermaid';
+import mermaidMetadata from 'mermaid/package.json' with { type: 'json' };
 import { MERMAID_RENDER_ID } from './constants';
 import type { RenderedMermaid } from './types';
 
@@ -70,10 +71,32 @@ const readDiagramData = async (source: string, family: RenderedMermaid['family']
   return getData.call(diagram.db) as unknown;
 };
 
+// Follow app/graph/state: render and read data from the same Diagram instance.
+const renderStateSource = async (source: string): Promise<RenderedMermaid> => {
+  const host = document.createElement('div');
+  const element = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  element.id = MERMAID_RENDER_ID;
+  element.append(document.createElementNS('http://www.w3.org/2000/svg', 'g'));
+  host.append(element);
+  document.body.append(host);
+  try {
+    const diagram = await mermaid.mermaidAPI.getDiagramFromText(source);
+    await diagram.render(MERMAID_RENDER_ID, mermaidMetadata.version);
+    const getData = 'getData' in diagram.db ? diagram.db.getData : undefined;
+    if (typeof getData !== 'function') throw new Error('Mermaid did not expose state data.');
+    const data: unknown = getData.call(diagram.db);
+    const svg = new JSDOM(element.outerHTML, { contentType: 'image/svg+xml' }).window.document;
+    return { family: 'state', svg, data };
+  } finally {
+    host.remove();
+  }
+};
+
 const renderMermaidSource = async (source: string): Promise<RenderedMermaid> => {
   const sanitizingWindow = initializeMermaid();
   try {
     const parsed = await mermaid.parse(source);
+    if (parsed.diagramType === 'stateDiagram') return await renderStateSource(source);
     const flowchart = parsed.diagramType.startsWith('flowchart');
     const supported = flowchart || parsed.diagramType === 'sequence';
     if (!supported) throw new Error(`The CLI preview does not support ${parsed.diagramType} yet.`);

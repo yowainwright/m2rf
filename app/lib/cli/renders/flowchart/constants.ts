@@ -35,6 +35,7 @@ export const LAYOUT_OPTIONS = {
   'elk.spacing.edgeNode': '2',
   'elk.spacing.edgeEdge': '2',
   'elk.spacing.edgeLabel': '1',
+  'elk.spacing.nodeSelfLoop': '2',
   'elk.layered.spacing.nodeNodeBetweenLayers': '3',
   'elk.layered.spacing.edgeNodeBetweenLayers': '1',
   'elk.layered.spacing.edgeEdgeBetweenLayers': '2',
